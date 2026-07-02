@@ -1,0 +1,24 @@
+:root {
+  --desktop-bg: #f5f6f8;
+  --desktop-panel: #ffffff;
+  --desktop-sidebar: #eef0f3;
+  --desktop-border: #dcdfe6;
+  --desktop-hover: rgba(0, 0, 0, 0.04);
+  --desktop-active: rgba(64, 158, 255, 0.12);
+  --desktop-muted: #909399;
+  --desktop-text: #303133;
+
+  --el-font-size-base: 13px;
+  --el-component-size: 30px;
+}
+
+/* 弱化网页卡片感，贴近桌面工具窗口 */
+.el-drawer__header {
+  margin-bottom: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--desktop-border);
+}
+
+.el-button {
+  font-weight: 500;
+}
