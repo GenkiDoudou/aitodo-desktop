@@ -135,12 +135,14 @@ function syncNavFromFilter() {
 function onSmart(smart: 'all' | 'today') {
   navSmart.value = smart
   navCategoryId.value = undefined
-  taskStore.load({ smartList: smart }, { clearCategoryId: true })
+  search.value = ''
+  taskStore.load({ smartList: smart }, { clearCategoryId: true, clearSearch: true })
 }
 
 function onCategory(id: string | null) {
   navCategoryId.value = id
-  taskStore.load({ categoryId: id }, { clearSmartList: true })
+  search.value = ''
+  taskStore.load({ categoryId: id }, { clearSmartList: true, clearSearch: true })
 }
 
 function onShowCompletedChange(show: boolean | string | number) {
@@ -158,8 +160,9 @@ async function onTaskSaved({ task }: TaskSavePayload) {
 
   if (task) {
     await taskStore.reloadAfterSave(task)
+    taskStore.ensureTaskVisible(task)
   } else {
-    await taskStore.load({}, { clearSearch: true })
+    await taskStore.load({ smartList: 'all' }, { clearCategoryId: true, clearSearch: true })
   }
   syncNavFromFilter()
 }

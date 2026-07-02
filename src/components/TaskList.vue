@@ -3,6 +3,7 @@
     <div v-if="!loading && tasks.length === 0" class="task-list__empty">
       <p>暂无任务</p>
       <p class="task-list__hint">按 Ctrl+N 或点击「新建任务」开始</p>
+      <p class="task-list__hint task-list__hint--muted">若刚保存了任务：请确认侧栏在「全部」，并打开「显示已完成」</p>
     </div>
     <ul v-else class="task-list__ul">
       <li
@@ -83,6 +84,12 @@ function formatDue(iso: string) {
 
 .task-list__hint {
   font-size: 12px;
+
+  &--muted {
+    margin-top: 8px;
+    color: var(--desktop-muted);
+    font-size: 11px;
+  }
 }
 
 .task-list__ul {

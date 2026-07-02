@@ -63,6 +63,12 @@ describe('TaskService', () => {
     expect(task.dueAt).toBeNull()
   })
 
+  it('lists new task under hideDone all filter', () => {
+    const task = service.create({ title: '列表可见' })
+    const list = service.list({ smartList: 'all', hideDone: true })
+    expect(list.some((t) => t.id === task.id)).toBe(true)
+  })
+
   it('rejects remind after due on update', () => {
     const task = service.create({ title: '更新校验', dueAt: '2026-07-02T10:00:00' })
     expect(() =>

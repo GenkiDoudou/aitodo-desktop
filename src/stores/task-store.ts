@@ -91,60 +91,47 @@ export const useTaskStore = defineStore('tasks', () => {
     loading.value = true
     try {
       tasks.value = unwrapIpc(await window.api.tasks.list(filter.value))
-    } catch {
-      /* unwrapIpc 已 Toast；保留原列表避免闪空 */
+    } catch (err) {
+      console.error('[task-store] load failed', err)
     } finally {
       loading.value = false
     }
   }
 
+  /** 确保新建任务出现在内存列表（API 刷新失败时的兜底） */
+  function ensureTaskVisible(task: Task) {
+    const idx = tasks.value.findIndex((t) => t.id === task.id)
+    if (idx >= 0) {
+      tasks.value[idx] = task
+    } else {
+      tasks.value = [task, ...tasks.value]
+    }
+  }
+
   /**
-   * 新建/保存后刷新：若当前筛选会排除该任务，自动切换到能看到的视图。
-   * 典型场景：在「未分类」下新建了带分类的任务、在「今天」下新建了无今日截止的任务、搜索框有残留关键字。
+   * 新建保存后：无条件切到「全部」并清掉分类/搜索，确保刚建的任务一定能看到。
    */
   async function reloadAfterSave(created: Task) {
-    const current = filter.value
-    const options: TaskListLoadOptions = { clearSearch: true }
-    let patch: TaskListFilter = {}
-
-    if (created.status === 'DONE' && current.hideDone) {
-      patch.hideDone = false
+    const hideDone = created.status === 'DONE' ? false : filter.value.hideDone
+    if (created.status === 'DONE') {
       persistHideDone(false)
     }
 
-    const probe: TaskListFilter = { ...current, ...patch }
-    if (!taskMatchesFilter(created, probe)) {
-      if (created.parentId) {
-        patch = {
-          hideDone: patch.hideDone ?? current.hideDone,
-          smartList: 'all'
-        }
-        options.clearCategoryId = true
-      } else if (created.categoryId) {
-        patch = {
-          hideDone: patch.hideDone ?? current.hideDone,
-          categoryId: created.categoryId
-        }
-        options.clearSmartList = true
-      } else {
-        patch = {
-          hideDone: patch.hideDone ?? current.hideDone,
-          smartList: 'all'
-        }
-        options.clearCategoryId = true
-      }
-    }
-
-    await load(patch, options)
+    await load(
+      { smartList: 'all', hideDone },
+      { clearCategoryId: true, clearSearch: true, clearSmartList: false }
+    )
 
     if (!tasks.value.some((t) => t.id === created.id)) {
-      await load(
-        {
-          smartList: 'all',
-          hideDone: created.status === 'DONE' ? false : filter.value.hideDone
-        },
-        { clearCategoryId: true, clearSearch: true, clearSmartList: false }
-      )
+      await load({ smartList: 'all', hideDone: false }, {
+        clearCategoryId: true,
+        clearSearch: true,
+        clearSmartList: false
+      })
+    }
+
+    if (!tasks.value.some((t) => t.id === created.id)) {
+      ensureTaskVisible(created)
     }
   }
 
@@ -174,5 +161,16 @@ export const useTaskStore = defineStore('tasks', () => {
     await load()
   }
 
-  return { tasks, loading, filter, load, reloadAfterSave, setHideDone, create, update, remove }
+  return {
+    tasks,
+    loading,
+    filter,
+    load,
+    reloadAfterSave,
+    ensureTaskVisible,
+    setHideDone,
+    create,
+    update,
+    remove
+  }
 })
