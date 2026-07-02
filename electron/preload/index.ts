@@ -32,10 +32,20 @@ const api: DesktopApi = {
     setDataPath: (path: string) => ipcRenderer.invoke(IPC.APP_SET_DATA_PATH, path),
     getVersion: () => ipcRenderer.invoke(IPC.APP_GET_VERSION),
     getInfo: () => ipcRenderer.invoke(IPC.APP_GET_INFO),
+    getShortcuts: () => ipcRenderer.invoke(IPC.APP_GET_SHORTCUTS),
+    setShortcuts: (bindings) => ipcRenderer.invoke(IPC.APP_SET_SHORTCUTS, bindings),
+    showWindow: () => ipcRenderer.invoke(IPC.APP_SHOW_WINDOW),
     onNewTask: (callback: () => void) => {
       const listener = () => callback()
       ipcRenderer.on(IPC.APP_NEW_TASK, listener)
       return () => ipcRenderer.removeListener(IPC.APP_NEW_TASK, listener)
+    },
+    onAction: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, action: string) => {
+        callback(action as import('@shared/shortcuts').ShortcutActionId)
+      }
+      ipcRenderer.on(IPC.APP_ACTION, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_ACTION, listener)
     }
   }
 }

@@ -10,6 +10,7 @@
     <main class="home__main">
       <header class="home__header">
         <el-input
+          ref="searchInputRef"
           v-model="search"
           class="home__search"
           placeholder="搜索任务标题…"
@@ -49,7 +50,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import type { InputInstance } from 'element-plus'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import TaskList from '@/components/TaskList.vue'
@@ -65,6 +67,7 @@ const taskStore = useTaskStore()
 const categoryStore = useCategoryStore()
 
 const search = ref('')
+const searchInputRef = ref<InputInstance>()
 const drawerOpen = ref(false)
 const activeTaskId = ref<string | null>(null)
 const createParentId = ref<string | null>(null)
@@ -132,17 +135,17 @@ function syncNavFromFilter() {
   navSmart.value = f.smartList === 'today' ? 'today' : 'all'
 }
 
-function onSmart(smart: 'all' | 'today') {
+async function onSmart(smart: 'all' | 'today') {
   navSmart.value = smart
   navCategoryId.value = undefined
   search.value = ''
-  taskStore.load({ smartList: smart }, { clearCategoryId: true, clearSearch: true })
+  await taskStore.load({ smartList: smart }, { clearCategoryId: true, clearSearch: true })
 }
 
-function onCategory(id: string | null) {
+async function onCategory(id: string | null) {
   navCategoryId.value = id
   search.value = ''
-  taskStore.load({ categoryId: id }, { clearSmartList: true, clearSearch: true })
+  await taskStore.load({ categoryId: id }, { clearSmartList: true, clearSearch: true })
 }
 
 function onShowCompletedChange(show: boolean | string | number) {
@@ -154,15 +157,14 @@ function onSearch() {
   taskStore.load(q ? { search: q } : {}, q ? undefined : { clearSearch: true })
 }
 
-async function onTaskSaved({ task }: TaskSavePayload) {
+async function onTaskSaved({ task, mode }: TaskSavePayload) {
   createParentId.value = null
   search.value = ''
 
-  if (task) {
+  if (mode === 'create' && task) {
     await taskStore.reloadAfterSave(task)
-    taskStore.ensureTaskVisible(task)
   } else {
-    await taskStore.load({ smartList: 'all' }, { clearCategoryId: true, clearSearch: true })
+    await taskStore.load()
   }
   syncNavFromFilter()
 }
@@ -197,11 +199,21 @@ async function onToggleStatus(task: Task) {
   }
 }
 
+function onFocusSearch() {
+  searchInputRef.value?.focus()
+}
+
 onMounted(async () => {
   await categoryStore.load()
   await taskStore.load()
   syncNavFromFilter()
   window.addEventListener('desktop:new-task', openNewTask)
+  window.addEventListener('desktop:focus-search', onFocusSearch)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('desktop:new-task', openNewTask)
+  window.removeEventListener('desktop:focus-search', onFocusSearch)
 })
 </script>
 

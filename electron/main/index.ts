@@ -6,6 +6,7 @@ import { TaskRepository } from './db/task-repository'
 import { ReminderService } from './services/reminder-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting } from './tray'
 import { resolveDataDir } from './data-path'
+import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts'
 
 let mainWindow: BrowserWindow | null = null
 let reminderService: ReminderService | null = null
@@ -58,8 +59,9 @@ app.whenReady().then(() => {
     return
   }
 
-  registerIpcHandlers()
+  registerIpcHandlers(() => mainWindow)
   mainWindow = createWindow()
+  registerGlobalShortcuts(mainWindow)
 
   const db = getDatabase()
   reminderService = new ReminderService(new TaskRepository(db))
@@ -88,6 +90,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   markQuitting()
+  unregisterGlobalShortcuts()
   reminderService?.stop()
   destroyTray()
   closeDatabase()

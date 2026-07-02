@@ -1,6 +1,7 @@
 import { BrowserWindow, Menu, Tray, nativeImage, app } from 'electron'
 import { join } from 'path'
 import { IPC } from '@shared/ipc-channels'
+import type { ShortcutActionId } from '@shared/shortcuts'
 
 let tray: Tray | null = null
 
@@ -27,7 +28,7 @@ export function createTray(mainWindow: BrowserWindow, actions: TrayActions): Tra
       label: '新建任务',
       click: () => {
         actions.onShow()
-        mainWindow.webContents.send(IPC.APP_NEW_TASK)
+        mainWindow.webContents.send(IPC.APP_ACTION, 'newTask' satisfies ShortcutActionId)
         actions.onNewTask()
       }
     },

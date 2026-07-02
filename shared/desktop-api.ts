@@ -10,6 +10,7 @@ import type {
   UpdateCategoryDto,
   UpdateTaskDto
 } from './types'
+import type { ShortcutActionId, ShortcutBindings } from './shortcuts'
 
 /**
  * Preload 暴露给渲染进程的 API 形状。
@@ -34,6 +35,11 @@ export interface DesktopApi {
     setDataPath(path: string): Promise<IpcResult<SetDataPathResult>>
     getVersion(): Promise<IpcResult<string>>
     getInfo(): Promise<IpcResult<AppInfo>>
+    getShortcuts(): Promise<IpcResult<ShortcutBindings>>
+    setShortcuts(bindings: ShortcutBindings): Promise<IpcResult<ShortcutBindings>>
+    showWindow(): Promise<IpcResult<void>>
+    /** @deprecated 请使用 onAction('newTask') */
     onNewTask(callback: () => void): () => void
+    onAction(callback: (action: ShortcutActionId) => void): () => void
   }
 }

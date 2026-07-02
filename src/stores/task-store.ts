@@ -86,20 +86,38 @@ export const useTaskStore = defineStore('tasks', () => {
     hideDone: readHideDonePreference()
   })
 
+  /** 递增序号：仅应用最新一次 load 的响应，避免快速切换分类时列表被旧请求覆盖 */
+  let loadSeq = 0
+
   async function load(patch?: TaskListFilter, options?: TaskListLoadOptions) {
+    const seq = ++loadSeq
     filter.value = mergeFilter(filter.value, patch, options)
     loading.value = true
     try {
-      tasks.value = unwrapIpc(await window.api.tasks.list(filter.value))
+      const list = unwrapIpc(await window.api.tasks.list(filter.value))
+      if (seq !== loadSeq) {
+        return
+      }
+      tasks.value = list
     } catch (err) {
-      console.error('[task-store] load failed', err)
+      if (seq === loadSeq) {
+        console.error('[task-store] load failed', err)
+      }
     } finally {
-      loading.value = false
+      if (seq === loadSeq) {
+        loading.value = false
+      }
     }
   }
 
-  /** 确保新建任务出现在内存列表（API 刷新失败时的兜底） */
+  /**
+   * 确保任务出现在内存列表（API 刷新失败时的兜底）。
+   * 仅当任务符合当前 filter 时才插入，避免污染分类/智能列表视图。
+   */
   function ensureTaskVisible(task: Task) {
+    if (!taskMatchesFilter(task, filter.value)) {
+      return
+    }
     const idx = tasks.value.findIndex((t) => t.id === task.id)
     if (idx >= 0) {
       tasks.value[idx] = task
@@ -109,7 +127,8 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   /**
-   * 新建保存后：无条件切到「全部」并清掉分类/搜索，确保刚建的任务一定能看到。
+   * 新建保存后：切到任务所属分类（或未分类 + 全部列表），确保用户能看到刚创建的任务。
+   * 编辑保存请直接 load() 保留当前侧栏筛选。
    */
   async function reloadAfterSave(created: Task) {
     const hideDone = created.status === 'DONE' ? false : filter.value.hideDone
@@ -117,17 +136,24 @@ export const useTaskStore = defineStore('tasks', () => {
       persistHideDone(false)
     }
 
-    await load(
-      { smartList: 'all', hideDone },
-      { clearCategoryId: true, clearSearch: true, clearSmartList: false }
-    )
+    const patch: TaskListFilter = { hideDone }
+    const options: TaskListLoadOptions = { clearSearch: true }
+
+    if (created.categoryId) {
+      patch.categoryId = created.categoryId
+      options.clearSmartList = true
+    } else {
+      patch.smartList = 'all'
+      options.clearCategoryId = true
+    }
+
+    await load(patch, options)
 
     if (!tasks.value.some((t) => t.id === created.id)) {
-      await load({ smartList: 'all', hideDone: false }, {
-        clearCategoryId: true,
-        clearSearch: true,
-        clearSmartList: false
-      })
+      await load(
+        { smartList: 'all', hideDone: false },
+        { clearCategoryId: true, clearSearch: true, clearSmartList: false }
+      )
     }
 
     if (!tasks.value.some((t) => t.id === created.id)) {

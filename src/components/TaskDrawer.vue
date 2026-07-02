@@ -97,6 +97,8 @@ import MarkdownEditor from '@/components/MarkdownEditor.vue'
 
 export interface TaskSavePayload {
   task: Task | null
+  /** create=新建；update=编辑；delete=删除 */
+  mode: 'create' | 'update' | 'delete'
 }
 
 const props = defineProps<{
@@ -218,7 +220,7 @@ async function save() {
       return
     }
 
-    emit('saved', { task: savedTask })
+    emit('saved', { task: savedTask, mode: isNew.value ? 'create' : 'update' })
     emit('update:modelValue', false)
   } catch {
     /* unwrapIpc 已 Toast */
@@ -232,7 +234,7 @@ async function remove() {
   saving.value = true
   try {
     await unwrapIpc(await window.api.tasks.delete(props.taskId))
-    emit('saved', { task: null })
+    emit('saved', { task: null, mode: 'delete' })
     emit('update:modelValue', false)
   } catch {
     /* unwrapIpc 已 Toast */

@@ -1,4 +1,4 @@
-import { app, ipcMain } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import type {
   CreateCategoryDto,
@@ -15,9 +15,15 @@ import { TaskService } from '../services/task-service'
 import {
   getDefaultDataDir,
   isDirectoryWritable,
+  readShortcutBindings,
   resolveDataDir,
-  savePendingDataDir
+  savePendingDataDir,
+  saveShortcutBindings
 } from '../data-path'
+import { registerGlobalShortcuts } from '../shortcuts'
+import type { ShortcutBindings } from '@shared/shortcuts'
+import { findShortcutConflicts } from '@shared/shortcuts'
+import { AppError } from '@shared/types'
 import { wrapIpc } from './wrap'
 
 function services() {
@@ -31,7 +37,7 @@ function services() {
 }
 
 /** 注册全部 IPC handler；在 app.whenReady 且数据库可用后调用 */
-export function registerIpcHandlers(): void {
+export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.TASKS_LIST, (_e, filter?: TaskListFilter) =>
     wrapIpc(() => services().tasks.list(filter))
   )
@@ -79,6 +85,35 @@ export function registerIpcHandlers(): void {
         dataPath,
         writable: isDirectoryWritable(dataPath)
       }
+    })
+  )
+
+  ipcMain.handle(IPC.APP_GET_SHORTCUTS, () => wrapIpc(() => readShortcutBindings()))
+
+  ipcMain.handle(IPC.APP_SET_SHORTCUTS, (_e, bindings: ShortcutBindings) =>
+    wrapIpc(() => {
+      const conflicts = findShortcutConflicts(bindings)
+      if (conflicts.size > 0) {
+        const first = [...conflicts.entries()][0]
+        throw new AppError(
+          'SHORTCUT_CONFLICT',
+          `快捷键 ${first[0]} 被多个动作占用：${first[1].join('、')}`
+        )
+      }
+      saveShortcutBindings(bindings)
+      const win = getMainWindow()
+      if (win) {
+        registerGlobalShortcuts(win, bindings)
+      }
+      return bindings
+    })
+  )
+
+  ipcMain.handle(IPC.APP_SHOW_WINDOW, () =>
+    wrapIpc(() => {
+      const win = getMainWindow()
+      win?.show()
+      win?.focus()
     })
   )
 }

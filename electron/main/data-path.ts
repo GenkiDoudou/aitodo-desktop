@@ -2,11 +2,16 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
+import type { ShortcutBindings } from '@shared/shortcuts'
+import { mergeShortcutBindings } from '@shared/shortcuts'
+
 const CONFIG_FILE = 'config.json'
 
 interface DesktopConfig {
   /** 用户自定义数据目录；重启后生效 */
   dataDir?: string
+  /** 用户自定义快捷键；未配置项使用 shared/shortcuts 默认值 */
+  shortcuts?: Partial<ShortcutBindings>
 }
 
 /**
@@ -84,4 +89,35 @@ export function savePendingDataDir(currentDir: string, newDir: string): void {
 
 export function getDatabaseFilePath(dataDir: string): string {
   return path.join(dataDir, 'data.db')
+}
+
+function readActiveConfig(): DesktopConfig {
+  const defaultDir = getDefaultDataDir()
+  return readConfigFrom(defaultDir) ?? {}
+}
+
+/** 读取当前生效的快捷键绑定（合并默认值） */
+export function readShortcutBindings(): ShortcutBindings {
+  const cfg = readActiveConfig()
+  return mergeShortcutBindings(cfg.shortcuts)
+}
+
+/**
+ * 持久化快捷键到 config.json（与 dataDir 同文件）。
+ * 保存后立即由 shortcuts 模块重新注册 globalShortcut。
+ */
+export function saveShortcutBindings(bindings: ShortcutBindings): void {
+  const defaultDir = getDefaultDataDir()
+  fs.mkdirSync(defaultDir, { recursive: true })
+  const configPath = path.join(defaultDir, CONFIG_FILE)
+  let existing: DesktopConfig = {}
+  if (fs.existsSync(configPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as DesktopConfig
+    } catch {
+      existing = {}
+    }
+  }
+  const next: DesktopConfig = { ...existing, shortcuts: bindings }
+  fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
 }
