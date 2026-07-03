@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { groupTasksInQuadrant, layoutTasksInQuadrant, splitTasksByPriority } from './quadrant-tasks'
+import {
+  flattenQuadrantTaskTree,
+  groupTasksInQuadrant,
+  layoutTasksInQuadrant,
+  splitTasksByPriority
+} from './quadrant-tasks'
 import type { Task } from './types'
 
 function task(partial: Partial<Task> & Pick<Task, 'id' | 'title'>): Task {
@@ -18,6 +23,7 @@ function task(partial: Partial<Task> & Pick<Task, 'id' | 'title'>): Task {
     updatedAt: '2026-01-01T00:00:00',
     deletedAt: null,
     syncVersion: 0,
+    kanbanGroupId: null,
     ...partial
   }
 }
@@ -45,5 +51,22 @@ describe('quadrant-tasks', () => {
     )
     expect(layout.ungrouped.map((t) => t.id)).toEqual(['3'])
     expect(layout.groups.map((g) => g.key)).toEqual(['overdue', 'completed'])
+  })
+
+  it('flattens nested subtasks under expanded parent', () => {
+    const all = [
+      task({ id: 'p', title: 'parent' }),
+      task({ id: 'c1', title: 'child1', parentId: 'p' }),
+      task({ id: 'c2', title: 'child2', parentId: 'p' })
+    ]
+    const collapsed = flattenQuadrantTaskTree([all[0]], all, new Set())
+    expect(collapsed.map((r) => r.task.id)).toEqual(['p'])
+
+    const expanded = flattenQuadrantTaskTree([all[0]], all, new Set(['p']))
+    expect(expanded.map((r) => [r.task.id, r.depth])).toEqual([
+      ['p', 0],
+      ['c1', 1],
+      ['c2', 1]
+    ])
   })
 })

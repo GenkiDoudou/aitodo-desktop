@@ -1,15 +1,21 @@
 import type {
   AppInfo,
+  AppMessage,
+  AppMessageKind,
   Category,
   CreateCategoryDto,
+  CreateKanbanGroupDto,
   CreateTaskDto,
+  DeleteTaskOptions,
   IpcResult,
+  KanbanBoardGroupsResult,
+  KanbanGroup,
   SetDataPathResult,
   Task,
   TaskListFilter,
   UpdateCategoryDto,
-  UpdateTaskDto,
-  DeleteTaskOptions
+  UpdateKanbanGroupDto,
+  UpdateTaskDto
 } from './types'
 import type { ShortcutActionId, ShortcutBindings } from './shortcuts'
 import type { LlmConfig } from './llm-config'
@@ -27,12 +33,33 @@ export interface DesktopApi {
     create(dto: CreateTaskDto): Promise<IpcResult<Task>>
     update(id: string, dto: UpdateTaskDto): Promise<IpcResult<Task>>
     delete(id: string, options?: DeleteTaskOptions): Promise<IpcResult<void>>
+    /** 从垃圾桶恢复（若父任务仍在垃圾桶则一并恢复） */
+    restore(id: string): Promise<IpcResult<Task>>
+    /** 彻底删除（仅适用于已在垃圾桶中的任务） */
+    permanentDelete(id: string, options?: DeleteTaskOptions): Promise<IpcResult<void>>
+    emptyTrash(): Promise<IpcResult<number>>
+    countTrash(): Promise<IpcResult<number>>
+    countDone(): Promise<IpcResult<number>>
+    /** 读取垃圾桶中的任务详情 */
+    getInTrash(id: string): Promise<IpcResult<Task>>
   }
   categories: {
     list(): Promise<IpcResult<Category[]>>
     create(dto: CreateCategoryDto): Promise<IpcResult<Category>>
     update(id: string, dto: UpdateCategoryDto): Promise<IpcResult<Category>>
     delete(id: string): Promise<IpcResult<void>>
+  }
+  kanbanGroups: {
+    list(scopeKey: string): Promise<IpcResult<KanbanBoardGroupsResult>>
+    create(dto: CreateKanbanGroupDto): Promise<IpcResult<KanbanGroup>>
+    update(id: string, dto: UpdateKanbanGroupDto): Promise<IpcResult<KanbanGroup>>
+    delete(id: string): Promise<IpcResult<void>>
+  }
+  messages: {
+    list(kind?: AppMessageKind): Promise<IpcResult<AppMessage[]>>
+    countUnread(kind?: AppMessageKind): Promise<IpcResult<number>>
+    markRead(id: string): Promise<IpcResult<AppMessage>>
+    markAllRead(kind?: AppMessageKind): Promise<IpcResult<number>>
   }
   app: {
     getDataPath(): Promise<IpcResult<string>>
@@ -54,5 +81,7 @@ export interface DesktopApi {
     /** @deprecated 请使用 onAction('newTask') */
     onNewTask(callback: () => void): () => void
     onAction(callback: (action: ShortcutActionId) => void): () => void
+    /** 主进程推送新消息（任务提醒等） */
+    onMessagePush(callback: (message: AppMessage) => void): () => void
   }
 }

@@ -9,14 +9,20 @@
       :active-category="navCategoryId"
 
       :task-counts="taskCounts"
-
+      :category-counts="sidebarListCounts.byId"
+      :uncategorized-count="sidebarListCounts.uncategorized"
+      :trash-count="taskStore.trashCount"
+      :done-count="taskStore.doneCount"
       @select-smart="onSmart"
-
       @select-matrix="onMatrix"
-
+      @select-done="onDone"
+      @select-trash="onTrash"
+      @select-calendar="onCalendar"
+      @select-tasks="onSelectTasks"
       @select-category="onCategory"
 
       @open-settings="router.push('/settings')"
+      @open-task="openTask"
 
     />
 
@@ -24,7 +30,13 @@
 
     <div class="home__workspace">
 
-      <section class="home__list-pane" :class="{ 'is-detail-open': detailOpen, 'is-detail-expanded': detailPanelExpanded }">
+      <section
+        class="home__list-pane"
+        :class="{
+          'is-detail-open': detailOpen && taskDetailStyle === 'sidebar',
+          'is-detail-expanded': detailPanelExpanded && taskDetailStyle === 'sidebar'
+        }"
+      >
 
         <header class="home__list-header">
 
@@ -32,27 +44,96 @@
 
             <h1 class="home__view-title">{{ viewTitle }}</h1>
 
-            <span class="home__view-count">{{ listDisplayCount }} 项</span>
+            <span v-if="!isSpecialListView" class="home__view-count">{{ listDisplayCount }} 项</span>
+
+            <el-select
+              v-if="showSmartDateFieldFilter"
+              v-model="listDateField"
+              size="small"
+              class="home__date-field-filter"
+              @change="onListDateFieldChange"
+            >
+              <el-option
+                v-for="(label, key) in dateFieldLabels"
+                :key="key"
+                :label="label"
+                :value="key"
+              />
+            </el-select>
+
+            <el-select
+              v-if="isDoneView"
+              v-model="doneTimeRange"
+              size="small"
+              class="home__done-time-filter"
+              @change="onDoneTimeRangeChange"
+            >
+              <el-option
+                v-for="(label, key) in doneTimeRangeLabels"
+                :key="key"
+                :label="label"
+                :value="key"
+              />
+            </el-select>
+
+            <el-date-picker
+              v-if="isDoneView && doneTimeRange === 'custom'"
+              v-model="doneCustomRange"
+              type="daterange"
+              size="small"
+              class="home__done-custom-range"
+              range-separator="至"
+              start-placeholder="开始"
+              end-placeholder="结束"
+              value-format="YYYY-MM-DD"
+              @change="onDoneCustomRangeChange"
+            />
+
+            <el-select
+              v-if="isDoneView"
+              v-model="doneListCategory"
+              size="small"
+              class="home__done-category-filter"
+            >
+              <el-option label="所有清单" value="all" />
+              <el-option label="未分类" value="uncategorized" />
+              <el-option
+                v-for="cat in categoryStore.categories"
+                :key="cat.id"
+                :label="cat.name"
+                :value="cat.id"
+              />
+            </el-select>
 
           </div>
 
           <div class="home__list-actions">
 
-            <label class="home__show-done">
+            <TaskListGroupSortPopover
+              v-if="showTaskListGroupSort"
+              v-model:group-by="taskGroupBy"
+              v-model:sort-by="taskSortBy"
+            />
 
-              <span>显示已完成</span>
+            <TaskListViewMenu
+              v-if="showListViewMenu"
+              v-model:view-mode="listViewMode"
+              v-model:hide-done="hideDoneModel"
+              v-model:detail-style="taskDetailStyle"
+              v-model:meta-visibility="taskListMetaVisibility"
+            />
 
-              <el-switch
+            <el-button
+              v-if="isTrashView"
+              text
+              class="home__empty-trash"
+              title="清空垃圾桶"
+              @click="onEmptyTrash"
+            >
+              <el-icon><Delete /></el-icon>
+            </el-button>
 
-                :model-value="!taskStore.filter.hideDone"
-
-                @change="onShowCompletedChange"
-
-              />
-
-            </label>
-
-            <el-button class="home__ai" @click="aiDialogOpen = true">
+            <el-button v-if="!isSpecialListView" class="home__ai" @click="aiDialogOpen = true">
 
               <el-icon class="home__ai-icon"><MagicStick /></el-icon>
 
@@ -60,7 +141,7 @@
 
             </el-button>
 
-            <el-button type="primary" @click="openNewTask">新建</el-button>
+            <el-button v-if="!isSpecialListView" type="primary" @click="openNewTask">新建</el-button>
 
           </div>
 
@@ -68,7 +149,7 @@
 
 
 
-        <div class="home__quick-add">
+        <div v-if="!isSpecialListView" class="home__quick-add">
 
           <el-icon class="home__quick-add-icon"><Plus /></el-icon>
 
@@ -90,55 +171,88 @@
 
 
 
-        <TaskList
-
-          v-if="!isMatrixView"
-
-          :tasks="visibleTasks"
-
+        <TrashTaskList
+          v-if="isTrashView"
+          :tasks="taskStore.tasks"
+          :categories="categoryStore.categories"
           :loading="taskStore.loading"
-
           :selected-id="activeTaskId"
+          @select="selectTrashTask"
+          @restore="onRestoreTrash"
+          @purge="onPurgeTrash"
+        />
 
+        <CompletedTaskList
+          v-else-if="isDoneView"
+          :tasks="taskStore.tasks"
+          :categories="categoryStore.categories"
+          :loading="taskStore.loading"
+          :selected-id="activeTaskId"
+          :category-filter="completedCategoryFilter"
           @select="openTask"
-
           @toggle-status="onToggleStatus"
-
         />
 
         <QuadrantMatrixView
-
-          v-else
-
+          v-else-if="isMatrixView"
           :tasks="taskStore.tasks"
-
           :categories="categoryStore.categories"
-
           :loading="taskStore.loading"
-
           :show-completed="!taskStore.filter.hideDone"
-
           @select="openTask"
-
           @toggle-status="onToggleStatus"
-
           @create="onQuadrantQuickCreate"
-
           @change-priority="onChangePriority"
+        />
 
+        <TaskKanbanView
+          v-else-if="listViewMode === 'kanban'"
+          v-model:selected-column-id="kanbanSelectedColumnId"
+          :scope-key="kanbanScopeKeyValue"
+          :tasks="taskStore.tasks"
+          :loading="taskStore.loading"
+          :selected-id="activeTaskId"
+          :hide-done="taskStore.filter.hideDone"
+          :meta-visibility="taskListMetaVisibility"
+          :default-category-id="kanbanDefaultCategoryId"
+          @select="openTask"
+          @toggle-status="onToggleStatus"
+          @changed="onKanbanChanged"
+        />
+
+        <TaskTimelineView
+          v-else-if="listViewMode === 'timeline'"
+          :tasks="taskStore.tasks"
+          :loading="taskStore.loading"
+          :selected-id="activeTaskId"
+          @select="openTask"
+        />
+
+        <TaskList
+          v-else
+          :layout-items="taskListLayout"
+          :loading="taskStore.loading"
+          :selected-id="activeTaskId"
+          :meta-visibility="taskListMetaVisibility"
+          @select="openTask"
+          @toggle-status="onToggleStatus"
         />
 
       </section>
 
 
 
-      <div v-if="detailOpen" class="home__detail-scrim" @click="closeDetail" />
-
-
+      <div
+        v-if="detailOpen && taskDetailStyle === 'sidebar'"
+        class="home__detail-scrim"
+        @click="closeDetail"
+      />
 
       <TaskDetailPanel
+        v-if="taskDetailStyle === 'sidebar'"
         class="home__detail"
         :visible="detailOpen"
+        variant="sidebar"
         :task-id="activeTaskId"
         :default-category-id="defaultCategoryForCreate"
         :default-priority="defaultPriorityForCreate"
@@ -147,6 +261,29 @@
         @saved="onTaskSaved"
         @panel-expanded-change="detailPanelExpanded = $event"
       />
+
+      <el-dialog
+        v-else
+        :model-value="detailOpen"
+        class="home__detail-dialog"
+        width="640px"
+        top="6vh"
+        destroy-on-close
+        :show-close="false"
+        append-to-body
+        @update:model-value="onDetailDialogVisible"
+      >
+        <TaskDetailPanel
+          :visible="detailOpen"
+          variant="dialog"
+          :task-id="activeTaskId"
+          :default-category-id="defaultCategoryForCreate"
+          :default-priority="defaultPriorityForCreate"
+          :emphasize-category="isMatrixView"
+          @close="closeDetail"
+          @saved="onTaskSaved"
+        />
+      </el-dialog>
 
     </div>
 
@@ -170,9 +307,9 @@
 
 <script setup lang="ts">
 
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
-import { MagicStick, Plus } from '@element-plus/icons-vue'
+import { MagicStick, Plus, Delete } from '@element-plus/icons-vue'
 
 import { useRouter } from 'vue-router'
 
@@ -181,6 +318,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import AppSidebar from '@/components/AppSidebar.vue'
 
 import TaskList from '@/components/TaskList.vue'
+import TaskListGroupSortPopover from '@/components/TaskListGroupSortPopover.vue'
+import TaskListViewMenu from '@/components/TaskListViewMenu.vue'
+import TaskKanbanView from '@/components/TaskKanbanView.vue'
+import TaskTimelineView from '@/components/TaskTimelineView.vue'
+
+import CompletedTaskList from '@/components/CompletedTaskList.vue'
+
+import TrashTaskList from '@/components/TrashTaskList.vue'
 
 import QuadrantMatrixView from '@/components/QuadrantMatrixView.vue'
 
@@ -199,6 +344,41 @@ import type { Task, TaskStatus } from '@shared/types'
 import type { TaskPriority } from '@shared/task-priority'
 
 import { DEFAULT_TASK_PRIORITY, getTaskPriorityMeta } from '@shared/task-priority'
+import { isMatrixListFilter } from '@shared/task-list-filter'
+import { isDueSmartList } from '@shared/smart-list'
+import { taskMatchesSmartListDate } from '@shared/date-filter'
+import {
+  DONE_TIME_RANGE_LABELS,
+  TASK_DATE_FIELD_LABELS,
+  type DoneTimeRange,
+  type TaskDateField
+} from '@shared/date-filter'
+import { buildTaskListLayout } from '@shared/task-list-layout'
+import type { TaskGroupBy, TaskSortBy } from '@shared/task-list-layout'
+import type { TaskDetailStyle, TaskListViewMode } from '@shared/list-view-preferences'
+import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
+import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
+import { kanbanScopeKey, KANBAN_UNGROUPED_ID } from '@shared/kanban-scope'
+import type { SmartList } from '@shared/types'
+import {
+  persistDoneTimeRange,
+  persistListDateField,
+  readDoneTimeRange,
+  readListDateField,
+  readTaskGroupBy,
+  readTaskSortBy,
+  persistTaskGroupBy,
+  persistTaskSortBy
+} from '@/utils/filter-preferences'
+import {
+  readTaskDetailStyle,
+  readTaskListMetaVisibility,
+  readTaskListViewMode,
+  persistTaskDetailStyle,
+  persistTaskListMetaVisibility,
+  persistTaskListViewMode
+} from '@/utils/list-view-preferences'
+import type { CalendarViewMode } from '@shared/calendar-tasks'
 
 
 
@@ -228,11 +408,98 @@ const defaultPriorityForCreate = ref<TaskPriority>(DEFAULT_TASK_PRIORITY)
 
 const navCategoryId = ref<string | null | undefined>(undefined)
 
-const navSmart = ref<'all' | 'today' | 'matrix'>('all')
+const navSmart = ref<'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash'>('all')
+
+/** 已完成页「所有清单」筛选：all=不过滤；uncategorized=未分类；否则为清单 id */
+const doneListCategory = ref<'all' | 'uncategorized' | string>('all')
+
+/** 今天/本周/最近7天：按哪列时间筛选（默认到期时间） */
+const listDateField = ref<TaskDateField>(readListDateField())
+
+/** 已完成页时间范围 */
+const doneTimeRange = ref<DoneTimeRange>(readDoneTimeRange())
+const doneCustomRange = ref<[string, string] | null>(null)
+
+const dateFieldLabels = TASK_DATE_FIELD_LABELS
+const doneTimeRangeLabels = DONE_TIME_RANGE_LABELS
+
+const showSmartDateFieldFilter = computed(
+  () =>
+    navCategoryId.value === undefined &&
+    (navSmart.value === 'today' || navSmart.value === 'week' || navSmart.value === 'last7days')
+)
+
+/** 普通任务列表顶栏：分组/排序、三点菜单（已完成/垃圾桶/四象限不展示） */
+const showTaskListGroupSort = computed(
+  () => !isSpecialListView.value && !isMatrixView.value
+)
+const showListViewMenu = showTaskListGroupSort
+
+const listViewMode = ref<TaskListViewMode>(readTaskListViewMode())
+const taskDetailStyle = ref<TaskDetailStyle>(readTaskDetailStyle())
+const taskListMetaVisibility = ref<TaskListMetaVisibility>(readTaskListMetaVisibility())
+
+watch(listViewMode, (v) => persistTaskListViewMode(v))
+watch(taskDetailStyle, (v) => persistTaskDetailStyle(v))
+watch(taskListMetaVisibility, (v) => persistTaskListMetaVisibility(v), { deep: true })
+
+/** 与 store hideDone 同步：true=隐藏已完成 */
+const hideDoneModel = computed({
+  get: () => taskStore.filter.hideDone,
+  set: (v: boolean) => {
+    void taskStore.setHideDone(v)
+  }
+})
+
+const taskGroupBy = ref<TaskGroupBy>(readTaskGroupBy())
+const taskSortBy = ref<TaskSortBy>(readTaskSortBy())
+
+watch(taskGroupBy, (v) => persistTaskGroupBy(v))
+watch(taskSortBy, (v) => persistTaskSortBy(v))
+
+/** 应用分组/排序后的列表行（含分组标题） */
+const taskListLayout = computed(() =>
+  buildTaskListLayout(taskStore.tasks, taskGroupBy.value, taskSortBy.value)
+)
+
+/** 看板自定义分组作用域（随侧栏导航变化） */
+const kanbanScopeKeyValue = computed(() =>
+  kanbanScopeKey({
+    categoryId: navCategoryId.value,
+    smart: navCategoryId.value === undefined ? navSmart.value : undefined
+  })
+)
+
+/** 看板列内快捷添加默认清单 */
+const kanbanDefaultCategoryId = computed(() => {
+  if (typeof navCategoryId.value === 'string') return navCategoryId.value
+  if (navCategoryId.value === null) return null
+  return null
+})
+
+/** 看板选中的列：顶栏快捷添加写入该列；未选中则归入未分组 */
+const kanbanSelectedColumnId = ref<string | null>(null)
+
+watch(kanbanScopeKeyValue, () => {
+  kanbanSelectedColumnId.value = null
+})
+
+/** 看板模式下顶栏快捷添加的目标分组 */
+function kanbanGroupIdForQuickAdd(): string | null | undefined {
+  if (listViewMode.value !== 'kanban') return undefined
+  const sel = kanbanSelectedColumnId.value
+  if (!sel) return null
+  if (sel === KANBAN_UNGROUPED_ID) return null
+  return sel
+}
+
+async function onKanbanChanged() {
+  await taskStore.load()
+}
 
 
 
-const sidebarActiveSmart = computed<'all' | 'today' | 'matrix' | null>(() =>
+const sidebarActiveSmart = computed<'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash' | null>(() =>
 
   navCategoryId.value !== undefined ? null : navSmart.value
 
@@ -240,7 +507,19 @@ const sidebarActiveSmart = computed<'all' | 'today' | 'matrix' | null>(() =>
 
 
 
+const isDoneView = computed(() => navSmart.value === 'done' && navCategoryId.value === undefined)
+
+const isTrashView = computed(() => navSmart.value === 'trash' && navCategoryId.value === undefined)
+
+const isSpecialListView = computed(() => isDoneView.value || isTrashView.value)
+
 const isMatrixView = computed(() => navSmart.value === 'matrix' && navCategoryId.value === undefined)
+
+const completedCategoryFilter = computed(() => {
+  if (doneListCategory.value === 'all') return undefined
+  if (doneListCategory.value === 'uncategorized') return null
+  return doneListCategory.value
+})
 
 
 
@@ -264,6 +543,14 @@ const viewTitle = computed(() => {
 
     if (navSmart.value === 'matrix') return '四象限'
 
+    if (navSmart.value === 'done') return '已完成'
+
+    if (navSmart.value === 'trash') return '垃圾桶'
+
+    if (navSmart.value === 'week') return '本周'
+
+    if (navSmart.value === 'last7days') return '最近7天'
+
     return navSmart.value === 'today' ? '今天' : '全部'
 
   }
@@ -286,22 +573,29 @@ const quickAddPlaceholder = computed(() => `输入标题回车即可添加至「
 
 
 
-/** 侧栏展示用任务计数（不含子任务层级，仅顶层） */
-
+/** 侧栏展示用任务计数（仅顶层、与智能列表筛选规则一致） */
 const taskCounts = computed(() => {
+  const roots = taskStore.tasks.filter((t) => !t.parentId)
+  const countSmart = (smart: 'today' | 'week' | 'last7days') =>
+    roots.filter((t) => taskMatchesSmartListDate(t, smart, listDateField.value)).length
+  return {
+    all: roots.length,
+    today: countSmart('today'),
+    week: countSmart('week'),
+    last7days: countSmart('last7days')
+  }
+})
 
-  const all = taskStore.tasks.filter((t) => !t.parentId)
-
-  const today = new Date().toISOString().slice(0, 10)
-
-  const todayCount = all.filter(
-
-    (t) => t.status !== 'DONE' && t.dueAt?.startsWith(today)
-
-  ).length
-
-  return { all: all.length, today: todayCount }
-
+/** 侧栏清单计数（基于当前列表数据，与智能列表计数同源） */
+const sidebarListCounts = computed(() => {
+  const roots = taskStore.tasks.filter((t) => !t.parentId && !t.deletedAt)
+  const byId: Record<string, number> = {}
+  let uncategorized = 0
+  for (const t of roots) {
+    if (!t.categoryId) uncategorized++
+    else byId[t.categoryId] = (byId[t.categoryId] ?? 0) + 1
+  }
+  return { byId, uncategorized }
 })
 
 
@@ -372,8 +666,14 @@ const visibleTasks = computed(() => {
 
 })
 
-/** 列表标题旁计数：仅统计顶层任务，与子任务折叠展示一致 */
+/** 列表标题旁计数 */
 const listDisplayCount = computed(() => {
+  if (isDoneView.value) {
+    return taskStore.tasks.filter((t) => t.status === 'DONE').length
+  }
+  if (isTrashView.value) {
+    return taskStore.tasks.length
+  }
   if (isMatrixView.value) {
     return taskStore.tasks.filter((t) => !t.parentId).length
   }
@@ -381,10 +681,29 @@ const listDisplayCount = computed(() => {
 })
 
 function syncNavFromFilter() {
-
   const f = taskStore.filter
 
-  if (f.parentId === null && f.categoryId === undefined && !f.smartList) {
+  if (f.smartList === 'done') {
+
+    navCategoryId.value = undefined
+
+    navSmart.value = 'done'
+
+    return
+
+  }
+
+  if (f.smartList === 'trash') {
+
+    navCategoryId.value = undefined
+
+    navSmart.value = 'trash'
+
+    return
+
+  }
+
+  if (isMatrixListFilter(f)) {
 
     navCategoryId.value = undefined
 
@@ -404,20 +723,39 @@ function syncNavFromFilter() {
 
   navCategoryId.value = undefined
 
-  navSmart.value = f.smartList === 'today' ? 'today' : 'all'
+  navSmart.value = smartListToNav(f.smartList)
+
+  if (f.dateField) {
+    listDateField.value = f.dateField
+  }
+  if (f.doneTimeRange) {
+    doneTimeRange.value = f.doneTimeRange
+  }
+  if (f.doneTimeRange === 'custom' && f.dateFrom && f.dateTo) {
+    doneCustomRange.value = [f.dateFrom.slice(0, 10), f.dateTo.slice(0, 10)]
+  }
 
 }
 
 
 
-async function onSmart(smart: 'all' | 'today') {
+function smartListToNav(smart?: SmartList): 'all' | 'today' | 'week' | 'last7days' {
+  if (smart === 'today') return 'today'
+  if (smart === 'week') return 'week'
+  if (smart === 'last7days') return 'last7days'
+  return 'all'
+}
 
+
+
+async function onSmart(smart: 'all' | 'today' | 'week' | 'last7days') {
   navSmart.value = smart
-
   navCategoryId.value = undefined
-
-  await taskStore.navigate({ kind: 'smart', smart })
-
+  await taskStore.navigate({
+    kind: 'smart',
+    smart,
+    dateField: isDueSmartList(smart) ? listDateField.value : undefined
+  })
 }
 
 
@@ -429,6 +767,187 @@ async function onMatrix() {
   navCategoryId.value = undefined
 
   await taskStore.navigate({ kind: 'matrix' })
+
+}
+
+
+
+async function onListDateFieldChange(field: TaskDateField) {
+  persistListDateField(field)
+  if (showSmartDateFieldFilter.value) {
+    await taskStore.load({ dateField: field })
+  }
+}
+
+function doneNavigatePayload() {
+  const payload: {
+    kind: 'done'
+    doneTimeRange: DoneTimeRange
+    dateFrom?: string | null
+    dateTo?: string | null
+  } = { kind: 'done', doneTimeRange: doneTimeRange.value }
+  if (doneTimeRange.value === 'custom' && doneCustomRange.value?.length === 2) {
+    payload.dateFrom = `${doneCustomRange.value[0]}T00:00:00`
+    payload.dateTo = `${doneCustomRange.value[1]}T23:59:59`
+  }
+  return payload
+}
+
+async function onDoneTimeRangeChange(range: DoneTimeRange) {
+  persistDoneTimeRange(range)
+  if (!isDoneView.value) return
+  if (range === 'custom') {
+    if (doneCustomRange.value?.length === 2) {
+      await taskStore.navigate(doneNavigatePayload())
+    }
+    return
+  }
+  await taskStore.navigate({ kind: 'done', doneTimeRange: range, dateFrom: null, dateTo: null })
+}
+
+async function onDoneCustomRangeChange(val: [string, string] | null) {
+  if (!isDoneView.value || !val || val.length !== 2) return
+  await taskStore.navigate({
+    kind: 'done',
+    doneTimeRange: 'custom',
+    dateFrom: `${val[0]}T00:00:00`,
+    dateTo: `${val[1]}T23:59:59`
+  })
+}
+
+async function onDone() {
+  navSmart.value = 'done'
+  navCategoryId.value = undefined
+  doneListCategory.value = 'all'
+  detailOpen.value = false
+  await taskStore.navigate(doneNavigatePayload())
+}
+
+function onCalendar(mode: CalendarViewMode) {
+  void router.push({ path: '/calendar', query: { view: mode } })
+}
+
+async function onSelectTasks() {
+  await onSmart('all')
+}
+
+async function onTrash() {
+  navSmart.value = 'trash'
+  navCategoryId.value = undefined
+  detailOpen.value = false
+  activeTaskId.value = null
+  await taskStore.navigate({ kind: 'trash' })
+}
+
+function selectTrashTask(id: string) {
+
+  activeTaskId.value = id
+
+}
+
+
+
+async function onRestoreTrash(task: Task) {
+
+  try {
+
+    await taskStore.restoreFromTrash(task.id)
+
+    if (activeTaskId.value === task.id) {
+
+      activeTaskId.value = null
+
+    }
+
+    ElMessage.success('任务已恢复')
+
+  } catch {
+
+    /* unwrapIpc 已 Toast */
+
+  }
+
+}
+
+
+
+async function onPurgeTrash(task: Task) {
+
+  const childCount = taskStore.tasks.filter((t) => t.parentId === task.id).length
+
+  try {
+
+    if (childCount > 0) {
+
+      await ElMessageBox.confirm(
+
+        `任务「${task.title}」下有 ${childCount} 个子任务，确定一并彻底删除吗？`,
+
+        '彻底删除',
+
+        { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+
+      )
+
+      await taskStore.purgeFromTrash(task.id, { cascadeChildren: true })
+
+    } else {
+
+      await taskStore.purgeFromTrash(task.id)
+
+    }
+
+    if (activeTaskId.value === task.id) {
+
+      activeTaskId.value = null
+
+    }
+
+    ElMessage.success('已彻底删除')
+
+  } catch {
+
+    /* 用户取消或 unwrapIpc 已 Toast */
+
+  }
+
+}
+
+
+
+async function onEmptyTrash() {
+
+  if (taskStore.tasks.length === 0) {
+
+    ElMessage.info('垃圾桶已是空的')
+
+    return
+
+  }
+
+  try {
+
+    await ElMessageBox.confirm(
+
+      `确定清空垃圾桶中的 ${taskStore.tasks.length} 项任务？此操作不可恢复。`,
+
+      '清空垃圾桶',
+
+      { type: 'warning', confirmButtonText: '清空', cancelButtonText: '取消' }
+
+    )
+
+    const n = await taskStore.emptyTrashBin()
+
+    activeTaskId.value = null
+
+    ElMessage.success(`已清空 ${n} 项`)
+
+  } catch {
+
+    /* 用户取消 */
+
+  }
 
 }
 
@@ -468,11 +987,19 @@ async function onQuickAdd() {
 
   try {
 
-    const opts: { categoryId?: string | null } = {}
+    const opts: { categoryId?: string | null; kanbanGroupId?: string | null } = {}
 
     if (defaultCategoryForCreate.value) {
 
       opts.categoryId = defaultCategoryForCreate.value
+
+    }
+
+    const kanbanGid = kanbanGroupIdForQuickAdd()
+
+    if (kanbanGid !== undefined) {
+
+      opts.kanbanGroupId = kanbanGid
 
     }
 
@@ -613,22 +1140,20 @@ function openTask(id: string) {
 
 
 function closeDetail() {
-
   detailOpen.value = false
-
   activeTaskId.value = null
+}
 
+function onDetailDialogVisible(visible: boolean) {
+  if (!visible) closeDetail()
 }
 
 
 
 async function onToggleStatus(task: Task) {
 
-  const order: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE']
-
-  const idx = order.indexOf(task.status)
-
-  const next = order[(idx + 1) % order.length]
+  // 列表复选框为二态：非 DONE 视为未完成，点击后在 TODO/DONE 间切换（不再经 IN_PROGRESS 循环）
+  const next: TaskStatus = task.status === 'DONE' ? 'TODO' : 'DONE'
 
   try {
 
@@ -673,6 +1198,8 @@ onMounted(async () => {
   await categoryStore.load()
 
   await taskStore.load()
+
+  await taskStore.refreshSidebarCounts()
 
   syncNavFromFilter()
 
@@ -795,6 +1322,16 @@ onUnmounted(() => {
 
 
 
+.home__detail-dialog {
+  :deep(.el-dialog__header) {
+    display: none;
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 0;
+  }
+}
+
 .home__list-header {
 
   display: flex;
@@ -861,6 +1398,31 @@ onUnmounted(() => {
 
   flex-shrink: 0;
 
+}
+
+
+
+.home__done-category-filter,
+.home__date-field-filter,
+.home__done-time-filter {
+  width: 128px;
+  flex-shrink: 0;
+}
+
+.home__done-custom-range {
+  flex-shrink: 0;
+  max-width: 260px;
+}
+
+
+
+.home__empty-trash {
+  font-size: 18px;
+  color: var(--desktop-muted);
+
+  &:hover {
+    color: var(--el-color-danger);
+  }
 }
 
 

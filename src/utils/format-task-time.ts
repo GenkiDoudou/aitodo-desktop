@@ -23,3 +23,11 @@ export function formatTaskCreatedAt(iso: string | null | undefined): string {
   if (iso.slice(0, 10) === today) return `今天 ${d.format('HH:mm')}`
   return d.format('M月D日 HH:mm')
 }
+
+/** 垃圾桶列表右侧日期：优先截止日，否则删除日 */
+export function formatTrashTaskDate(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = dayjs(iso)
+  if (!d.isValid()) return iso
+  return d.format('YYYY年M月D日')
+}

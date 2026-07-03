@@ -3,10 +3,12 @@ import { IPC } from '@shared/ipc-channels'
 import type { DesktopApi } from '@shared/desktop-api'
 import type {
   CreateCategoryDto,
+  CreateKanbanGroupDto,
   CreateTaskDto,
   DeleteTaskOptions,
   TaskListFilter,
   UpdateCategoryDto,
+  UpdateKanbanGroupDto,
   UpdateTaskDto
 } from '@shared/types'
 
@@ -17,9 +19,32 @@ const api: DesktopApi = {
   tasks: {
     list: (filter?: TaskListFilter) => ipcRenderer.invoke(IPC.TASKS_LIST, filter),
     get: (id: string) => ipcRenderer.invoke(IPC.TASKS_GET, id),
+    getInTrash: (id: string) => ipcRenderer.invoke(IPC.TASKS_GET_IN_TRASH, id),
     create: (dto: CreateTaskDto) => ipcRenderer.invoke(IPC.TASKS_CREATE, dto),
     update: (id: string, dto: UpdateTaskDto) => ipcRenderer.invoke(IPC.TASKS_UPDATE, id, dto),
-    delete: (id: string, options?: DeleteTaskOptions) => ipcRenderer.invoke(IPC.TASKS_DELETE, id, options)
+    delete: (id: string, options?: DeleteTaskOptions) => ipcRenderer.invoke(IPC.TASKS_DELETE, id, options),
+    restore: (id: string) => ipcRenderer.invoke(IPC.TASKS_RESTORE, id),
+    permanentDelete: (id: string, options?: DeleteTaskOptions) =>
+      ipcRenderer.invoke(IPC.TASKS_PERMANENT_DELETE, id, options),
+    emptyTrash: () => ipcRenderer.invoke(IPC.TASKS_EMPTY_TRASH),
+    countTrash: () => ipcRenderer.invoke(IPC.TASKS_COUNT_TRASH),
+    countDone: () => ipcRenderer.invoke(IPC.TASKS_COUNT_DONE)
+  },
+  kanbanGroups: {
+    list: (scopeKey: string) => ipcRenderer.invoke(IPC.KANBAN_GROUPS_LIST, scopeKey),
+    create: (dto: CreateKanbanGroupDto) => ipcRenderer.invoke(IPC.KANBAN_GROUPS_CREATE, dto),
+    update: (id: string, dto: UpdateKanbanGroupDto) =>
+      ipcRenderer.invoke(IPC.KANBAN_GROUPS_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.KANBAN_GROUPS_DELETE, id)
+  },
+  messages: {
+    list: (kind?: import('@shared/types').AppMessageKind) =>
+      ipcRenderer.invoke(IPC.MESSAGES_LIST, kind),
+    countUnread: (kind?: import('@shared/types').AppMessageKind) =>
+      ipcRenderer.invoke(IPC.MESSAGES_COUNT_UNREAD, kind),
+    markRead: (id: string) => ipcRenderer.invoke(IPC.MESSAGES_MARK_READ, id),
+    markAllRead: (kind?: import('@shared/types').AppMessageKind) =>
+      ipcRenderer.invoke(IPC.MESSAGES_MARK_ALL_READ, kind)
   },
   categories: {
     list: () => ipcRenderer.invoke(IPC.CATEGORIES_LIST),
@@ -57,6 +82,13 @@ const api: DesktopApi = {
       }
       ipcRenderer.on(IPC.APP_ACTION, listener)
       return () => ipcRenderer.removeListener(IPC.APP_ACTION, listener)
+    },
+    onMessagePush: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, message: import('@shared/types').AppMessage) => {
+        callback(message)
+      }
+      ipcRenderer.on(IPC.APP_MESSAGE_PUSH, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_MESSAGE_PUSH, listener)
     }
   }
 }

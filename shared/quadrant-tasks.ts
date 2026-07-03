@@ -83,3 +83,47 @@ export function layoutTasksInQuadrant(tasks: Task[], showCompleted: boolean): Qu
     groups
   }
 }
+
+/** 四象限任务行（含嵌套深度，供 UI 缩进与展开） */
+export interface QuadrantTaskRow {
+  task: Task
+  depth: number
+}
+
+/** 统计每个父任务下的直接子任务数量 */
+export function buildChildCountMap(allTasks: Task[]): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const t of allTasks) {
+    if (!t.parentId) continue
+    counts.set(t.parentId, (counts.get(t.parentId) ?? 0) + 1)
+  }
+  return counts
+}
+
+/**
+ * 将象限内顶层任务展开为带深度的平铺列表；子任务嵌套在父任务下，不参与象限分桶。
+ */
+export function flattenQuadrantTaskTree(
+  roots: Task[],
+  allTasks: Task[],
+  expandedIds: ReadonlySet<string>
+): QuadrantTaskRow[] {
+  const byParent = new Map<string, Task[]>()
+  for (const t of allTasks) {
+    if (!t.parentId) continue
+    if (!byParent.has(t.parentId)) byParent.set(t.parentId, [])
+    byParent.get(t.parentId)!.push(t)
+  }
+
+  const result: QuadrantTaskRow[] = []
+  const walk = (items: Task[], depth: number) => {
+    for (const task of items) {
+      result.push({ task, depth })
+      if (expandedIds.has(task.id)) {
+        walk(byParent.get(task.id) ?? [], depth + 1)
+      }
+    }
+  }
+  walk(roots, 0)
+  return result
+}

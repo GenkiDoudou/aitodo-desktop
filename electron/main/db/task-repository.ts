@@ -1,6 +1,9 @@
 import type Database from 'better-sqlite3'
-import { todayDatePrefix } from '@shared/datetime'
+import dayjs from 'dayjs'
+import { doneTimeRangeBounds, smartListDateBounds } from '@shared/date-filter'
+import { dueCutoffIsoForSmartList, isDueSmartList, type DueSmartList } from '@shared/smart-list'
 import type { Task, TaskListFilter, TaskStatus } from '@shared/types'
+import { parseRecurrenceRule, primaryRemindAt, serializeRecurrenceRule, type TaskReminderItem } from '@shared/task-reminder'
 import { DEFAULT_TASK_PRIORITY, normalizeTaskPriority } from '@shared/task-priority'
 
 interface TaskRow {
@@ -20,9 +23,15 @@ interface TaskRow {
   updated_at: string
   deleted_at: string | null
   sync_version: number
+  kanban_group_id: string | null
+  recurrence_rule: string | null
+  remind_continuous: number
 }
 
-function mapRow(row: TaskRow): Task {
+function mapRow(row: TaskRow, reminders: TaskReminderItem[] = []): Task {
+  const recurrence = parseRecurrenceRule(row.recurrence_rule)
+  const syncedReminders = reminders
+  const legacyRemind = primaryRemindAt(syncedReminders) ?? row.remind_at
   return {
     id: row.id,
     title: row.title,
@@ -32,14 +41,18 @@ function mapRow(row: TaskRow): Task {
     categoryId: row.category_id,
     parentId: row.parent_id,
     dueAt: row.due_at,
-    remindAt: row.remind_at,
+    remindAt: legacyRemind,
     remindFiredAt: row.remind_fired_at,
     completedAt: row.completed_at,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
-    syncVersion: row.sync_version
+    syncVersion: row.sync_version,
+    kanbanGroupId: row.kanban_group_id ?? null,
+    reminders: syncedReminders,
+    recurrence: parseRecurrenceRule(row.recurrence_rule ?? null),
+    remindContinuous: (row.remind_continuous ?? 0) === 1
   }
 }
 
@@ -57,12 +70,32 @@ function sqlBind<T extends Record<string, unknown>>(params: T): T {
   return out
 }
 
+/** 智能列表 createdAt/completedAt 闭区间（与 shared/date-filter 一致） */
+function boundsForSmartListNonDue(smart: DueSmartList) {
+  const raw = smartListDateBounds(smart, 'createdAt')
+  if (!('from' in raw)) {
+    throw new Error('expected closed range for non-due smart list')
+  }
+  return raw
+}
+
 export class TaskRepository {
   constructor(private readonly db: Database.Database) {}
 
   list(filter: TaskListFilter = {}): Task[] {
-    const clauses: string[] = ['deleted_at IS NULL']
+    const isTrash = filter.smartList === 'trash'
+    const clauses: string[] = isTrash ? ['deleted_at IS NOT NULL'] : ['deleted_at IS NULL']
     const params: Record<string, unknown> = {}
+
+    if (isTrash) {
+      if (filter.search?.trim()) {
+        clauses.push('LOWER(title) LIKE @search')
+        params.search = `%${filter.search.trim().toLowerCase()}%`
+      }
+      const sql = `SELECT * FROM tasks WHERE ${clauses.join(' AND ')} ORDER BY deleted_at DESC, updated_at DESC`
+      const rows = this.db.prepare(sql).all(sqlBind(params)) as TaskRow[]
+      return rows.map(mapRow)
+    }
 
     if (filter.hideDone) {
       clauses.push(`status != 'DONE'`)
@@ -102,15 +135,48 @@ export class TaskRepository {
 
     if (filter.smartList === 'done') {
       clauses.push(`status = 'DONE'`)
-    } else if (filter.smartList === 'today') {
-      const today = todayDatePrefix()
-      const now = `${today}T23:59:59`
-      clauses.push(`status != 'DONE'`)
-      clauses.push(`due_at IS NOT NULL AND due_at <= @todayEnd`)
-      params.todayEnd = now
+      const doneBounds = doneTimeRangeBounds(filter.doneTimeRange ?? 'all', dayjs(), {
+        from: filter.dateFrom,
+        to: filter.dateTo
+      })
+      if (doneBounds) {
+        // 无 completed_at 的历史数据用 updated_at 回退，与 completed-task-groups 一致
+        clauses.push(
+          `COALESCE(completed_at, updated_at) >= @doneFrom AND COALESCE(completed_at, updated_at) <= @doneTo`
+        )
+        params.doneFrom = doneBounds.from
+        params.doneTo = doneBounds.to
+      }
+    } else if (isDueSmartList(filter.smartList)) {
+      const dateField = filter.dateField ?? 'dueAt'
+      if (dateField === 'dueAt') {
+        clauses.push(`status != 'DONE'`)
+        clauses.push(`due_at IS NOT NULL AND due_at <= @dueCutoff`)
+        params.dueCutoff = dueCutoffIsoForSmartList(filter.smartList)
+      } else if (dateField === 'createdAt') {
+        clauses.push(`status != 'DONE'`)
+        clauses.push(`created_at >= @smartFrom AND created_at <= @smartTo`)
+        const bounds = boundsForSmartListNonDue(filter.smartList)
+        params.smartFrom = bounds.from
+        params.smartTo = bounds.to
+      } else {
+        // completedAt：智能列表展示该时段内完成的任务
+        clauses.push(`status = 'DONE'`)
+        clauses.push(
+          `COALESCE(completed_at, updated_at) >= @smartFrom AND COALESCE(completed_at, updated_at) <= @smartTo`
+        )
+        const bounds = boundsForSmartListNonDue(filter.smartList)
+        params.smartFrom = bounds.from
+        params.smartTo = bounds.to
+      }
     }
 
-    const sql = `SELECT * FROM tasks WHERE ${clauses.join(' AND ')} ORDER BY sort_order ASC, created_at DESC`
+    const orderBy =
+      filter.smartList === 'done'
+        ? 'completed_at DESC, updated_at DESC, sort_order ASC'
+        : 'sort_order ASC, created_at DESC'
+
+    const sql = `SELECT * FROM tasks WHERE ${clauses.join(' AND ')} ORDER BY ${orderBy}`
     const rows = this.db.prepare(sql).all(sqlBind(params)) as TaskRow[]
     return rows.map(mapRow)
   }
@@ -125,17 +191,74 @@ export class TaskRepository {
     return row ? mapRow(row) : null
   }
 
+  /** 含已软删除记录，供垃圾桶详情与恢复 */
+  findByIdIncludingDeleted(id: string): Task | null {
+    if (!id) {
+      return null
+    }
+    const row = this.db.prepare(`SELECT * FROM tasks WHERE id = ?`).get(id) as TaskRow | undefined
+    return row ? mapRow(row) : null
+  }
+
+  countTrash(): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) as cnt FROM tasks WHERE deleted_at IS NOT NULL`)
+      .get() as { cnt: number }
+    return row.cnt
+  }
+
+  /** 未删除的已完成任务数（侧栏「有内容时显示」用） */
+  countDone(): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) as cnt FROM tasks WHERE deleted_at IS NULL AND status = 'DONE'`)
+      .get() as { cnt: number }
+    return row.cnt
+  }
+
+  findDeletedChildrenByParentId(parentId: string): Task[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM tasks WHERE parent_id = ? AND deleted_at IS NOT NULL`)
+      .all(parentId) as TaskRow[]
+    return rows.map(mapRow)
+  }
+
+  restore(id: string, updatedAt: string): void {
+    this.db
+      .prepare(`UPDATE tasks SET deleted_at = NULL, updated_at = ? WHERE id = ? AND deleted_at IS NOT NULL`)
+      .run(updatedAt, id)
+  }
+
+  /** 恢复前若父任务已不存在，解除 parent 关联（任务仍在垃圾桶中） */
+  clearParentOnDeleted(id: string, updatedAt: string): void {
+    this.db
+      .prepare(
+        `UPDATE tasks SET parent_id = NULL, updated_at = ? WHERE id = ? AND deleted_at IS NOT NULL`
+      )
+      .run(updatedAt, id)
+  }
+
+  hardDelete(id: string): void {
+    this.db.prepare(`DELETE FROM tasks WHERE id = ?`).run(id)
+  }
+
+  hardDeleteAllTrash(): number {
+    const result = this.db.prepare(`DELETE FROM tasks WHERE deleted_at IS NOT NULL`).run()
+    return result.changes
+  }
+
   insert(task: Task): void {
     this.db
       .prepare(
         `INSERT INTO tasks (
           id, title, description, status, priority, category_id, parent_id,
           due_at, remind_at, remind_fired_at, completed_at, sort_order,
-          created_at, updated_at, deleted_at, sync_version
+          created_at, updated_at, deleted_at, sync_version, kanban_group_id,
+          recurrence_rule, remind_continuous
         ) VALUES (
           @id, @title, @description, @status, @priority, @categoryId, @parentId,
           @dueAt, @remindAt, @remindFiredAt, @completedAt, @sortOrder,
-          @createdAt, @updatedAt, NULL, @syncVersion
+          @createdAt, @updatedAt, NULL, @syncVersion, @kanbanGroupId,
+          @recurrenceRule, @remindContinuous
         )`
       )
       .run(
@@ -154,7 +277,10 @@ export class TaskRepository {
           sortOrder: task.sortOrder,
           createdAt: task.createdAt,
           updatedAt: task.updatedAt,
-          syncVersion: task.syncVersion
+          syncVersion: task.syncVersion,
+          kanbanGroupId: task.kanbanGroupId,
+          recurrenceRule: serializeRecurrenceRule(task.recurrence),
+          remindContinuous: task.remindContinuous ? 1 : 0
         })
       )
   }
@@ -166,7 +292,9 @@ export class TaskRepository {
           title = @title, description = @description, status = @status,
           priority = @priority, category_id = @categoryId, parent_id = @parentId,
           due_at = @dueAt, remind_at = @remindAt, remind_fired_at = @remindFiredAt,
-          completed_at = @completedAt, sort_order = @sortOrder, updated_at = @updatedAt
+          completed_at = @completedAt, sort_order = @sortOrder, updated_at = @updatedAt,
+          kanban_group_id = @kanbanGroupId,
+          recurrence_rule = @recurrenceRule, remind_continuous = @remindContinuous
          WHERE id = @id AND deleted_at IS NULL`
       )
       .run(
@@ -183,7 +311,10 @@ export class TaskRepository {
           remindFiredAt: task.remindFiredAt,
           completedAt: task.completedAt,
           sortOrder: task.sortOrder,
-          updatedAt: task.updatedAt
+          updatedAt: task.updatedAt,
+          kanbanGroupId: task.kanbanGroupId,
+          recurrenceRule: serializeRecurrenceRule(task.recurrence),
+          remindContinuous: task.remindContinuous ? 1 : 0
         })
       )
   }

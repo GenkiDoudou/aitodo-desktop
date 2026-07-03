@@ -25,15 +25,27 @@ export function cloneTaskListFilter(filter: TaskListFilter): TaskListFilter {
   if (Object.prototype.hasOwnProperty.call(filter, 'parentId')) {
     out.parentId = filter.parentId ?? null
   }
+  if (filter.dateField) {
+    out.dateField = filter.dateField
+  }
+  if (filter.doneTimeRange) {
+    out.doneTimeRange = filter.doneTimeRange
+  }
+  if (filter.dateFrom) {
+    out.dateFrom = filter.dateFrom
+  }
+  if (filter.dateTo) {
+    out.dateTo = filter.dateTo
+  }
 
   return out
 }
 
-/** 四象限视图的列表筛选：仅顶层任务、不按清单/smartList 过滤 */
+/** 四象限视图的列表筛选：不按清单/smartList/父子过滤，子任务在象限内嵌套展示 */
 export function isMatrixListFilter(filter: TaskListFilter): boolean {
   return (
-    filter.parentId === null &&
     filter.categoryId === undefined &&
-    filter.smartList === undefined
+    filter.smartList === undefined &&
+    !Object.prototype.hasOwnProperty.call(filter, 'parentId')
   )
 }

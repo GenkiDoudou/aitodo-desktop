@@ -21,6 +21,7 @@
 
     <main class="settings-layout__main">
       <SettingsDataSection v-if="activeSection === 'data'" />
+      <SettingsSmartListSection v-else-if="activeSection === 'smartList'" />
       <SettingsShortcutsSection v-else-if="activeSection === 'shortcuts'" />
       <SettingsLlmSection v-else-if="activeSection === 'llm'" />
       <SettingsPromptSection v-else-if="activeSection === 'prompt'" />
@@ -32,20 +33,22 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Coin, Cpu, Document, InfoFilled, Key } from '@element-plus/icons-vue'
+import { Coin, Cpu, Document, InfoFilled, Key, List } from '@element-plus/icons-vue'
 import SettingsDataSection from '@/components/settings/SettingsDataSection.vue'
+import SettingsSmartListSection from '@/components/settings/SettingsSmartListSection.vue'
 import SettingsShortcutsSection from '@/components/settings/SettingsShortcutsSection.vue'
 import SettingsLlmSection from '@/components/settings/SettingsLlmSection.vue'
 import SettingsPromptSection from '@/components/settings/SettingsPromptSection.vue'
 import SettingsAboutSection from '@/components/settings/SettingsAboutSection.vue'
 
-type SettingsSection = 'data' | 'shortcuts' | 'llm' | 'prompt' | 'about'
+type SettingsSection = 'data' | 'smartList' | 'shortcuts' | 'llm' | 'prompt' | 'about'
 
 const router = useRouter()
 const activeSection = ref<SettingsSection>('data')
 
 const menuItems = [
   { id: 'data' as const, label: '数据存储', icon: Coin },
+  { id: 'smartList' as const, label: '智能清单', icon: List },
   { id: 'shortcuts' as const, label: '快捷键', icon: Key },
   { id: 'llm' as const, label: '大模型', icon: Cpu },
   { id: 'prompt' as const, label: '提示词', icon: Document },

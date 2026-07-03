@@ -1,77 +1,88 @@
 <template>
   <div class="task-list" v-loading="loading">
-    <div v-if="!loading && tasks.length === 0" class="task-list__empty">
+    <div v-if="!loading && layoutItems.length === 0" class="task-list__empty">
       <p>暂无任务</p>
       <p class="task-list__hint">在上方输入框回车，或按 Ctrl+N 新建</p>
     </div>
     <ul v-else class="task-list__ul">
-      <li
-        v-for="{ task, depth } in displayTasks"
-        :key="task.id"
-        class="task-list__row"
-        :class="{ 'is-selected': selectedId === task.id }"
-        :style="{ paddingLeft: `${12 + depth * 20}px` }"
-        @click="emit('select', task.id)"
-      >
-        <button
-          v-if="hasChildren(task.id)"
-          type="button"
-          class="task-list__expand"
-          :aria-expanded="isExpanded(task.id)"
-          :aria-label="isExpanded(task.id) ? '折叠子任务' : '展开子任务'"
-          @click="toggleExpand(task.id, $event)"
+      <template v-for="(item, idx) in displayItems" :key="itemKey(item, idx)">
+        <li v-if="item.type === 'group'" class="task-list__group">
+          {{ item.label }}
+        </li>
+        <li
+          v-else
+          class="task-list__row"
+          :class="{ 'is-selected': selectedId === item.task.id }"
+          :style="{ paddingLeft: `${12 + item.depth * 20}px` }"
+          @click="emit('select', item.task.id)"
         >
-          <el-icon>
-            <ArrowDown v-if="isExpanded(task.id)" />
-            <ArrowRight v-else />
-          </el-icon>
-        </button>
-        <span v-else class="task-list__expand-placeholder" aria-hidden="true" />
+          <button
+            v-if="hasChildren(item.task.id)"
+            type="button"
+            class="task-list__expand"
+            :aria-expanded="isExpanded(item.task.id)"
+            :aria-label="isExpanded(item.task.id) ? '折叠子任务' : '展开子任务'"
+            @click="toggleExpand(item.task.id, $event)"
+          >
+            <el-icon>
+              <ArrowDown v-if="isExpanded(item.task.id)" />
+              <ArrowRight v-else />
+            </el-icon>
+          </button>
+          <span v-else class="task-list__expand-placeholder" aria-hidden="true" />
 
-        <el-checkbox
-          :model-value="task.status === 'DONE'"
-          @click.stop
-          @change="() => emit('toggle-status', task)"
-        />
+          <el-checkbox
+            :model-value="item.task.status === 'DONE'"
+            @click.stop
+            @change="() => emit('toggle-status', item.task)"
+          />
 
-        <div class="task-list__body">
-          <div class="task-list__title-row">
-            <span class="task-list__title" :class="{ 'is-done': task.status === 'DONE' }">
-              {{ task.title }}
-            </span>
-            <span
-              v-if="task.priority && task.priority < 4"
-              class="task-list__priority"
-              :style="{ color: priorityColor(task.priority) }"
-              :title="priorityLabel(task.priority)"
-            >
-              {{ priorityRoman(task.priority) }}
-            </span>
-            <span
-              v-if="hasChildren(task.id) && !isExpanded(task.id)"
-              class="task-list__child-count"
-            >
-              {{ childCount(task.id) }}
-            </span>
+          <div class="task-list__body">
+            <div class="task-list__title-row">
+              <span class="task-list__title" :class="{ 'is-done': item.task.status === 'DONE' }">
+                {{ item.task.title }}
+              </span>
+              <span
+                v-if="item.task.priority && item.task.priority < 4"
+                class="task-list__priority"
+                :style="{ color: priorityColor(item.task.priority) }"
+                :title="priorityLabel(item.task.priority)"
+              >
+                {{ priorityRoman(item.task.priority) }}
+              </span>
+              <span
+                v-if="hasChildren(item.task.id) && !isExpanded(item.task.id)"
+                class="task-list__child-count"
+              >
+                {{ childCount(item.task.id) }}
+              </span>
+            </div>
+            <div v-if="hasMeta(item.task)" class="task-list__meta">
+              <span
+                v-if="showCompletedAt(item.task)"
+                class="task-list__meta-item task-list__meta-item--completed"
+                title="完成时间"
+              >
+                完成 {{ formatTaskListTime(item.task.completedAt!) }}
+              </span>
+              <span v-if="showCreatedAt(item.task)" class="task-list__meta-item" title="创建时间">
+                创建 {{ formatTaskCreatedAt(item.task.createdAt) }}
+              </span>
+              <span
+                v-if="showDueAt(item.task)"
+                class="task-list__meta-item"
+                :class="{ 'is-overdue': isOverdue(item.task) }"
+                title="截止时间"
+              >
+                截止 {{ formatTaskListTime(item.task.dueAt!) }}
+              </span>
+              <span v-if="showRemindAt(item.task)" class="task-list__meta-item" title="提醒时间">
+                提醒 {{ formatTaskListTime(item.task.remindAt!) }}
+              </span>
+            </div>
           </div>
-          <div v-if="hasMeta(task)" class="task-list__meta">
-            <span v-if="task.createdAt" class="task-list__meta-item" title="创建时间">
-              创建 {{ formatTaskCreatedAt(task.createdAt) }}
-            </span>
-            <span
-              v-if="task.dueAt"
-              class="task-list__meta-item"
-              :class="{ 'is-overdue': isOverdue(task) }"
-              title="截止时间"
-            >
-              截止 {{ formatTaskListTime(task.dueAt) }}
-            </span>
-            <span v-if="task.remindAt" class="task-list__meta-item" title="提醒时间">
-              提醒 {{ formatTaskListTime(task.remindAt) }}
-            </span>
-          </div>
-        </div>
-      </li>
+        </li>
+      </template>
     </ul>
   </div>
 </template>
@@ -81,14 +92,18 @@ import { computed, ref, watch } from 'vue'
 import { ArrowDown, ArrowRight } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import type { Task } from '@shared/types'
+import type { TaskListLayoutItem } from '@shared/task-list-layout'
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
 import { getTaskPriorityMeta } from '@shared/task-priority'
-import type { TaskPriority } from '@shared/task-priority'
+import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
+import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 
 const props = defineProps<{
-  tasks: { task: Task; depth: number }[]
+  layoutItems: TaskListLayoutItem[]
   loading: boolean
   selectedId?: string | null
+  /** 列表行内展示哪些时间字段 */
+  metaVisibility?: TaskListMetaVisibility
 }>()
 
 const emit = defineEmits<{
@@ -100,20 +115,25 @@ const expandedIds = ref<Set<string>>(new Set())
 
 const taskById = computed(() => {
   const map = new Map<string, Task>()
-  for (const { task } of props.tasks) {
-    map.set(task.id, task)
+  for (const item of props.layoutItems) {
+    if (item.type === 'task') map.set(item.task.id, item.task)
   }
   return map
 })
 
 const childCountByParent = computed(() => {
   const counts = new Map<string, number>()
-  for (const { task } of props.tasks) {
-    if (!task.parentId) continue
-    counts.set(task.parentId, (counts.get(task.parentId) ?? 0) + 1)
+  for (const item of props.layoutItems) {
+    if (item.type !== 'task' || !item.task.parentId) continue
+    counts.set(item.task.parentId, (counts.get(item.task.parentId) ?? 0) + 1)
   }
   return counts
 })
+
+function itemKey(item: TaskListLayoutItem, idx: number): string {
+  if (item.type === 'group') return `g-${item.key}-${idx}`
+  return item.task.id
+}
 
 function hasChildren(taskId: string): boolean {
   return (childCountByParent.value.get(taskId) ?? 0) > 0
@@ -139,12 +159,41 @@ function isRowVisible(task: Task, depth: number): boolean {
   return true
 }
 
-const displayTasks = computed(() =>
-  props.tasks.filter(({ task, depth }) => isRowVisible(task, depth))
+/** 分组标题始终展示；子任务仍受折叠控制 */
+const displayItems = computed(() =>
+  props.layoutItems.filter((item) => {
+    if (item.type === 'group') return true
+    return isRowVisible(item.task, item.depth)
+  })
 )
 
+function metaVis() {
+  return props.metaVisibility ?? DEFAULT_TASK_LIST_META_VISIBILITY
+}
+
+function showCreatedAt(task: Task) {
+  return metaVis().createdAt && Boolean(task.createdAt)
+}
+
+function showDueAt(task: Task) {
+  return metaVis().dueAt && Boolean(task.dueAt)
+}
+
+function showRemindAt(task: Task) {
+  return metaVis().remindAt && Boolean(task.remindAt)
+}
+
+function showCompletedAt(task: Task) {
+  return metaVis().completedAt && task.status === 'DONE' && Boolean(task.completedAt)
+}
+
 function hasMeta(task: Task): boolean {
-  return Boolean(task.createdAt || task.dueAt || task.remindAt)
+  return (
+    showCreatedAt(task) ||
+    showDueAt(task) ||
+    showRemindAt(task) ||
+    showCompletedAt(task)
+  )
 }
 
 function toggleExpand(taskId: string, event: Event) {
@@ -170,7 +219,7 @@ function expandAncestors(taskId: string) {
 }
 
 watch(
-  () => props.tasks.map((t) => t.task.id).join('|'),
+  () => props.layoutItems.map((i) => (i.type === 'task' ? i.task.id : i.key)).join('|'),
   () => {
     expandedIds.value = new Set()
     if (props.selectedId) expandAncestors(props.selectedId)
@@ -228,6 +277,15 @@ function priorityColor(priority: TaskPriority) {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.task-list__group {
+  padding: 12px 16px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--desktop-muted);
+  letter-spacing: 0.02em;
+  user-select: none;
 }
 
 .task-list__row {
@@ -334,6 +392,10 @@ function priorityColor(priority: TaskPriority) {
   &.is-overdue {
     color: var(--el-color-danger);
     font-weight: 500;
+  }
+
+  &--completed {
+    color: var(--el-color-success);
   }
 }
 </style>

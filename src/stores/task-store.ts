@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import dayjs from 'dayjs'
+import {
+  doneTimeRangeBounds,
+  taskDateIsoInRange,
+  taskMatchesSmartListDate
+} from '@shared/date-filter'
+import { isDueSmartList } from '@shared/smart-list'
 import type { CreateTaskDto, DeleteTaskOptions, Task, TaskListFilter } from '@shared/types'
 import type { TaskPriority } from '@shared/task-priority'
 import { cloneTaskListFilter, isMatrixListFilter } from '@shared/task-list-filter'
@@ -53,6 +59,12 @@ function mergeFilter(
 
 /** 判断任务是否会被当前列表筛选条件包含 */
 export function taskMatchesFilter(task: Task, filter: TaskListFilter): boolean {
+  if (filter.smartList === 'trash') {
+    return Boolean(task.deletedAt)
+  }
+  if (task.deletedAt) {
+    return false
+  }
   if (filter.hideDone && task.status === 'DONE') {
     return false
   }
@@ -65,17 +77,20 @@ export function taskMatchesFilter(task: Task, filter: TaskListFilter): boolean {
       return false
     }
   }
-  if (filter.smartList === 'today') {
-    const today = dayjs().format('YYYY-MM-DD')
-    if (task.status === 'DONE') {
-      return false
-    }
-    if (!task.dueAt?.startsWith(today)) {
-      return false
-    }
+  if (isDueSmartList(filter.smartList)) {
+    return taskMatchesSmartListDate(task, filter.smartList, filter.dateField ?? 'dueAt')
   }
   if (filter.smartList === 'done' && task.status !== 'DONE') {
     return false
+  }
+  if (filter.smartList === 'done' && filter.doneTimeRange && filter.doneTimeRange !== 'all') {
+    const bounds = doneTimeRangeBounds(filter.doneTimeRange, dayjs(), {
+      from: filter.dateFrom,
+      to: filter.dateTo
+    })
+    if (bounds && !taskDateIsoInRange(task, 'completedAt', bounds)) {
+      return false
+    }
   }
   if (filter.parentId !== undefined && filter.parentId === null && task.parentId) {
     return false
@@ -85,7 +100,9 @@ export function taskMatchesFilter(task: Task, filter: TaskListFilter): boolean {
 
 /** 侧栏导航：整页替换筛选，避免 merge 残留 smartList/categoryId/search */
 export type TaskNavView =
-  | { kind: 'smart'; smart: 'all' | 'today' }
+  | { kind: 'smart'; smart: 'all' | 'today' | 'week' | 'last7days'; dateField?: import('@shared/date-filter').TaskDateField }
+  | { kind: 'done'; doneTimeRange?: import('@shared/date-filter').DoneTimeRange; dateFrom?: string | null; dateTo?: string | null }
+  | { kind: 'trash' }
   | { kind: 'category'; categoryId: string }
   | { kind: 'uncategorized' }
   | { kind: 'matrix' }
@@ -93,6 +110,8 @@ export type TaskNavView =
 export const useTaskStore = defineStore('tasks', () => {
   const tasks = ref<Task[]>([])
   const loading = ref(false)
+  const trashCount = ref(0)
+  const doneCount = ref(0)
   const filter = ref<TaskListFilter>({
     smartList: 'all',
     hideDone: readHideDonePreference()
@@ -131,14 +150,31 @@ export const useTaskStore = defineStore('tasks', () => {
   async function navigate(view: TaskNavView) {
     const hideDone = filter.value.hideDone
     if (view.kind === 'smart') {
-      filter.value = { hideDone, smartList: view.smart }
+      const next: TaskListFilter = { hideDone, smartList: view.smart }
+      if (view.dateField && isDueSmartList(view.smart)) {
+        next.dateField = view.dateField
+      } else if (isDueSmartList(view.smart)) {
+        next.dateField = filter.value.dateField ?? 'dueAt'
+      }
+      filter.value = next
+    } else if (view.kind === 'done') {
+      /** 已完成：仅 DONE，按 completed_at 倒序（见 task-repository） */
+      filter.value = {
+        hideDone: false,
+        smartList: 'done',
+        doneTimeRange: view.doneTimeRange ?? filter.value.doneTimeRange ?? 'all',
+        dateFrom: view.dateFrom ?? filter.value.dateFrom,
+        dateTo: view.dateTo ?? filter.value.dateTo
+      }
+    } else if (view.kind === 'trash') {
+      filter.value = { smartList: 'trash' }
     } else if (view.kind === 'category') {
       filter.value = { hideDone, categoryId: view.categoryId }
     } else if (view.kind === 'uncategorized') {
       filter.value = { hideDone, categoryId: null }
     } else {
-      /** 四象限：仅顶层任务，跨清单按 priority 分组 */
-      filter.value = { hideDone, parentId: null }
+      /** 四象限：拉取全部任务（含子任务），顶层入象限、子任务在父任务下嵌套展示 */
+      filter.value = { hideDone }
     }
     await fetchWithCurrentFilter()
   }
@@ -176,21 +212,25 @@ export const useTaskStore = defineStore('tasks', () => {
         removeTaskFromList(task.id)
       }
       await fetchWithCurrentFilter()
+      await refreshSidebarCounts()
       return
     }
     if (!task) {
       await fetchWithCurrentFilter()
+      await refreshSidebarCounts()
       return
     }
 
     if (mode === 'create') {
       await reloadAfterSave(task)
+      await refreshSidebarCounts()
       return
     }
 
     // update：先拉最新列表，再强制合并刚保存的任务（防止 IPC 竞态或缓存导致 UI 滞后）
     await fetchWithCurrentFilter()
     syncTaskInList(task)
+    await refreshSidebarCounts()
   }
 
   async function reloadAfterSave(created: Task) {
@@ -203,7 +243,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
     if (wasMatrix) {
       /** 四象限内新建/保存：保持 matrix 筛选，避免跳回「全部」列表 */
-      filter.value = { hideDone, parentId: null }
+      filter.value = { hideDone }
     } else if (created.categoryId) {
       filter.value = { hideDone, categoryId: created.categoryId }
     } else {
@@ -251,7 +291,7 @@ export const useTaskStore = defineStore('tasks', () => {
    */
   async function quickCreate(
     title: string,
-    options?: { categoryId?: string | null; priority?: TaskPriority }
+    options?: { categoryId?: string | null; priority?: TaskPriority; kanbanGroupId?: string | null }
   ) {
     const trimmed = title.trim()
     if (!trimmed) {
@@ -264,9 +304,13 @@ export const useTaskStore = defineStore('tasks', () => {
     if (options?.priority != null) {
       dto.priority = options.priority
     }
+    if (options?.kanbanGroupId !== undefined) {
+      dto.kanbanGroupId = options.kanbanGroupId
+    }
     const task = unwrapIpc(await window.api.tasks.create(dto))
     syncTaskInList(task)
     await fetchWithCurrentFilter()
+    await refreshSidebarCounts()
     return task
   }
 
@@ -275,6 +319,7 @@ export const useTaskStore = defineStore('tasks', () => {
       const task = unwrapIpc(await window.api.tasks.update(id, patch))
       await fetchWithCurrentFilter()
       syncTaskInList(task)
+      await refreshSidebarCounts()
       return task
     } catch {
       throw new Error('update failed')
@@ -285,11 +330,54 @@ export const useTaskStore = defineStore('tasks', () => {
     unwrapIpc(await window.api.tasks.delete(id, options))
     removeTaskFromList(id)
     await fetchWithCurrentFilter()
+    await refreshSidebarCounts()
+  }
+
+  async function refreshSidebarCounts() {
+    try {
+      trashCount.value = unwrapIpc(await window.api.tasks.countTrash())
+    } catch {
+      trashCount.value = 0
+    }
+    try {
+      doneCount.value = unwrapIpc(await window.api.tasks.countDone())
+    } catch {
+      doneCount.value = 0
+    }
+  }
+
+  /** @deprecated 使用 refreshSidebarCounts */
+  async function refreshTrashCount() {
+    await refreshSidebarCounts()
+  }
+
+  async function restoreFromTrash(id: string) {
+    const task = unwrapIpc(await window.api.tasks.restore(id))
+    removeTaskFromList(id)
+    await fetchWithCurrentFilter()
+    await refreshSidebarCounts()
+    return task
+  }
+
+  async function purgeFromTrash(id: string, options?: DeleteTaskOptions) {
+    unwrapIpc(await window.api.tasks.permanentDelete(id, options))
+    removeTaskFromList(id)
+    await fetchWithCurrentFilter()
+    await refreshSidebarCounts()
+  }
+
+  async function emptyTrashBin() {
+    const n = unwrapIpc(await window.api.tasks.emptyTrash())
+    tasks.value = []
+    await refreshSidebarCounts()
+    return n
   }
 
   return {
     tasks,
     loading,
+    trashCount,
+    doneCount,
     filter,
     load,
     navigate,
@@ -300,6 +388,11 @@ export const useTaskStore = defineStore('tasks', () => {
     create,
     quickCreate,
     update,
-    remove
+    remove,
+    refreshTrashCount,
+    refreshSidebarCounts,
+    restoreFromTrash,
+    purgeFromTrash,
+    emptyTrashBin
   }
 })

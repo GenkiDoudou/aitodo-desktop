@@ -84,6 +84,21 @@ export function parseTaskDescription(raw: string | null | undefined): {
   }
 }
 
+/** 看板卡片：正文纯文本摘要 */
+export function taskDescriptionPreview(raw: string | null | undefined, maxLen = 60): string {
+  const { body } = parseTaskDescription(raw)
+  const plain = body
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`]+`/g, ' ')
+    .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)]\([^)]*\)/g, '$1')
+    .replace(/[#>*_~\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!plain) return ''
+  return plain.length <= maxLen ? plain : `${plain.slice(0, maxLen)}…`
+}
+
 /** 合并正文与外置附件为 description 存储字符串 */
 export function serializeTaskDescription(
   body: string,

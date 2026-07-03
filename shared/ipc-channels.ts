@@ -3,9 +3,19 @@
 export const IPC = {
   TASKS_LIST: 'tasks:list',
   TASKS_GET: 'tasks:get',
+  TASKS_GET_IN_TRASH: 'tasks:getInTrash',
   TASKS_CREATE: 'tasks:create',
   TASKS_UPDATE: 'tasks:update',
   TASKS_DELETE: 'tasks:delete',
+  TASKS_RESTORE: 'tasks:restore',
+  TASKS_PERMANENT_DELETE: 'tasks:permanentDelete',
+  TASKS_EMPTY_TRASH: 'tasks:emptyTrash',
+  TASKS_COUNT_TRASH: 'tasks:countTrash',
+  TASKS_COUNT_DONE: 'tasks:countDone',
+  KANBAN_GROUPS_LIST: 'kanbanGroups:list',
+  KANBAN_GROUPS_CREATE: 'kanbanGroups:create',
+  KANBAN_GROUPS_UPDATE: 'kanbanGroups:update',
+  KANBAN_GROUPS_DELETE: 'kanbanGroups:delete',
   CATEGORIES_LIST: 'categories:list',
   CATEGORIES_CREATE: 'categories:create',
   CATEGORIES_UPDATE: 'categories:update',
@@ -34,5 +44,11 @@ export const IPC = {
   /** 用系统默认程序打开附件 */
   APP_OPEN_ATTACHMENT: 'app:openAttachment',
   /** 附件另存为到用户指定路径 */
-  APP_DOWNLOAD_ATTACHMENT: 'app:downloadAttachment'
+  APP_DOWNLOAD_ATTACHMENT: 'app:downloadAttachment',
+  /** Main → Renderer：新应用内消息 */
+  APP_MESSAGE_PUSH: 'app:message-push',
+  MESSAGES_LIST: 'messages:list',
+  MESSAGES_COUNT_UNREAD: 'messages:countUnread',
+  MESSAGES_MARK_READ: 'messages:markRead',
+  MESSAGES_MARK_ALL_READ: 'messages:markAllRead'
 } as const

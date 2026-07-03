@@ -1,9 +1,14 @@
 <template>
 
-  <aside
+  <component
+    :is="variant === 'dialog' ? 'div' : 'aside'"
     v-if="visible"
     class="task-panel"
-    :class="{ 'is-panel-expanded': panelExpanded, 'is-content-focus': contentExpanded }"
+    :class="{
+      'is-panel-expanded': panelExpanded,
+      'is-content-focus': contentExpanded,
+      'task-panel--dialog': variant === 'dialog'
+    }"
     @click.stop
   >
 
@@ -16,6 +21,8 @@
       </el-button>
 
       <span class="task-panel__header-spacer" />
+
+      <TaskPriorityFlagMenu v-model="form.priority" class="task-panel__header-priority" />
 
       <el-button text class="task-panel__close" @click="onClose">
 
@@ -96,22 +103,6 @@
 
             </el-dropdown>
 
-            <el-select
-              v-model="form.priority"
-              size="small"
-              class="task-panel__priority-select"
-              placeholder="优先级"
-            >
-
-              <el-option
-                v-for="p in TASK_PRIORITIES"
-                :key="p.value"
-                :label="p.label"
-                :value="p.value"
-              />
-
-            </el-select>
-
           </div>
 
 
@@ -150,9 +141,15 @@
 
             </el-form-item>
 
-            <el-form-item label="提醒时间" :error="timeError || undefined">
+            <el-form-item label="提醒" :error="timeError || undefined">
 
-              <RemindTimePicker v-model="remindDate" :due-at="dueDate" />
+              <RemindMultiPicker v-model="remindPicker" :due-at="dueDate" />
+
+            </el-form-item>
+
+            <el-form-item v-if="dueDate" label="重复">
+
+              <TaskRecurrencePicker v-model="recurrenceRule" :due-at="dueDate" />
 
             </el-form-item>
 
@@ -253,7 +250,7 @@
 
     </footer>
 
-  </aside>
+  </component>
 
 </template>
 
@@ -271,7 +268,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 import type { Task, TaskStatus } from '@shared/types'
 
-import { DEFAULT_TASK_PRIORITY, TASK_PRIORITIES, type TaskPriority } from '@shared/task-priority'
+import { DEFAULT_TASK_PRIORITY, type TaskPriority } from '@shared/task-priority'
 
 import { useCategoryStore } from '@/stores/category-store'
 
@@ -279,13 +276,19 @@ import { useTaskStore } from '@/stores/task-store'
 
 import { unwrapIpc } from '@/ipc/client'
 
-import { assertRemindBeforeDue, toIso } from '@/utils/datetime'
+import { assertRemindersBeforeDue } from '@shared/task-reminder'
+import type { TaskRecurrenceRule } from '@shared/task-reminder'
+import { toIso } from '@/utils/datetime'
 
 import DatetimeShortcutPicker from '@/components/DatetimeShortcutPicker.vue'
 
-import RemindTimePicker from '@/components/RemindTimePicker.vue'
+import RemindMultiPicker, { type RemindMultiPickerValue } from '@/components/RemindMultiPicker.vue'
+
+import TaskRecurrencePicker from '@/components/TaskRecurrencePicker.vue'
 
 import TaskBodyEditor from '@/components/TaskBodyEditor.vue'
+
+import TaskPriorityFlagMenu from '@/components/TaskPriorityFlagMenu.vue'
 
 
 
@@ -299,21 +302,17 @@ export interface TaskSavePayload {
 
 
 
-const props = defineProps<{
-
+const props = withDefaults(
+  defineProps<{
   visible: boolean
-
   taskId: string | null
-
   defaultCategoryId?: string | null
-
-  /** 新建任务时的默认四象限优先级 */
   defaultPriority?: TaskPriority
-
-  /** 从四象限进入时强化清单选择展示 */
   emphasizeCategory?: boolean
-
-}>()
+  variant?: 'sidebar' | 'dialog'
+}>(),
+  { variant: 'sidebar' }
+)
 
 
 
@@ -373,7 +372,9 @@ const form = reactive({
 
 const dueDate = ref<string | null>(null)
 
-const remindDate = ref<string | null>(null)
+const remindPicker = ref<RemindMultiPickerValue>({ reminders: [], continuous: false })
+
+const recurrenceRule = ref<TaskRecurrenceRule | null>(null)
 
 const timeError = ref<string | null>(null)
 
@@ -395,9 +396,20 @@ const subtaskInputRef = ref<InputInstance>()
 
 
 
-const savedChildren = computed(() =>
-  props.taskId ? taskStore.tasks.filter((t) => t.parentId === props.taskId) : []
-)
+const childTasks = ref<Task[]>([])
+
+/** 按 parentId 单独拉子任务，不依赖列表筛选（四象限曾用 parentId:null 会导致子任务不在 store） */
+async function refreshChildTasks() {
+  if (!props.taskId) {
+    childTasks.value = []
+    return
+  }
+  childTasks.value = unwrapIpc(
+    await window.api.tasks.list({ parentId: props.taskId })
+  )
+}
+
+const savedChildren = computed(() => childTasks.value)
 
 const displaySubtasks = computed(() => {
   const drafts = draftSubtasks.value.map((title, index) => ({
@@ -433,7 +445,9 @@ function resetForCreate() {
 
   dueDate.value = null
 
-  remindDate.value = null
+  remindPicker.value = { reminders: [], continuous: false }
+
+  recurrenceRule.value = null
 
   draftSubtasks.value = []
 
@@ -495,6 +509,8 @@ watch(
 
       resetForCreate()
 
+      childTasks.value = []
+
       return
 
     }
@@ -513,9 +529,21 @@ watch(
 
     dueDate.value = task.dueAt
 
-    remindDate.value = task.remindAt
+    remindPicker.value = {
+      reminders: (task.reminders ?? []).map((r) => ({
+        remindAt: r.remindAt,
+        offsetMinutes: r.offsetMinutes
+      })),
+      continuous: task.remindContinuous ?? false
+    }
 
-    scheduleOpen.value = Boolean(task.dueAt || task.remindAt)
+    recurrenceRule.value = task.recurrence ?? null
+
+    scheduleOpen.value = Boolean(
+      task.dueAt || remindPicker.value.reminders.length || task.recurrence
+    )
+
+    await refreshChildTasks()
 
   },
 
@@ -525,11 +553,11 @@ watch(
 
 
 
-watch([dueDate, remindDate], () => {
-
-  timeError.value = assertRemindBeforeDue(remindDate.value, dueDate.value)
-
-})
+watch([dueDate, remindPicker], () => {
+  const dueAt = toIso(dueDate.value)
+  const err = assertRemindersBeforeDue(remindPicker.value.reminders, dueAt)
+  timeError.value = err ?? ''
+}, { deep: true })
 
 
 
@@ -545,9 +573,12 @@ function buildPayload() {
 
   const dueAt = toIso(dueDate.value)
 
-  const remindAt = toIso(remindDate.value)
+  const reminders = remindPicker.value.reminders.map((r) => ({
+    remindAt: r.remindAt,
+    offsetMinutes: r.offsetMinutes ?? null
+  }))
 
-  const err = assertRemindBeforeDue(remindAt, dueAt)
+  const err = assertRemindersBeforeDue(reminders, dueAt)
 
   if (err) {
 
@@ -573,7 +604,11 @@ function buildPayload() {
 
     dueAt,
 
-    remindAt
+    reminders,
+
+    recurrence: recurrenceRule.value,
+
+    remindContinuous: remindPicker.value.continuous
 
   }
 
@@ -643,7 +678,7 @@ async function addSubtaskInline() {
 
   newSubtaskTitle.value = ''
 
-  await taskStore.load()
+  await refreshChildTasks()
 
 }
 
@@ -653,15 +688,13 @@ async function toggleChildStatus(item: { id?: string; status?: TaskStatus }) {
 
   if (!item.id || !item.status) return
 
-  const order: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE']
-
-  const idx = order.indexOf(item.status)
-
-  const next = order[(idx + 1) % order.length]
+  const next: TaskStatus = item.status === 'DONE' ? 'TODO' : 'DONE'
 
   try {
 
     await taskStore.update(item.id, { status: next })
+
+    await refreshChildTasks()
 
   } catch {
 
@@ -701,6 +734,7 @@ async function removeSubtask(item: SubtaskRow) {
   }
   try {
     await taskStore.remove(item.id)
+    await refreshChildTasks()
     ElMessage.success('子任务已删除')
   } catch {
     /* store 内 unwrapIpc 已 Toast */
@@ -850,7 +884,12 @@ async function remove() {
 
   transition: width 0.2s ease;
 
-
+  &--dialog {
+    width: 100%;
+    max-width: none;
+    border-left: none;
+    min-height: 60vh;
+  }
 
   &.is-panel-expanded {
 
@@ -1166,12 +1205,9 @@ async function remove() {
   gap: 8px;
 }
 
-.task-panel__priority-select {
-  width: 148px;
+.task-panel__header-priority {
   flex-shrink: 0;
 }
-
-
 
 .task-panel__section-title {
 

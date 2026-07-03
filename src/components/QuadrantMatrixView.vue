@@ -37,25 +37,48 @@
         <div v-else class="quadrant-matrix__groups">
           <ul v-if="layoutFor(meta.value).ungrouped.length" class="quadrant-matrix__tasks quadrant-matrix__tasks--flat">
             <li
-              v-for="task in layoutFor(meta.value).ungrouped"
+              v-for="{ task, depth } in tasksWithChildren(layoutFor(meta.value).ungrouped)"
               :key="task.id"
               class="quadrant-matrix__task"
               :class="{ 'is-dragging': draggingTaskId === task.id }"
-              draggable="true"
-              @dragstart="onDragStart($event, task, meta.value)"
+              :style="{ paddingLeft: `${6 + depth * 18}px` }"
+              :draggable="depth === 0"
+              @dragstart="depth === 0 && onDragStart($event, task, meta.value)"
               @dragend="onDragEnd"
               @click="onTaskClick(task.id)"
             >
+              <button
+                v-if="hasChildren(task.id)"
+                type="button"
+                class="quadrant-matrix__expand"
+                :aria-expanded="isExpanded(task.id)"
+                @click.stop="toggleExpand(task.id, $event)"
+              >
+                <el-icon>
+                  <ArrowDown v-if="isExpanded(task.id)" />
+                  <ArrowRight v-else />
+                </el-icon>
+              </button>
+              <span v-else class="quadrant-matrix__expand-placeholder" aria-hidden="true" />
+
               <el-checkbox
                 :model-value="task.status === 'DONE'"
                 @click.stop
                 @change="() => emit('toggle-status', task)"
               />
               <div class="quadrant-matrix__task-body">
-                <span class="quadrant-matrix__task-title" :class="{ 'is-done': task.status === 'DONE' }">
-                  {{ task.title }}
-                </span>
-                <div class="quadrant-matrix__task-meta">
+                <div class="quadrant-matrix__title-row">
+                  <span class="quadrant-matrix__task-title" :class="{ 'is-done': task.status === 'DONE' }">
+                    {{ task.title }}
+                  </span>
+                  <span
+                    v-if="hasChildren(task.id) && !isExpanded(task.id)"
+                    class="quadrant-matrix__child-count"
+                  >
+                    {{ childCount(task.id) }}
+                  </span>
+                </div>
+                <div v-if="depth === 0" class="quadrant-matrix__task-meta">
                   <span v-if="categoryName(task)" class="quadrant-matrix__category">
                     <span class="quadrant-matrix__folder" aria-hidden="true">📁</span>
                     {{ categoryName(task) }}
@@ -84,25 +107,48 @@
 
             <ul v-show="isGroupOpen(meta.value, group.key)" class="quadrant-matrix__tasks">
               <li
-                v-for="task in group.tasks"
+                v-for="{ task, depth } in tasksWithChildren(group.tasks)"
                 :key="task.id"
                 class="quadrant-matrix__task"
                 :class="{ 'is-dragging': draggingTaskId === task.id }"
-                draggable="true"
-                @dragstart="onDragStart($event, task, meta.value)"
+                :style="{ paddingLeft: `${6 + depth * 18}px` }"
+                :draggable="depth === 0"
+                @dragstart="depth === 0 && onDragStart($event, task, meta.value)"
                 @dragend="onDragEnd"
                 @click="onTaskClick(task.id)"
               >
+                <button
+                  v-if="hasChildren(task.id)"
+                  type="button"
+                  class="quadrant-matrix__expand"
+                  :aria-expanded="isExpanded(task.id)"
+                  @click.stop="toggleExpand(task.id, $event)"
+                >
+                  <el-icon>
+                    <ArrowDown v-if="isExpanded(task.id)" />
+                    <ArrowRight v-else />
+                  </el-icon>
+                </button>
+                <span v-else class="quadrant-matrix__expand-placeholder" aria-hidden="true" />
+
                 <el-checkbox
                   :model-value="task.status === 'DONE'"
                   @click.stop
                   @change="() => emit('toggle-status', task)"
                 />
                 <div class="quadrant-matrix__task-body">
-                  <span class="quadrant-matrix__task-title" :class="{ 'is-done': task.status === 'DONE' }">
-                    {{ task.title }}
-                  </span>
-                  <div class="quadrant-matrix__task-meta">
+                  <div class="quadrant-matrix__title-row">
+                    <span class="quadrant-matrix__task-title" :class="{ 'is-done': task.status === 'DONE' }">
+                      {{ task.title }}
+                    </span>
+                    <span
+                      v-if="hasChildren(task.id) && !isExpanded(task.id)"
+                      class="quadrant-matrix__child-count"
+                    >
+                      {{ childCount(task.id) }}
+                    </span>
+                  </div>
+                  <div v-if="depth === 0" class="quadrant-matrix__task-meta">
                     <span v-if="categoryName(task)" class="quadrant-matrix__category">
                       <span class="quadrant-matrix__folder" aria-hidden="true">📁</span>
                       {{ categoryName(task) }}
@@ -127,12 +173,14 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import type { Category, Task } from '@shared/types'
 import type { TaskPriority } from '@shared/task-priority'
 import { TASK_PRIORITIES } from '@shared/task-priority'
 import {
+  buildChildCountMap,
+  flattenQuadrantTaskTree,
   layoutTasksInQuadrant,
   splitTasksByPriority,
   type QuadrantTaskGroupKey
@@ -157,6 +205,7 @@ const emit = defineEmits<{
 const buckets = computed(() => splitTasksByPriority(props.tasks))
 
 const groupOpen = reactive<Record<string, boolean>>({})
+const expandedIds = ref<Set<string>>(new Set())
 const draggingTaskId = ref<string | null>(null)
 const dragSourcePriority = ref<TaskPriority | null>(null)
 const dropTargetPriority = ref<TaskPriority | null>(null)
@@ -184,6 +233,33 @@ function layoutFor(priority: TaskPriority) {
 function hasTasks(priority: TaskPriority) {
   const layout = layoutFor(priority)
   return layout.ungrouped.length > 0 || layout.groups.length > 0
+}
+
+const childCountMap = computed(() => buildChildCountMap(props.tasks))
+
+function hasChildren(taskId: string) {
+  return (childCountMap.value.get(taskId) ?? 0) > 0
+}
+
+function childCount(taskId: string) {
+  return childCountMap.value.get(taskId) ?? 0
+}
+
+function isExpanded(taskId: string) {
+  return expandedIds.value.has(taskId)
+}
+
+function toggleExpand(taskId: string, event: Event) {
+  event.stopPropagation()
+  const next = new Set(expandedIds.value)
+  if (next.has(taskId)) next.delete(taskId)
+  else next.add(taskId)
+  expandedIds.value = next
+}
+
+/** 象限内顶层任务 + 已展开子任务，平铺为带 depth 的行 */
+function tasksWithChildren(roots: Task[]) {
+  return flattenQuadrantTaskTree(roots, props.tasks, expandedIds.value)
 }
 
 const categoryMap = computed(() => {
@@ -418,10 +494,10 @@ function onTaskClick(taskId: string) {
 .quadrant-matrix__task {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
   padding: 8px 6px;
   border-radius: 8px;
-  cursor: grab;
+  cursor: pointer;
 
   &:hover {
     background: var(--desktop-hover);
@@ -431,6 +507,54 @@ function onTaskClick(taskId: string) {
     opacity: 0.45;
     cursor: grabbing;
   }
+
+  &[draggable='true'] {
+    cursor: grab;
+  }
+}
+
+.quadrant-matrix__expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--desktop-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--desktop-text);
+  }
+}
+
+.quadrant-matrix__expand-placeholder {
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.quadrant-matrix__title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.quadrant-matrix__child-count {
+  font-size: 11px;
+  color: var(--desktop-muted);
+  background: var(--desktop-bg);
+  border: 1px solid var(--desktop-border);
+  border-radius: 10px;
+  padding: 0 6px;
+  line-height: 18px;
+  flex-shrink: 0;
 }
 
 .quadrant-matrix__task-body {
@@ -439,7 +563,8 @@ function onTaskClick(taskId: string) {
 }
 
 .quadrant-matrix__task-title {
-  display: block;
+  flex: 1;
+  min-width: 0;
   font-size: 14px;
   line-height: 1.4;
   word-break: break-word;

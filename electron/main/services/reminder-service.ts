@@ -1,26 +1,36 @@
 import { Notification } from 'electron'
 import { nowIso } from '@shared/datetime'
+import { nextDueAfterRecurrence, remindAtFromDueOffset } from '@shared/task-reminder'
+import type { AppMessage } from '@shared/types'
 import type { TaskRepository } from '../db/task-repository'
+import type { TaskReminderRepository } from '../db/task-reminder-repository'
+import type { AppMessageService } from './app-message-service'
+import type { HolidayService } from './holiday-service'
 
 const SCAN_INTERVAL_MS = 60_000
 
 /**
- * 主进程定时扫描 remind_at，触发系统通知。
- * 同一任务仅提醒一次：触发前先写入 remind_fired_at，并监听 close/click 防重复。
+ * 主进程定时扫描 task_reminders，触发系统通知与应用内消息。
+ * 支持持续提醒与循环（触发后推进 dueAt 并重算相对提醒）。
+ * 法定节假日循环依赖 HolidayService（timor.tech API + 本地缓存）。
  */
 export class ReminderService {
   private timer: NodeJS.Timeout | null = null
-  /** 本轮已排队展示的任务，防止 60s 内重复弹窗 */
   private readonly pendingIds = new Set<string>()
+  private ticking = false
 
-  constructor(private readonly taskRepo: TaskRepository) {}
+  constructor(
+    private readonly taskRepo: TaskRepository,
+    private readonly reminderRepo: TaskReminderRepository,
+    private readonly messageService: AppMessageService,
+    private readonly holidayService: HolidayService,
+    private readonly onInAppMessage?: (message: AppMessage) => void
+  ) {}
 
   start(): void {
-    if (this.timer) {
-      return
-    }
-    this.tick()
-    this.timer = setInterval(() => this.tick(), SCAN_INTERVAL_MS)
+    if (this.timer) return
+    void this.tick()
+    this.timer = setInterval(() => void this.tick(), SCAN_INTERVAL_MS)
   }
 
   stop(): void {
@@ -31,41 +41,88 @@ export class ReminderService {
     this.pendingIds.clear()
   }
 
-  private markFired(taskId: string, firedAt: string): void {
-    if (this.pendingIds.has(taskId)) {
-      return
+  private async tick(): Promise<void> {
+    if (this.ticking) return
+    this.ticking = true
+    try {
+      const now = nowIso()
+      const due = this.reminderRepo.findDue(now)
+      for (const reminder of due) {
+        if (this.pendingIds.has(reminder.id)) continue
+        this.pendingIds.add(reminder.id)
+
+        const task = this.taskRepo.findById(reminder.taskId)
+        if (!task) {
+          this.pendingIds.delete(reminder.id)
+          continue
+        }
+
+        const inApp = this.messageService.createTaskReminder({
+          ...task,
+          title: task.title,
+          id: task.id
+        } as import('@shared/types').Task)
+        this.onInAppMessage?.(inApp)
+
+        const continuous = task.remindContinuous
+        const recurrence = task.recurrence
+
+        if (!continuous) {
+          this.reminderRepo.markFired(reminder.id, now)
+        }
+
+        if (recurrence && task.dueAt) {
+          const nextDue = await this.resolveNextDue(task.dueAt, recurrence)
+          if (nextDue) {
+            const updated = {
+              ...task,
+              dueAt: nextDue,
+              remindAt:
+                reminder.offsetMinutes != null
+                  ? remindAtFromDueOffset(nextDue, reminder.offsetMinutes)
+                  : task.remindAt,
+              updatedAt: now
+            }
+            this.taskRepo.update(updated)
+            this.reminderRepo.rebuildOffsetsForTask(task.id, nextDue)
+            if (continuous) {
+              this.reminderRepo.clearFiredForTask(task.id)
+            }
+          }
+        }
+
+        if (!Notification.isSupported()) {
+          this.pendingIds.delete(reminder.id)
+          continue
+        }
+
+        const notification = new Notification({
+          title: '任务提醒',
+          body: task.title
+        })
+        const release = () => this.pendingIds.delete(reminder.id)
+        notification.on('close', release)
+        notification.on('click', release)
+        notification.on('failed', release)
+        notification.show()
+      }
+    } finally {
+      this.ticking = false
     }
-    this.pendingIds.add(taskId)
-    this.taskRepo.markRemindFired(taskId, firedAt)
   }
 
-  private tick(): void {
-    if (!Notification.isSupported()) {
-      return
-    }
-    const now = nowIso()
-    const due = this.taskRepo.findDueReminders(now)
-    for (const task of due) {
-      if (this.pendingIds.has(task.id)) {
-        continue
+  private async resolveNextDue(
+    dueAt: string,
+    recurrence: NonNullable<import('@shared/types').Task['recurrence']>
+  ): Promise<string | null> {
+    if (recurrence.type === 'legal_holidays') {
+      try {
+        return await this.holidayService.nextLegalHolidayDueAfter(dueAt)
+      } catch (err) {
+        console.error('[ReminderService] 法定节假日数据获取失败', err)
+        return null
       }
-      // 先落库再弹窗，避免下一轮扫描重复提醒
-      this.markFired(task.id, now)
-
-      const notification = new Notification({
-        title: '任务提醒',
-        body: task.title
-      })
-      notification.on('close', () => {
-        this.pendingIds.delete(task.id)
-      })
-      notification.on('click', () => {
-        this.pendingIds.delete(task.id)
-      })
-      notification.on('failed', () => {
-        this.pendingIds.delete(task.id)
-      })
-      notification.show()
     }
+    return nextDueAfterRecurrence(dueAt, recurrence)
   }
 }

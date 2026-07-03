@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import dayjs from 'dayjs'
 import BetterSqlite3 from 'better-sqlite3'
 import { initDatabaseForTest, closeDatabase } from '../db/database'
+import { TaskReminderRepository } from '../db/task-reminder-repository'
 import { TaskRepository } from '../db/task-repository'
 import { TaskService } from './task-service'
 import { AppError } from '@shared/types'
@@ -12,7 +14,7 @@ describe('TaskService', () => {
     closeDatabase()
     const db = new BetterSqlite3(':memory:')
     initDatabaseForTest(db)
-    service = new TaskService(new TaskRepository(db))
+    service = new TaskService(new TaskRepository(db), new TaskReminderRepository(db))
   })
 
   it('creates task with TODO status', () => {
@@ -21,6 +23,20 @@ describe('TaskService', () => {
     expect(task.status).toBe('TODO')
     expect(task.priority).toBe(4)
     expect(task.completedAt).toBeNull()
+  })
+
+  it('creates task with multiple reminders', () => {
+    const due = dayjs().add(1, 'day').format('YYYY-MM-DDTHH:mm:ss')
+    const task = service.create({
+      title: '多提醒',
+      dueAt: due,
+      reminders: [
+        { remindAt: due, offsetMinutes: 0 },
+        { remindAt: dayjs(due).subtract(30, 'minute').format('YYYY-MM-DDTHH:mm:ss'), offsetMinutes: 30 }
+      ]
+    })
+    const loaded = service.get(task.id)
+    expect(loaded.reminders).toHaveLength(2)
   })
 
   it('creates task with explicit priority', () => {
@@ -154,5 +170,86 @@ describe('TaskService', () => {
     expect(child.parentId).toBe(parent.id)
     const list = service.list({ smartList: 'all', hideDone: true })
     expect(list.some((t) => t.id === child.id)).toBe(true)
+  })
+
+  it('filters last7days by due cutoff', () => {
+    const base = dayjs()
+    const inRange = service.create({
+      title: '7天内',
+      dueAt: `${base.add(2, 'day').format('YYYY-MM-DD')}T10:00:00`
+    })
+    const outRange = service.create({
+      title: '超出7天',
+      dueAt: `${base.add(8, 'day').format('YYYY-MM-DD')}T10:00:00`
+    })
+    const list = service.list({ smartList: 'last7days', hideDone: true })
+    expect(list.some((t) => t.id === inRange.id)).toBe(true)
+    expect(list.some((t) => t.id === outRange.id)).toBe(false)
+  })
+
+  it('filters week by due cutoff through Sunday', () => {
+    const base = dayjs()
+    const inWeek = service.create({
+      title: '本周内',
+      dueAt: `${base.endOf('week').format('YYYY-MM-DD')}T18:00:00`
+    })
+    const nextWeek = service.create({
+      title: '下周',
+      dueAt: `${base.add(8, 'day').format('YYYY-MM-DD')}T10:00:00`
+    })
+    const list = service.list({ smartList: 'week', hideDone: true })
+    expect(list.some((t) => t.id === inWeek.id)).toBe(true)
+    expect(list.some((t) => t.id === nextWeek.id)).toBe(false)
+  })
+
+  it('filters done list by doneTimeRange today', () => {
+    const todayDone = service.create({ title: '今日完成' })
+    service.update(todayDone.id, { status: 'DONE' })
+    const list = service.list({ smartList: 'done', doneTimeRange: 'today' })
+    expect(list.some((t) => t.id === todayDone.id)).toBe(true)
+  })
+
+  it('filters smart list by createdAt', () => {
+    const inToday = service.create({ title: '今日创建' })
+    const list = service.list({
+      smartList: 'today',
+      dateField: 'createdAt',
+      hideDone: true
+    })
+    expect(list.some((t) => t.id === inToday.id)).toBe(true)
+  })
+
+  it('lists soft-deleted tasks in trash smart list', () => {
+    const task = service.create({ title: '待删' })
+    service.delete(task.id)
+    const active = service.list({ smartList: 'all' })
+    const trash = service.list({ smartList: 'trash' })
+    expect(active.some((t) => t.id === task.id)).toBe(false)
+    expect(trash.some((t) => t.id === task.id)).toBe(true)
+  })
+
+  it('restores task from trash', () => {
+    const task = service.create({ title: '恢复' })
+    service.delete(task.id)
+    const restored = service.restore(task.id)
+    expect(restored.deletedAt).toBeNull()
+    expect(service.list({ smartList: 'trash' })).toHaveLength(0)
+  })
+
+  it('permanently deletes task in trash', () => {
+    const task = service.create({ title: '清除' })
+    service.delete(task.id)
+    service.permanentDelete(task.id)
+    expect(service.list({ smartList: 'trash' })).toHaveLength(0)
+    expect(service.countTrash()).toBe(0)
+  })
+
+  it('empties trash', () => {
+    const a = service.create({ title: 'a' })
+    const b = service.create({ title: 'b' })
+    service.delete(a.id)
+    service.delete(b.id)
+    expect(service.emptyTrash()).toBe(2)
+    expect(service.countTrash()).toBe(0)
   })
 })

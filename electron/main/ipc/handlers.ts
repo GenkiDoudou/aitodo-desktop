@@ -2,15 +2,24 @@ import { app, ipcMain, BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import type {
   CreateCategoryDto,
+  CreateKanbanGroupDto,
   CreateTaskDto,
   TaskListFilter,
   UpdateCategoryDto,
-  UpdateTaskDto
+  UpdateKanbanGroupDto,
+  UpdateTaskDto,
+  AppMessage,
+  AppMessageKind
 } from '@shared/types'
 import { getActiveDataDir, getDatabase } from '../db/database'
 import { CategoryRepository } from '../db/category-repository'
+import { KanbanGroupRepository } from '../db/kanban-group-repository'
+import { AppMessageRepository } from '../db/app-message-repository'
+import { TaskReminderRepository } from '../db/task-reminder-repository'
 import { TaskRepository } from '../db/task-repository'
 import { CategoryService } from '../services/category-service'
+import { AppMessageService } from '../services/app-message-service'
+import { KanbanGroupService } from '../services/kanban-group-service'
 import { TaskService } from '../services/task-service'
 import {
   getDefaultDataDir,
@@ -45,18 +54,34 @@ function services() {
   const db = getDatabase()
   const taskRepo = new TaskRepository(db)
   const categoryRepo = new CategoryRepository(db)
+  const kanbanRepo = new KanbanGroupRepository(db)
+  const messageRepo = new AppMessageRepository(db)
+  const reminderRepo = new TaskReminderRepository(db)
   return {
-    tasks: new TaskService(taskRepo),
-    categories: new CategoryService(categoryRepo)
+    tasks: new TaskService(taskRepo, reminderRepo),
+    categories: new CategoryService(categoryRepo),
+    kanbanGroups: new KanbanGroupService(kanbanRepo),
+    messages: new AppMessageService(messageRepo)
   }
+}
+
+let getMainWindowRef: () => BrowserWindow | null = () => null
+
+/** 主进程写入消息后推送给渲染进程（侧栏角标与列表刷新） */
+export function pushAppMessageToRenderer(message: AppMessage): void {
+  getMainWindowRef()?.webContents.send(IPC.APP_MESSAGE_PUSH, message)
 }
 
 /** 注册全部 IPC handler；在 app.whenReady 且数据库可用后调用 */
 export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): void {
+  getMainWindowRef = getMainWindow
   ipcMain.handle(IPC.TASKS_LIST, (_e, filter?: TaskListFilter) =>
     wrapIpc(() => services().tasks.list(cloneTaskListFilter(filter ?? {})))
   )
   ipcMain.handle(IPC.TASKS_GET, (_e, id: string) => wrapIpc(() => services().tasks.get(id)))
+  ipcMain.handle(IPC.TASKS_GET_IN_TRASH, (_e, id: string) =>
+    wrapIpc(() => services().tasks.getInTrash(id))
+  )
   ipcMain.handle(IPC.TASKS_CREATE, (_e, dto: CreateTaskDto) =>
     wrapIpc(() => services().tasks.create(dto))
   )
@@ -68,6 +93,45 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       services().tasks.delete(id, options)
       return undefined
     })
+  )
+  ipcMain.handle(IPC.TASKS_RESTORE, (_e, id: string) => wrapIpc(() => services().tasks.restore(id)))
+  ipcMain.handle(IPC.TASKS_PERMANENT_DELETE, (_e, id: string, options?: import('@shared/types').DeleteTaskOptions) =>
+    wrapIpc(() => {
+      services().tasks.permanentDelete(id, options)
+      return undefined
+    })
+  )
+  ipcMain.handle(IPC.TASKS_EMPTY_TRASH, () => wrapIpc(() => services().tasks.emptyTrash()))
+  ipcMain.handle(IPC.TASKS_COUNT_TRASH, () => wrapIpc(() => services().tasks.countTrash()))
+  ipcMain.handle(IPC.TASKS_COUNT_DONE, () => wrapIpc(() => services().tasks.countDone()))
+
+  ipcMain.handle(IPC.KANBAN_GROUPS_LIST, (_e, scopeKey: string) =>
+    wrapIpc(() => services().kanbanGroups.listBoard(scopeKey))
+  )
+  ipcMain.handle(IPC.KANBAN_GROUPS_CREATE, (_e, dto: CreateKanbanGroupDto) =>
+    wrapIpc(() => services().kanbanGroups.create(dto))
+  )
+  ipcMain.handle(IPC.KANBAN_GROUPS_UPDATE, (_e, id: string, dto: UpdateKanbanGroupDto) =>
+    wrapIpc(() => services().kanbanGroups.update(id, dto))
+  )
+  ipcMain.handle(IPC.KANBAN_GROUPS_DELETE, (_e, id: string) =>
+    wrapIpc(() => {
+      services().kanbanGroups.delete(id)
+      return undefined
+    })
+  )
+
+  ipcMain.handle(IPC.MESSAGES_LIST, (_e, kind?: AppMessageKind) =>
+    wrapIpc(() => services().messages.list(kind))
+  )
+  ipcMain.handle(IPC.MESSAGES_COUNT_UNREAD, (_e, kind?: AppMessageKind) =>
+    wrapIpc(() => services().messages.countUnread(kind))
+  )
+  ipcMain.handle(IPC.MESSAGES_MARK_READ, (_e, id: string) =>
+    wrapIpc(() => services().messages.markRead(id))
+  )
+  ipcMain.handle(IPC.MESSAGES_MARK_ALL_READ, (_e, kind?: AppMessageKind) =>
+    wrapIpc(() => services().messages.markAllRead(kind))
   )
 
   ipcMain.handle(IPC.CATEGORIES_LIST, () => wrapIpc(() => services().categories.list()))

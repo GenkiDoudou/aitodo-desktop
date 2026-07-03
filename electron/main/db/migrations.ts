@@ -46,6 +46,65 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       ALTER TABLE tasks ADD COLUMN priority INTEGER NOT NULL DEFAULT 4;
       CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
     `
+  },
+  {
+    version: 3,
+    sql: `
+      CREATE TABLE IF NOT EXISTS kanban_groups (
+        id TEXT PRIMARY KEY,
+        scope_key TEXT NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_kanban_groups_scope ON kanban_groups(scope_key);
+      ALTER TABLE tasks ADD COLUMN kanban_group_id TEXT;
+      CREATE INDEX IF NOT EXISTS idx_tasks_kanban_group ON tasks(kanban_group_id);
+    `
+  },
+  {
+    version: 4,
+    sql: `
+      CREATE TABLE IF NOT EXISTS app_messages (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT,
+        task_id TEXT,
+        read_at TEXT,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_app_messages_kind ON app_messages(kind);
+      CREATE INDEX IF NOT EXISTS idx_app_messages_created ON app_messages(created_at);
+    `
+  },
+  {
+    version: 5,
+    sql: `
+      CREATE TABLE IF NOT EXISTS task_reminders (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        remind_at TEXT NOT NULL,
+        fired_at TEXT,
+        offset_minutes INTEGER,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_task_reminders_at ON task_reminders(remind_at);
+      CREATE INDEX IF NOT EXISTS idx_task_reminders_task ON task_reminders(task_id);
+      ALTER TABLE tasks ADD COLUMN recurrence_rule TEXT;
+      ALTER TABLE tasks ADD COLUMN remind_continuous INTEGER NOT NULL DEFAULT 0;
+      INSERT INTO task_reminders (id, task_id, remind_at, fired_at, offset_minutes, created_at)
+      SELECT
+        lower(hex(randomblob(16))),
+        id,
+        remind_at,
+        remind_fired_at,
+        NULL,
+        updated_at
+      FROM tasks
+      WHERE remind_at IS NOT NULL AND deleted_at IS NULL;
+    `
   }
 ]
 

@@ -1,9 +1,13 @@
 import { app, BrowserWindow, dialog, Menu } from 'electron'
 import { join } from 'path'
 import { getDatabase, closeDatabase, DatabaseNotWritableError } from './db/database'
-import { registerIpcHandlers } from './ipc/handlers'
+import { registerIpcHandlers, pushAppMessageToRenderer } from './ipc/handlers'
 import { TaskRepository } from './db/task-repository'
+import { AppMessageRepository } from './db/app-message-repository'
+import { TaskReminderRepository } from './db/task-reminder-repository'
+import { AppMessageService } from './services/app-message-service'
 import { ReminderService } from './services/reminder-service'
+import { HolidayService } from './services/holiday-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting } from './tray'
 import { resolveDataDir } from './data-path'
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts'
@@ -76,7 +80,17 @@ app.whenReady().then(() => {
   registerGlobalShortcuts(mainWindow)
 
   const db = getDatabase()
-  reminderService = new ReminderService(new TaskRepository(db))
+  const taskRepo = new TaskRepository(db)
+  const messageService = new AppMessageService(new AppMessageRepository(db))
+  const reminderRepo = new TaskReminderRepository(db)
+  const holidayService = new HolidayService()
+  reminderService = new ReminderService(
+    taskRepo,
+    reminderRepo,
+    messageService,
+    holidayService,
+    pushAppMessageToRenderer
+  )
   reminderService.start()
 
   createTray(mainWindow, {
