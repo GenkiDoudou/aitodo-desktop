@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 import { nowIso } from '@shared/datetime'
+import { DEFAULT_TASK_PRIORITY, coerceTaskPriority } from '@shared/task-priority'
 import type {
   CreateTaskDto,
   Task,
@@ -20,7 +21,7 @@ function assertRemindBeforeDue(remindAt: string | null, dueAt: string | null): v
 }
 
 /**
- * 任务业务规则：状态与 completed_at、父任务完成约束、软删除时子任务提升。
+ * 任务业务规则：状态与 completed_at、父任务完成约束、删除时子任务级联。
  */
 export class TaskService {
   constructor(private readonly repo: TaskRepository) {}
@@ -30,6 +31,9 @@ export class TaskService {
   }
 
   get(id: string): Task {
+    if (!id?.trim()) {
+      throw new AppError('VALIDATION_ERROR', '任务 id 不能为空')
+    }
     const task = this.repo.findById(id)
     if (!task) {
       throw new AppError('NOT_FOUND', '任务不存在')
@@ -42,23 +46,34 @@ export class TaskService {
     if (!title) {
       throw new AppError('VALIDATION_ERROR', '任务标题不能为空')
     }
+
+    let parent: Task | null = null
     if (dto.parentId) {
-      const parent = this.repo.findById(dto.parentId)
+      parent = this.repo.findById(dto.parentId)
       if (!parent) {
         throw new AppError('NOT_FOUND', '父任务不存在')
       }
     }
+
     const status = dto.status ?? 'TODO'
     const ts = nowIso()
     const dueAt = dto.dueAt ?? null
     const remindAt = dto.remindAt ?? null
     assertRemindBeforeDue(remindAt, dueAt)
+
+    // 子任务默认继承父任务清单，避免在分类视图下子任务脱离父任务无法折叠展示
+    let categoryId = dto.categoryId ?? null
+    if (!categoryId && parent?.categoryId) {
+      categoryId = parent.categoryId
+    }
+
     const task: Task = {
       id: uuidv4(),
       title,
       description: dto.description ?? null,
       status,
-      categoryId: dto.categoryId ?? null,
+      priority: coerceTaskPriority(dto.priority, DEFAULT_TASK_PRIORITY),
+      categoryId,
       parentId: dto.parentId ?? null,
       dueAt,
       remindAt,
@@ -75,6 +90,9 @@ export class TaskService {
   }
 
   update(id: string, dto: UpdateTaskDto): Task {
+    if (!id?.trim()) {
+      throw new AppError('VALIDATION_ERROR', '任务 id 不能为空')
+    }
     const existing = this.get(id)
     const nextStatus = dto.status ?? existing.status
     if (!VALID_STATUS.includes(nextStatus)) {
@@ -104,12 +122,13 @@ export class TaskService {
     const updated: Task = {
       ...existing,
       title: dto.title?.trim() ?? existing.title,
-      description: dto.description !== undefined ? dto.description : existing.description,
+      description: dto.description !== undefined ? (dto.description ?? null) : existing.description,
       status: nextStatus,
-      categoryId: dto.categoryId !== undefined ? dto.categoryId : existing.categoryId,
-      parentId: dto.parentId !== undefined ? dto.parentId : existing.parentId,
-      dueAt: dto.dueAt !== undefined ? dto.dueAt : existing.dueAt,
-      remindAt: dto.remindAt !== undefined ? dto.remindAt : existing.remindAt,
+      priority: coerceTaskPriority(dto.priority ?? existing.priority, existing.priority),
+      categoryId: dto.categoryId !== undefined ? (dto.categoryId ?? null) : existing.categoryId,
+      parentId: dto.parentId !== undefined ? (dto.parentId ?? null) : existing.parentId,
+      dueAt: dto.dueAt !== undefined ? (dto.dueAt ?? null) : existing.dueAt,
+      remindAt: dto.remindAt !== undefined ? (dto.remindAt ?? null) : existing.remindAt,
       remindFiredAt,
       completedAt,
       sortOrder: dto.sortOrder ?? existing.sortOrder,
@@ -126,10 +145,36 @@ export class TaskService {
     return updated
   }
 
-  delete(id: string): void {
+  /**
+   * 删除任务。
+   * - 无子任务：直接软删除
+   * - 有子任务且 cascadeChildren=false：拒绝删除（须 UI 确认后传 true）
+   * - cascadeChildren=true：递归软删除全部子孙任务后删除自身
+   */
+  delete(id: string, options?: { cascadeChildren?: boolean }): void {
     this.get(id)
     const ts = nowIso()
-    this.repo.promoteChildren(id, ts)
+    const childCount = this.repo.countChildren(id)
+
+    if (childCount > 0) {
+      if (!options?.cascadeChildren) {
+        throw new AppError(
+          'HAS_CHILDREN',
+          `该任务下有 ${childCount} 个子任务，请确认是否一并删除`
+        )
+      }
+      this.softDeleteSubtree(id, ts)
+      return
+    }
+
+    this.repo.softDelete(id, ts)
+  }
+
+  /** 后序遍历：先删子孙，再删当前节点 */
+  private softDeleteSubtree(id: string, ts: string): void {
+    for (const child of this.repo.findChildrenByParentId(id)) {
+      this.softDeleteSubtree(child.id, ts)
+    }
     this.repo.softDelete(id, ts)
   }
 }

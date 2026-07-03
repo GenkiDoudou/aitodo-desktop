@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, Menu } from 'electron'
 import { join } from 'path'
 import { getDatabase, closeDatabase, DatabaseNotWritableError } from './db/database'
 import { registerIpcHandlers } from './ipc/handlers'
@@ -7,6 +7,12 @@ import { ReminderService } from './services/reminder-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting } from './tray'
 import { resolveDataDir } from './data-path'
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts'
+import {
+  registerAttachmentProtocol,
+  registerAttachmentSchemePrivilege
+} from './attachment-protocol'
+
+registerAttachmentSchemePrivilege()
 
 let mainWindow: BrowserWindow | null = null
 let reminderService: ReminderService | null = null
@@ -18,6 +24,8 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 560,
     title: 'aiTodo',
+    /** 不显示系统菜单栏（File / Edit / View …） */
+    autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -59,6 +67,10 @@ app.whenReady().then(() => {
     return
   }
 
+  /** 移除默认应用菜单（Windows/Linux 顶栏 File/Edit/View/Window/Help） */
+  Menu.setApplicationMenu(null)
+
+  registerAttachmentProtocol()
   registerIpcHandlers(() => mainWindow)
   mainWindow = createWindow()
   registerGlobalShortcuts(mainWindow)

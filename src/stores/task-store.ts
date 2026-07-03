@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import dayjs from 'dayjs'
-import type { Task, TaskListFilter } from '@shared/types'
+import type { CreateTaskDto, DeleteTaskOptions, Task, TaskListFilter } from '@shared/types'
+import type { TaskPriority } from '@shared/task-priority'
+import { cloneTaskListFilter, isMatrixListFilter } from '@shared/task-list-filter'
 import { unwrapIpc } from '@/ipc/client'
 
 /** 与《待办需求》一致：true 表示隐藏已完成（开关默认关 = 隐藏） */
@@ -75,8 +77,18 @@ export function taskMatchesFilter(task: Task, filter: TaskListFilter): boolean {
   if (filter.smartList === 'done' && task.status !== 'DONE') {
     return false
   }
+  if (filter.parentId !== undefined && filter.parentId === null && task.parentId) {
+    return false
+  }
   return true
 }
+
+/** 侧栏导航：整页替换筛选，避免 merge 残留 smartList/categoryId/search */
+export type TaskNavView =
+  | { kind: 'smart'; smart: 'all' | 'today' }
+  | { kind: 'category'; categoryId: string }
+  | { kind: 'uncategorized' }
+  | { kind: 'matrix' }
 
 export const useTaskStore = defineStore('tasks', () => {
   const tasks = ref<Task[]>([])
@@ -86,15 +98,15 @@ export const useTaskStore = defineStore('tasks', () => {
     hideDone: readHideDonePreference()
   })
 
-  /** 递增序号：仅应用最新一次 load 的响应，避免快速切换分类时列表被旧请求覆盖 */
   let loadSeq = 0
 
-  async function load(patch?: TaskListFilter, options?: TaskListLoadOptions) {
+  async function fetchWithCurrentFilter() {
     const seq = ++loadSeq
-    filter.value = mergeFilter(filter.value, patch, options)
     loading.value = true
     try {
-      const list = unwrapIpc(await window.api.tasks.list(filter.value))
+      const list = unwrapIpc(
+        await window.api.tasks.list(cloneTaskListFilter(filter.value))
+      )
       if (seq !== loadSeq) {
         return
       }
@@ -110,81 +122,169 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  /**
-   * 确保任务出现在内存列表（API 刷新失败时的兜底）。
-   * 仅当任务符合当前 filter 时才插入，避免污染分类/智能列表视图。
-   */
-  function ensureTaskVisible(task: Task) {
-    if (!taskMatchesFilter(task, filter.value)) {
-      return
-    }
-    const idx = tasks.value.findIndex((t) => t.id === task.id)
-    if (idx >= 0) {
-      tasks.value[idx] = task
+  async function load(patch?: TaskListFilter, options?: TaskListLoadOptions) {
+    filter.value = mergeFilter(filter.value, patch, options)
+    await fetchWithCurrentFilter()
+  }
+
+  /** 侧栏切换：用全新 filter 拉列表，确保分类/全部/今天互斥 */
+  async function navigate(view: TaskNavView) {
+    const hideDone = filter.value.hideDone
+    if (view.kind === 'smart') {
+      filter.value = { hideDone, smartList: view.smart }
+    } else if (view.kind === 'category') {
+      filter.value = { hideDone, categoryId: view.categoryId }
+    } else if (view.kind === 'uncategorized') {
+      filter.value = { hideDone, categoryId: null }
     } else {
-      tasks.value = [task, ...tasks.value]
+      /** 四象限：仅顶层任务，跨清单按 priority 分组 */
+      filter.value = { hideDone, parentId: null }
     }
+    await fetchWithCurrentFilter()
   }
 
   /**
-   * 新建保存后：切到任务所属分类（或未分类 + 全部列表），确保用户能看到刚创建的任务。
-   * 编辑保存请直接 load() 保留当前侧栏筛选。
+   * 将单条任务同步进当前列表（编辑保存后立即反映标题/状态/分类变更）。
+   * 若不再符合当前筛选则从列表移除。
    */
+  function syncTaskInList(task: Task) {
+    const visible = taskMatchesFilter(task, filter.value)
+    const idx = tasks.value.findIndex((t) => t.id === task.id)
+    if (!visible) {
+      if (idx >= 0) {
+        tasks.value = tasks.value.filter((t) => t.id !== task.id)
+      }
+      return
+    }
+    if (idx >= 0) {
+      tasks.value = tasks.value.map((t) => (t.id === task.id ? { ...task } : t))
+    } else {
+      tasks.value = [{ ...task }, ...tasks.value]
+    }
+  }
+
+  function removeTaskFromList(taskId: string) {
+    tasks.value = tasks.value.filter((t) => t.id !== taskId)
+  }
+
+  /**
+   * 保存后的统一入口：create / update / delete。
+   */
+  async function afterSave(task: Task | null, mode: 'create' | 'update' | 'delete') {
+    if (mode === 'delete') {
+      if (task?.id) {
+        removeTaskFromList(task.id)
+      }
+      await fetchWithCurrentFilter()
+      return
+    }
+    if (!task) {
+      await fetchWithCurrentFilter()
+      return
+    }
+
+    if (mode === 'create') {
+      await reloadAfterSave(task)
+      return
+    }
+
+    // update：先拉最新列表，再强制合并刚保存的任务（防止 IPC 竞态或缓存导致 UI 滞后）
+    await fetchWithCurrentFilter()
+    syncTaskInList(task)
+  }
+
   async function reloadAfterSave(created: Task) {
     const hideDone = created.status === 'DONE' ? false : filter.value.hideDone
     if (created.status === 'DONE') {
       persistHideDone(false)
     }
 
-    const patch: TaskListFilter = { hideDone }
-    const options: TaskListLoadOptions = { clearSearch: true }
+    const wasMatrix = isMatrixListFilter(filter.value)
 
-    if (created.categoryId) {
-      patch.categoryId = created.categoryId
-      options.clearSmartList = true
+    if (wasMatrix) {
+      /** 四象限内新建/保存：保持 matrix 筛选，避免跳回「全部」列表 */
+      filter.value = { hideDone, parentId: null }
+    } else if (created.categoryId) {
+      filter.value = { hideDone, categoryId: created.categoryId }
     } else {
-      patch.smartList = 'all'
-      options.clearCategoryId = true
+      filter.value = { hideDone, smartList: 'all' }
     }
+    await fetchWithCurrentFilter()
 
-    await load(patch, options)
-
-    if (!tasks.value.some((t) => t.id === created.id)) {
-      await load(
-        { smartList: 'all', hideDone: false },
-        { clearCategoryId: true, clearSearch: true, clearSmartList: false }
-      )
+    if (!tasks.value.some((t) => t.id === created.id) && !wasMatrix) {
+      filter.value = { hideDone: false, smartList: 'all' }
+      await fetchWithCurrentFilter()
     }
-
-    if (!tasks.value.some((t) => t.id === created.id)) {
-      ensureTaskVisible(created)
-    }
+    syncTaskInList(created)
   }
 
   async function setHideDone(hideDone: boolean) {
     persistHideDone(hideDone)
-    await load({ hideDone })
+    filter.value = { ...filter.value, hideDone }
+    await fetchWithCurrentFilter()
   }
 
-  async function create(title: string, parentId?: string | null) {
-    const task = unwrapIpc(
-      await window.api.tasks.create({
-        title,
-        parentId: parentId ?? null
-      })
-    )
+  async function create(
+    title: string,
+    options?: { parentId?: string | null; categoryId?: string | null }
+  ) {
+    const trimmed = title.trim()
+    if (!trimmed) {
+      throw new Error('title required')
+    }
+    // 仅传有值字段，避免 IPC 序列化后 undefined 导致 SQLite 绑定异常
+    const dto: CreateTaskDto = { title: trimmed }
+    if (options?.parentId) {
+      dto.parentId = options.parentId
+    }
+    if (options?.categoryId) {
+      dto.categoryId = options.categoryId
+    }
+    const task = unwrapIpc(await window.api.tasks.create(dto))
     await reloadAfterSave(task)
     return task
   }
 
-  async function update(id: string, patch: Parameters<typeof window.api.tasks.update>[1]) {
-    unwrapIpc(await window.api.tasks.update(id, patch))
-    await load()
+  /**
+   * 快捷添加：仅标题即可创建，保持当前侧栏筛选不变。
+   * 详情（截止日、正文等）可之后点击任务再补全。
+   */
+  async function quickCreate(
+    title: string,
+    options?: { categoryId?: string | null; priority?: TaskPriority }
+  ) {
+    const trimmed = title.trim()
+    if (!trimmed) {
+      throw new Error('title required')
+    }
+    const dto: CreateTaskDto = { title: trimmed }
+    if (options?.categoryId) {
+      dto.categoryId = options.categoryId
+    }
+    if (options?.priority != null) {
+      dto.priority = options.priority
+    }
+    const task = unwrapIpc(await window.api.tasks.create(dto))
+    syncTaskInList(task)
+    await fetchWithCurrentFilter()
+    return task
   }
 
-  async function remove(id: string) {
-    unwrapIpc(await window.api.tasks.delete(id))
-    await load()
+  async function update(id: string, patch: Parameters<typeof window.api.tasks.update>[1]) {
+    try {
+      const task = unwrapIpc(await window.api.tasks.update(id, patch))
+      await fetchWithCurrentFilter()
+      syncTaskInList(task)
+      return task
+    } catch {
+      throw new Error('update failed')
+    }
+  }
+
+  async function remove(id: string, options?: DeleteTaskOptions) {
+    unwrapIpc(await window.api.tasks.delete(id, options))
+    removeTaskFromList(id)
+    await fetchWithCurrentFilter()
   }
 
   return {
@@ -192,10 +292,13 @@ export const useTaskStore = defineStore('tasks', () => {
     loading,
     filter,
     load,
+    navigate,
+    afterSave,
+    syncTaskInList,
     reloadAfterSave,
-    ensureTaskVisible,
     setHideDone,
     create,
+    quickCreate,
     update,
     remove
   }

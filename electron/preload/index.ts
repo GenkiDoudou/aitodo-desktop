@@ -4,6 +4,7 @@ import type { DesktopApi } from '@shared/desktop-api'
 import type {
   CreateCategoryDto,
   CreateTaskDto,
+  DeleteTaskOptions,
   TaskListFilter,
   UpdateCategoryDto,
   UpdateTaskDto
@@ -18,7 +19,7 @@ const api: DesktopApi = {
     get: (id: string) => ipcRenderer.invoke(IPC.TASKS_GET, id),
     create: (dto: CreateTaskDto) => ipcRenderer.invoke(IPC.TASKS_CREATE, dto),
     update: (id: string, dto: UpdateTaskDto) => ipcRenderer.invoke(IPC.TASKS_UPDATE, id, dto),
-    delete: (id: string) => ipcRenderer.invoke(IPC.TASKS_DELETE, id)
+    delete: (id: string, options?: DeleteTaskOptions) => ipcRenderer.invoke(IPC.TASKS_DELETE, id, options)
   },
   categories: {
     list: () => ipcRenderer.invoke(IPC.CATEGORIES_LIST),
@@ -34,7 +35,17 @@ const api: DesktopApi = {
     getInfo: () => ipcRenderer.invoke(IPC.APP_GET_INFO),
     getShortcuts: () => ipcRenderer.invoke(IPC.APP_GET_SHORTCUTS),
     setShortcuts: (bindings) => ipcRenderer.invoke(IPC.APP_SET_SHORTCUTS, bindings),
+    getLlmConfig: () => ipcRenderer.invoke(IPC.APP_GET_LLM_CONFIG),
+    setLlmConfig: (config) => ipcRenderer.invoke(IPC.APP_SET_LLM_CONFIG, config),
+    getAiPrompt: () => ipcRenderer.invoke(IPC.APP_GET_AI_PROMPT),
+    setAiPrompt: (config) => ipcRenderer.invoke(IPC.APP_SET_AI_PROMPT, config),
     showWindow: () => ipcRenderer.invoke(IPC.APP_SHOW_WINDOW),
+    pickAttachment: () => ipcRenderer.invoke(IPC.APP_PICK_ATTACHMENT),
+    saveAttachment: (dto) => ipcRenderer.invoke(IPC.APP_SAVE_ATTACHMENT, dto),
+    resolveAttachmentUrl: (uri) => ipcRenderer.invoke(IPC.APP_RESOLVE_ATTACHMENT_URL, uri),
+    openAttachment: (uri) => ipcRenderer.invoke(IPC.APP_OPEN_ATTACHMENT, uri),
+    downloadAttachment: (uri, suggestedName) =>
+      ipcRenderer.invoke(IPC.APP_DOWNLOAD_ATTACHMENT, uri, suggestedName),
     onNewTask: (callback: () => void) => {
       const listener = () => callback()
       ipcRenderer.on(IPC.APP_NEW_TASK, listener)

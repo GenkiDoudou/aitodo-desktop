@@ -39,6 +39,13 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id);
       CREATE INDEX IF NOT EXISTS idx_tasks_category_id ON tasks(category_id);
     `
+  },
+  {
+    version: 2,
+    sql: `
+      ALTER TABLE tasks ADD COLUMN priority INTEGER NOT NULL DEFAULT 4;
+      CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+    `
   }
 ]
 

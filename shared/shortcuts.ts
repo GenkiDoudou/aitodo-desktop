@@ -18,7 +18,7 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
   {
     id: 'newTask',
     label: '新建任务',
-    description: '打开任务创建抽屉',
+    description: '打开右侧任务详情面板',
     defaultAccelerator: 'Mod+N',
     globalWhenHidden: true
   },
@@ -31,8 +31,8 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
   },
   {
     id: 'focusSearch',
-    label: '聚焦搜索',
-    description: '跳转到首页并聚焦任务搜索框',
+    label: '聚焦快捷添加',
+    description: '跳转到首页并聚焦任务快捷添加输入框',
     defaultAccelerator: 'Mod+F'
   },
   {

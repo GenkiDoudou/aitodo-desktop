@@ -1,15 +1,24 @@
 :root {
-  --desktop-bg: #f5f6f8;
+  --desktop-bg: #f4f5f7;
   --desktop-panel: #ffffff;
-  --desktop-sidebar: #eef0f3;
-  --desktop-border: #dcdfe6;
-  --desktop-hover: rgba(0, 0, 0, 0.04);
-  --desktop-active: rgba(64, 158, 255, 0.12);
-  --desktop-muted: #909399;
-  --desktop-text: #303133;
+  --desktop-sidebar: #fafbfc;
+  --desktop-border: #e8eaed;
+  --desktop-hover: rgba(0, 0, 0, 0.035);
+  --desktop-active: rgba(64, 158, 255, 0.1);
+  --desktop-muted: #8b919a;
+  --desktop-text: #1f2329;
+
+  /* AI 入口专用 Teal，与主操作蓝区分 */
+  --desktop-ai: #0d9488;
+  --desktop-ai-light: rgba(13, 148, 136, 0.08);
+  --desktop-ai-border: rgba(13, 148, 136, 0.22);
+  --desktop-ai-hover: rgba(13, 148, 136, 0.14);
+  --desktop-ai-hover-solid: #0f766e;
+  --desktop-ai-active: #115e59;
 
   --el-font-size-base: 13px;
-  --el-component-size: 30px;
+  --el-component-size: 32px;
+  --el-border-radius-base: 8px;
 }
 
 /* 弱化网页卡片感，贴近桌面工具窗口 */
@@ -21,4 +30,13 @@
 
 .el-button {
   font-weight: 500;
+  border-radius: 8px;
+}
+
+.el-input__wrapper {
+  border-radius: 8px;
+}
+
+.el-dialog {
+  border-radius: 12px;
 }

@@ -48,12 +48,15 @@ npm run build:mac    # macOS dmg（需在 macOS 上执行）
 
 ## 数据目录
 
-| 平台 | 默认路径 |
+| 环境 | 默认路径 |
 |---|---|
-| Windows | 可执行文件同级 `data/data.db` |
-| macOS | `.app` 旁 `ai-todo-data/data.db` |
+| **开发**（`npm run dev`） | 系统用户数据目录下 `data/data.db`（Windows 一般为 `%APPDATA%/ai-todo-desktop/data/`） |
+| Windows 打包 | 可执行文件同级 `data/data.db` |
+| macOS 打包 | `.app` 旁 `ai-todo-data/data.db` |
 
-可在应用 **设置** 中修改数据目录；**v1 需重启后生效**，请按提示手动复制原 `data` 目录内容。
+开发模式下数据库**不再**写在 `node_modules/electron` 旁，重启 `npm run dev` 不会丢数据。若你曾在旧版本创建过任务，首次启动会自动尝试从旧路径迁移一次。
+
+可在应用 **设置** 中查看当前数据目录；修改目录 **v1 需重启后生效**，请按提示手动复制原 `data` 目录内容。
 
 ## 架构
 

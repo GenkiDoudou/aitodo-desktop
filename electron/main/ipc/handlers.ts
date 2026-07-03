@@ -17,14 +17,29 @@ import {
   isDirectoryWritable,
   readShortcutBindings,
   resolveDataDir,
+  readLlmConfig,
+  readAiPromptConfig,
+  saveLlmConfig,
+  saveAiPromptConfig,
   savePendingDataDir,
   saveShortcutBindings
 } from '../data-path'
 import { registerGlobalShortcuts } from '../shortcuts'
 import type { ShortcutBindings } from '@shared/shortcuts'
 import { findShortcutConflicts } from '@shared/shortcuts'
+import type { LlmConfig } from '@shared/llm-config'
+import type { AiPromptConfig } from '@shared/ai-prompt-config'
 import { AppError } from '@shared/types'
-import { wrapIpc } from './wrap'
+import { wrapIpc, wrapIpcAsync } from './wrap'
+import { cloneTaskListFilter } from '@shared/task-list-filter'
+import {
+  openAttachmentPath,
+  openAttachmentUriOrFileUrl,
+  pickAndSaveAttachment,
+  resolveAttachmentFileUrl,
+  saveAttachmentBuffer,
+  downloadAttachment
+} from '../services/attachment-service'
 
 function services() {
   const db = getDatabase()
@@ -39,7 +54,7 @@ function services() {
 /** 注册全部 IPC handler；在 app.whenReady 且数据库可用后调用 */
 export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.TASKS_LIST, (_e, filter?: TaskListFilter) =>
-    wrapIpc(() => services().tasks.list(filter))
+    wrapIpc(() => services().tasks.list(cloneTaskListFilter(filter ?? {})))
   )
   ipcMain.handle(IPC.TASKS_GET, (_e, id: string) => wrapIpc(() => services().tasks.get(id)))
   ipcMain.handle(IPC.TASKS_CREATE, (_e, dto: CreateTaskDto) =>
@@ -48,9 +63,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.TASKS_UPDATE, (_e, id: string, dto: UpdateTaskDto) =>
     wrapIpc(() => services().tasks.update(id, dto))
   )
-  ipcMain.handle(IPC.TASKS_DELETE, (_e, id: string) =>
+  ipcMain.handle(IPC.TASKS_DELETE, (_e, id: string, options?: import('@shared/types').DeleteTaskOptions) =>
     wrapIpc(() => {
-      services().tasks.delete(id)
+      services().tasks.delete(id, options)
       return undefined
     })
   )
@@ -109,11 +124,52 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     })
   )
 
+  ipcMain.handle(IPC.APP_GET_LLM_CONFIG, () => wrapIpc(() => readLlmConfig()))
+
+  ipcMain.handle(IPC.APP_SET_LLM_CONFIG, (_e, config: LlmConfig) =>
+    wrapIpc(() => {
+      saveLlmConfig(config)
+      return readLlmConfig()
+    })
+  )
+
+  ipcMain.handle(IPC.APP_GET_AI_PROMPT, () => wrapIpc(() => readAiPromptConfig()))
+
+  ipcMain.handle(IPC.APP_SET_AI_PROMPT, (_e, config: AiPromptConfig) =>
+    wrapIpc(() => {
+      saveAiPromptConfig(config)
+      return readAiPromptConfig()
+    })
+  )
+
   ipcMain.handle(IPC.APP_SHOW_WINDOW, () =>
     wrapIpc(() => {
       const win = getMainWindow()
       win?.show()
       win?.focus()
     })
+  )
+
+  ipcMain.handle(IPC.APP_PICK_ATTACHMENT, async () =>
+    wrapIpcAsync(() => pickAndSaveAttachment(getMainWindow() ?? undefined))
+  )
+
+  ipcMain.handle(IPC.APP_SAVE_ATTACHMENT, (_e, dto: { name: string; base64: string }) =>
+    wrapIpc(() => saveAttachmentBuffer(dto.name, Buffer.from(dto.base64, 'base64')))
+  )
+
+  ipcMain.handle(IPC.APP_RESOLVE_ATTACHMENT_URL, (_e, uri: string) =>
+    wrapIpc(() => resolveAttachmentFileUrl(uri))
+  )
+
+  ipcMain.handle(IPC.APP_OPEN_ATTACHMENT, (_e, uri: string) =>
+    wrapIpc(() => {
+      openAttachmentUriOrFileUrl(uri)
+      return undefined
+    })
+  )
+
+  ipcMain.handle(IPC.APP_DOWNLOAD_ATTACHMENT, async (_e, uri: string, suggestedName?: string) =>
+    wrapIpcAsync(() => downloadAttachment(getMainWindow() ?? undefined, uri, suggestedName))
   )
 }

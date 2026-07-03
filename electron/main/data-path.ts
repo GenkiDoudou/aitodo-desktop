@@ -4,6 +4,10 @@ import path from 'path'
 
 import type { ShortcutBindings } from '@shared/shortcuts'
 import { mergeShortcutBindings } from '@shared/shortcuts'
+import type { LlmConfig } from '@shared/llm-config'
+import { mergeLlmConfig } from '@shared/llm-config'
+import type { AiPromptConfig } from '@shared/ai-prompt-config'
+import { mergeAiPromptConfig } from '@shared/ai-prompt-config'
 
 const CONFIG_FILE = 'config.json'
 
@@ -12,19 +16,52 @@ interface DesktopConfig {
   dataDir?: string
   /** 用户自定义快捷键；未配置项使用 shared/shortcuts 默认值 */
   shortcuts?: Partial<ShortcutBindings>
+  /** 大模型 API 配置（本地存储） */
+  llm?: Partial<LlmConfig>
+  /** AI 一句话解析提示词 */
+  aiPrompt?: Partial<AiPromptConfig>
 }
 
 /**
- * 平台默认数据目录（便携模式）：
- * - Windows：exe 同级 data/
- * - macOS：.app 包外并列 ai-todo-data/（bundle 内只读）
+ * 平台默认数据目录：
+ * - **开发模式**（`npm run dev`）：`app.getPath('userData')/data`，持久保存，不随 node_modules 重装丢失
+ * - **Windows 打包**：exe 同级 `data/`（便携）
+ * - **macOS 打包**：`.app` 旁 `ai-todo-data/`
  */
 export function getDefaultDataDir(): string {
+  if (!app.isPackaged) {
+    return path.join(app.getPath('userData'), 'data')
+  }
   if (process.platform === 'darwin') {
     const exe = app.getPath('exe')
     return path.resolve(path.dirname(exe), '..', '..', '..', 'ai-todo-data')
   }
   return path.join(path.dirname(process.execPath), 'data')
+}
+
+/** 开发模式下旧版误写在 electron.exe 旁的数据库路径（仅用于一次性迁移） */
+function getLegacyDevDataDir(): string {
+  return path.join(path.dirname(process.execPath), 'data')
+}
+
+/**
+ * 若新版 userData 库不存在、旧版 electron 旁库存在，则自动复制一次。
+ */
+export function migrateLegacyDevDatabaseIfNeeded(targetDir: string): void {
+  if (app.isPackaged) {
+    return
+  }
+  const targetDb = path.join(targetDir, 'data.db')
+  if (fs.existsSync(targetDb)) {
+    return
+  }
+  const legacyDb = path.join(getLegacyDevDataDir(), 'data.db')
+  if (!fs.existsSync(legacyDb)) {
+    return
+  }
+  fs.mkdirSync(targetDir, { recursive: true })
+  fs.copyFileSync(legacyDb, targetDb)
+  console.log(`[aiTodo] 已从旧开发目录迁移数据库：${legacyDb} → ${targetDb}`)
 }
 
 function readConfigFrom(dir: string): DesktopConfig | null {
@@ -45,6 +82,7 @@ function readConfigFrom(dir: string): DesktopConfig | null {
  */
 export function resolveDataDir(): string {
   const defaultDir = getDefaultDataDir()
+  migrateLegacyDevDatabaseIfNeeded(defaultDir)
   const cfg = readConfigFrom(defaultDir)
   if (cfg?.dataDir) {
     return cfg.dataDir
@@ -119,5 +157,51 @@ export function saveShortcutBindings(bindings: ShortcutBindings): void {
     }
   }
   const next: DesktopConfig = { ...existing, shortcuts: bindings }
+  fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
+}
+
+/** 读取大模型配置（合并默认值） */
+export function readLlmConfig(): LlmConfig {
+  const cfg = readActiveConfig()
+  return mergeLlmConfig(cfg.llm)
+}
+
+/** 持久化大模型配置到 config.json */
+export function saveLlmConfig(config: LlmConfig): void {
+  const defaultDir = getDefaultDataDir()
+  fs.mkdirSync(defaultDir, { recursive: true })
+  const configPath = path.join(defaultDir, CONFIG_FILE)
+  let existing: DesktopConfig = {}
+  if (fs.existsSync(configPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as DesktopConfig
+    } catch {
+      existing = {}
+    }
+  }
+  const next: DesktopConfig = { ...existing, llm: mergeLlmConfig(config) }
+  fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
+}
+
+/** 读取 AI 解析提示词（合并默认值） */
+export function readAiPromptConfig(): AiPromptConfig {
+  const cfg = readActiveConfig()
+  return mergeAiPromptConfig(cfg.aiPrompt)
+}
+
+/** 持久化 AI 解析提示词 */
+export function saveAiPromptConfig(config: AiPromptConfig): void {
+  const defaultDir = getDefaultDataDir()
+  fs.mkdirSync(defaultDir, { recursive: true })
+  const configPath = path.join(defaultDir, CONFIG_FILE)
+  let existing: DesktopConfig = {}
+  if (fs.existsSync(configPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as DesktopConfig
+    } catch {
+      existing = {}
+    }
+  }
+  const next: DesktopConfig = { ...existing, aiPrompt: mergeAiPromptConfig(config) }
   fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
 }

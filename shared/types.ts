@@ -1,6 +1,9 @@
 /** 与 AGENTS.md / 后端约定一致的任务状态枚举 */
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE'
 
+/** 艾森豪威尔四象限优先级 */
+export type { TaskPriority } from './task-priority'
+
 /** ISO 本地时间字符串：yyyy-MM-ddTHH:mm:ss */
 export type IsoDateTime = string
 
@@ -19,6 +22,8 @@ export interface Task {
   title: string
   description: string | null
   status: TaskStatus
+  /** 1=重要紧急 … 4=不重要不紧急，默认 4 */
+  priority: import('./task-priority').TaskPriority
   categoryId: string | null
   parentId: string | null
   dueAt: IsoDateTime | null
@@ -41,6 +46,7 @@ export interface CreateTaskDto {
   title: string
   description?: string | null
   status?: TaskStatus
+  priority?: import('./task-priority').TaskPriority
   categoryId?: string | null
   parentId?: string | null
   dueAt?: IsoDateTime | null
@@ -52,11 +58,17 @@ export interface UpdateTaskDto {
   title?: string
   description?: string | null
   status?: TaskStatus
+  priority?: import('./task-priority').TaskPriority
   categoryId?: string | null
   parentId?: string | null
   dueAt?: IsoDateTime | null
   remindAt?: IsoDateTime | null
   sortOrder?: number
+}
+
+/** 删除任务：有子任务时必须 cascadeChildren=true 才会执行 */
+export interface DeleteTaskOptions {
+  cascadeChildren?: boolean
 }
 
 export interface CreateCategoryDto {

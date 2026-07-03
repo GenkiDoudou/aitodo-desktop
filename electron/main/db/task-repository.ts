@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import { todayDatePrefix } from '@shared/datetime'
 import type { Task, TaskListFilter, TaskStatus } from '@shared/types'
+import { DEFAULT_TASK_PRIORITY, normalizeTaskPriority } from '@shared/task-priority'
 
 interface TaskRow {
   id: string
@@ -13,6 +14,7 @@ interface TaskRow {
   remind_at: string | null
   remind_fired_at: string | null
   completed_at: string | null
+  priority: number
   sort_order: number
   created_at: string
   updated_at: string
@@ -26,6 +28,7 @@ function mapRow(row: TaskRow): Task {
     title: row.title,
     description: row.description,
     status: row.status,
+    priority: normalizeTaskPriority(row.priority),
     categoryId: row.category_id,
     parentId: row.parent_id,
     dueAt: row.due_at,
@@ -38,6 +41,20 @@ function mapRow(row: TaskRow): Task {
     deletedAt: row.deleted_at,
     syncVersion: row.sync_version
   }
+}
+
+/**
+ * better-sqlite3 命名绑定不接受 undefined（会报 Too few parameter values were provided）。
+ * IPC/表单合并后偶发 undefined 字段，入库前统一转为 null。
+ */
+function sqlBind<T extends Record<string, unknown>>(params: T): T {
+  const out = { ...params }
+  for (const key of Object.keys(out)) {
+    if (out[key] === undefined) {
+      ;(out as Record<string, unknown>)[key] = null
+    }
+  }
+  return out
 }
 
 export class TaskRepository {
@@ -56,9 +73,17 @@ export class TaskRepository {
     }
     if (filter.categoryId !== undefined) {
       if (filter.categoryId === null) {
-        clauses.push('category_id IS NULL')
+        // 未分类：仅顶层任务（子任务随父任务在对应清单中展示）
+        clauses.push('category_id IS NULL AND parent_id IS NULL')
       } else {
-        clauses.push('category_id = @categoryId')
+        // 某清单：包含该分类任务及其子任务（子任务 category_id 可能为空但 parent 在清单内）
+        clauses.push(`(
+          category_id = @categoryId
+          OR parent_id IN (
+            SELECT id FROM tasks
+            WHERE category_id = @categoryId AND deleted_at IS NULL
+          )
+        )`)
         params.categoryId = filter.categoryId
       }
     }
@@ -86,11 +111,14 @@ export class TaskRepository {
     }
 
     const sql = `SELECT * FROM tasks WHERE ${clauses.join(' AND ')} ORDER BY sort_order ASC, created_at DESC`
-    const rows = this.db.prepare(sql).all(params) as TaskRow[]
+    const rows = this.db.prepare(sql).all(sqlBind(params)) as TaskRow[]
     return rows.map(mapRow)
   }
 
   findById(id: string): Task | null {
+    if (!id) {
+      return null
+    }
     const row = this.db
       .prepare(`SELECT * FROM tasks WHERE id = ? AND deleted_at IS NULL`)
       .get(id) as TaskRow | undefined
@@ -101,31 +129,34 @@ export class TaskRepository {
     this.db
       .prepare(
         `INSERT INTO tasks (
-          id, title, description, status, category_id, parent_id,
+          id, title, description, status, priority, category_id, parent_id,
           due_at, remind_at, remind_fired_at, completed_at, sort_order,
           created_at, updated_at, deleted_at, sync_version
         ) VALUES (
-          @id, @title, @description, @status, @categoryId, @parentId,
+          @id, @title, @description, @status, @priority, @categoryId, @parentId,
           @dueAt, @remindAt, @remindFiredAt, @completedAt, @sortOrder,
           @createdAt, @updatedAt, NULL, @syncVersion
         )`
       )
-      .run({
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        categoryId: task.categoryId,
-        parentId: task.parentId,
-        dueAt: task.dueAt,
-        remindAt: task.remindAt,
-        remindFiredAt: task.remindFiredAt,
-        completedAt: task.completedAt,
-        sortOrder: task.sortOrder,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt,
-        syncVersion: task.syncVersion
-      })
+      .run(
+        sqlBind({
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          parentId: task.parentId,
+          dueAt: task.dueAt,
+          remindAt: task.remindAt,
+          remindFiredAt: task.remindFiredAt,
+          completedAt: task.completedAt,
+          sortOrder: task.sortOrder,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+          syncVersion: task.syncVersion
+        })
+      )
   }
 
   update(task: Task): void {
@@ -133,29 +164,50 @@ export class TaskRepository {
       .prepare(
         `UPDATE tasks SET
           title = @title, description = @description, status = @status,
-          category_id = @categoryId, parent_id = @parentId,
+          priority = @priority, category_id = @categoryId, parent_id = @parentId,
           due_at = @dueAt, remind_at = @remindAt, remind_fired_at = @remindFiredAt,
           completed_at = @completedAt, sort_order = @sortOrder, updated_at = @updatedAt
          WHERE id = @id AND deleted_at IS NULL`
       )
-      .run({
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        categoryId: task.categoryId,
-        parentId: task.parentId,
-        dueAt: task.dueAt,
-        remindAt: task.remindAt,
-        remindFiredAt: task.remindFiredAt,
-        completedAt: task.completedAt,
-        sortOrder: task.sortOrder,
-        updatedAt: task.updatedAt
-      })
+      .run(
+        sqlBind({
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          parentId: task.parentId,
+          dueAt: task.dueAt,
+          remindAt: task.remindAt,
+          remindFiredAt: task.remindFiredAt,
+          completedAt: task.completedAt,
+          sortOrder: task.sortOrder,
+          updatedAt: task.updatedAt
+        })
+      )
   }
 
   softDelete(id: string, deletedAt: string): void {
     this.db.prepare(`UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE id = ?`).run(deletedAt, deletedAt, id)
+  }
+
+  countChildren(parentId: string): number {
+    const row = this.db
+      .prepare(
+        `SELECT COUNT(*) as cnt FROM tasks
+         WHERE parent_id = ? AND deleted_at IS NULL`
+      )
+      .get(parentId) as { cnt: number }
+    return row.cnt
+  }
+
+  /** 直接子任务列表（未删除） */
+  findChildrenByParentId(parentId: string): Task[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM tasks WHERE parent_id = ? AND deleted_at IS NULL`)
+      .all(parentId) as TaskRow[]
+    return rows.map(mapRow)
   }
 
   countOpenChildren(parentId: string): number {
