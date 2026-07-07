@@ -4,11 +4,13 @@ import type { DesktopApi } from '@shared/desktop-api'
 import type {
   CreateCategoryDto,
   CreateKanbanGroupDto,
+  CreateScheduledSummaryDto,
   CreateTaskDto,
   DeleteTaskOptions,
   TaskListFilter,
   UpdateCategoryDto,
   UpdateKanbanGroupDto,
+  UpdateScheduledSummaryDto,
   UpdateTaskDto
 } from '@shared/types'
 
@@ -38,13 +40,23 @@ const api: DesktopApi = {
     delete: (id: string) => ipcRenderer.invoke(IPC.KANBAN_GROUPS_DELETE, id)
   },
   messages: {
-    list: (kind?: import('@shared/types').AppMessageKind) =>
-      ipcRenderer.invoke(IPC.MESSAGES_LIST, kind),
+    list: (
+      kind?: import('@shared/types').AppMessageKind,
+      source?: import('@shared/types').AppMessageSource
+    ) => ipcRenderer.invoke(IPC.MESSAGES_LIST, kind, source),
     countUnread: (kind?: import('@shared/types').AppMessageKind) =>
       ipcRenderer.invoke(IPC.MESSAGES_COUNT_UNREAD, kind),
     markRead: (id: string) => ipcRenderer.invoke(IPC.MESSAGES_MARK_READ, id),
     markAllRead: (kind?: import('@shared/types').AppMessageKind) =>
       ipcRenderer.invoke(IPC.MESSAGES_MARK_ALL_READ, kind)
+  },
+  scheduledSummaries: {
+    list: () => ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_LIST),
+    create: (dto: CreateScheduledSummaryDto) =>
+      ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_CREATE, dto),
+    update: (id: string, dto: UpdateScheduledSummaryDto) =>
+      ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_DELETE, id)
   },
   categories: {
     list: () => ipcRenderer.invoke(IPC.CATEGORIES_LIST),
@@ -56,6 +68,10 @@ const api: DesktopApi = {
   app: {
     getDataPath: () => ipcRenderer.invoke(IPC.APP_GET_DATA_PATH),
     setDataPath: (path: string) => ipcRenderer.invoke(IPC.APP_SET_DATA_PATH, path),
+    pickDataDir: () => ipcRenderer.invoke(IPC.APP_PICK_DATA_DIR),
+    exportUserConfig: (uiPreferences?: Record<string, string>) =>
+      ipcRenderer.invoke(IPC.APP_EXPORT_USER_CONFIG, uiPreferences),
+    importUserConfig: () => ipcRenderer.invoke(IPC.APP_IMPORT_USER_CONFIG),
     getVersion: () => ipcRenderer.invoke(IPC.APP_GET_VERSION),
     getInfo: () => ipcRenderer.invoke(IPC.APP_GET_INFO),
     getShortcuts: () => ipcRenderer.invoke(IPC.APP_GET_SHORTCUTS),

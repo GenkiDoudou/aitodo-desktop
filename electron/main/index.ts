@@ -7,6 +7,10 @@ import { AppMessageRepository } from './db/app-message-repository'
 import { TaskReminderRepository } from './db/task-reminder-repository'
 import { AppMessageService } from './services/app-message-service'
 import { ReminderService } from './services/reminder-service'
+import { SummarySchedulerService } from './services/summary-scheduler-service'
+import { ScheduledSummaryRepository } from './db/scheduled-summary-repository'
+import { ScheduledSummaryService } from './services/scheduled-summary-service'
+import { CategoryRepository } from './db/category-repository'
 import { HolidayService } from './services/holiday-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting } from './tray'
 import { resolveDataDir } from './data-path'
@@ -15,11 +19,13 @@ import {
   registerAttachmentProtocol,
   registerAttachmentSchemePrivilege
 } from './attachment-protocol'
-
-registerAttachmentSchemePrivilege()
+import { registerNotificationSupport } from './services/system-notification'
 
 let mainWindow: BrowserWindow | null = null
 let reminderService: ReminderService | null = null
+let summarySchedulerService: SummarySchedulerService | null = null
+
+registerNotificationSupport()
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -93,6 +99,16 @@ app.whenReady().then(() => {
   )
   reminderService.start()
 
+  const summaryRepo = new ScheduledSummaryRepository(db)
+  const categoryRepo = new CategoryRepository(db)
+  summarySchedulerService = new SummarySchedulerService(
+    summaryRepo,
+    new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo),
+    messageService,
+    pushAppMessageToRenderer
+  )
+  summarySchedulerService.start()
+
   createTray(mainWindow, {
     onShow: () => {
       mainWindow?.show()
@@ -118,6 +134,7 @@ app.on('before-quit', () => {
   markQuitting()
   unregisterGlobalShortcuts()
   reminderService?.stop()
+  summarySchedulerService?.stop()
   destroyTray()
   closeDatabase()
 })

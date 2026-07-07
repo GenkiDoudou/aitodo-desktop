@@ -7,17 +7,21 @@ interface AppMessageRow {
   title: string
   body: string | null
   task_id: string | null
+  source: string | null
   read_at: string | null
   created_at: string
 }
 
 function mapRow(row: AppMessageRow): AppMessage {
+  const source = row.source
   return {
     id: row.id,
     kind: row.kind as AppMessageKind,
     title: row.title,
     body: row.body,
     taskId: row.task_id,
+    source:
+      source === 'task_reminder' || source === 'scheduled_summary' ? source : null,
     readAt: row.read_at,
     createdAt: row.created_at
   }
@@ -26,7 +30,15 @@ function mapRow(row: AppMessageRow): AppMessage {
 export class AppMessageRepository {
   constructor(private readonly db: Database.Database) {}
 
-  list(kind?: AppMessageKind, limit = 100): AppMessage[] {
+  list(kind?: AppMessageKind, limit = 100, source?: AppMessage['source']): AppMessage[] {
+    if (kind && source) {
+      const rows = this.db
+        .prepare(
+          `SELECT * FROM app_messages WHERE kind = ? AND source = ? ORDER BY created_at DESC LIMIT ?`
+        )
+        .all(kind, source, limit) as AppMessageRow[]
+      return rows.map(mapRow)
+    }
     if (kind) {
       const rows = this.db
         .prepare(
@@ -64,8 +76,8 @@ export class AppMessageRepository {
   insert(message: AppMessage): void {
     this.db
       .prepare(
-        `INSERT INTO app_messages (id, kind, title, body, task_id, read_at, created_at)
-         VALUES (@id, @kind, @title, @body, @taskId, @readAt, @createdAt)`
+        `INSERT INTO app_messages (id, kind, title, body, task_id, source, read_at, created_at)
+         VALUES (@id, @kind, @title, @body, @taskId, @source, @readAt, @createdAt)`
       )
       .run({
         id: message.id,
@@ -73,6 +85,7 @@ export class AppMessageRepository {
         title: message.title,
         body: message.body,
         taskId: message.taskId,
+        source: message.source,
         readAt: message.readAt,
         createdAt: message.createdAt
       })

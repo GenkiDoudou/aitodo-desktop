@@ -9,6 +9,11 @@ import {
 import { isDueSmartList } from '@shared/smart-list'
 import type { CreateTaskDto, DeleteTaskOptions, Task, TaskListFilter } from '@shared/types'
 import type { TaskPriority } from '@shared/task-priority'
+import {
+  buildCreateTaskDtoFromParsed,
+  parseAiTaskInput,
+  type AiParseCategoryRef
+} from '@shared/ai-task-parser'
 import { cloneTaskListFilter, isMatrixListFilter } from '@shared/task-list-filter'
 import { unwrapIpc } from '@/ipc/client'
 
@@ -286,26 +291,29 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   /**
-   * 快捷添加：仅标题即可创建，保持当前侧栏筛选不变。
-   * 详情（截止日、正文等）可之后点击任务再补全。
+   * 快捷添加：本地规则解析日期/提醒/循环后创建，保持当前侧栏筛选不变。
    */
   async function quickCreate(
-    title: string,
-    options?: { categoryId?: string | null; priority?: TaskPriority; kanbanGroupId?: string | null }
+    rawInput: string,
+    options?: {
+      categoryId?: string | null
+      priority?: TaskPriority
+      kanbanGroupId?: string | null
+      parseCategories?: AiParseCategoryRef[]
+    }
   ) {
-    const trimmed = title.trim()
+    const trimmed = rawInput.trim()
     if (!trimmed) {
       throw new Error('title required')
     }
-    const dto: CreateTaskDto = { title: trimmed }
-    if (options?.categoryId) {
-      dto.categoryId = options.categoryId
-    }
-    if (options?.priority != null) {
-      dto.priority = options.priority
-    }
-    if (options?.kanbanGroupId !== undefined) {
-      dto.kanbanGroupId = options.kanbanGroupId
+    const parsed = parseAiTaskInput(trimmed, { categories: options?.parseCategories ?? [] })
+    const dto = buildCreateTaskDtoFromParsed(parsed, {
+      categoryId: options?.categoryId ?? null,
+      priority: options?.priority,
+      kanbanGroupId: options?.kanbanGroupId
+    })
+    if (!dto.title.trim()) {
+      throw new Error('title required')
     }
     const task = unwrapIpc(await window.api.tasks.create(dto))
     syncTaskInList(task)

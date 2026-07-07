@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3'
+import type { SummaryTaskFilter } from '@shared/summary-report-config'
 import dayjs from 'dayjs'
 import { doneTimeRangeBounds, smartListDateBounds } from '@shared/date-filter'
 import { dueCutoffIsoForSmartList, isDueSmartList, type DueSmartList } from '@shared/smart-list'
@@ -379,5 +380,70 @@ export class TaskRepository {
     this.db
       .prepare(`UPDATE tasks SET remind_fired_at = ?, updated_at = ? WHERE id = ?`)
       .run(firedAt, firedAt, id)
+  }
+
+  /** 按完成时间区间查询已完成任务（供定时汇总） */
+  listCompletedInRange(from: string, to: string, categoryIds?: string[]): Task[] {
+    const clauses = [
+      `deleted_at IS NULL`,
+      `status = 'DONE'`,
+      `COALESCE(completed_at, updated_at) >= @from`,
+      `COALESCE(completed_at, updated_at) < @to`
+    ]
+    const params: Record<string, unknown> = { from, to }
+
+    if (categoryIds && categoryIds.length > 0) {
+      const placeholders = categoryIds.map((_, i) => `@cat${i}`).join(', ')
+      clauses.push(`category_id IN (${placeholders})`)
+      categoryIds.forEach((id, i) => {
+        params[`cat${i}`] = id
+      })
+    }
+
+    const sql = `SELECT * FROM tasks WHERE ${clauses.join(' AND ')} ORDER BY completed_at DESC, updated_at DESC`
+    const rows = this.db.prepare(sql).all(params) as TaskRow[]
+    return rows.map(mapRow)
+  }
+
+  /** 按区块配置查询任务（供定时汇总） */
+  listForSummaryReport(
+    filter: SummaryTaskFilter,
+    from: string,
+    to: string,
+    categoryIds?: string[]
+  ): Task[] {
+    if (filter === 'completed') {
+      return this.listCompletedInRange(from, to, categoryIds)
+    }
+
+    const clauses = [`deleted_at IS NULL`, `status != 'DONE'`]
+    const params: Record<string, unknown> = { from, to }
+
+    if (filter === 'overdue') {
+      clauses.push(`due_at IS NOT NULL`, `due_at < @to`)
+    } else {
+      clauses.push(`(due_at IS NULL OR due_at >= @to)`)
+      clauses.push(`(
+        (due_at IS NOT NULL AND due_at >= @from)
+        OR (due_at IS NULL AND created_at >= @from AND created_at < @to)
+      )`)
+    }
+
+    if (categoryIds && categoryIds.length > 0) {
+      const placeholders = categoryIds.map((_, i) => `@cat${i}`).join(', ')
+      clauses.push(`category_id IN (${placeholders})`)
+      categoryIds.forEach((id, i) => {
+        params[`cat${i}`] = id
+      })
+    }
+
+    const orderBy =
+      filter === 'overdue'
+        ? 'due_at ASC, updated_at DESC'
+        : 'CASE WHEN due_at IS NULL THEN 1 ELSE 0 END, due_at ASC, created_at DESC, updated_at DESC'
+
+    const sql = `SELECT * FROM tasks WHERE ${clauses.join(' AND ')} ORDER BY ${orderBy}`
+    const rows = this.db.prepare(sql).all(params) as TaskRow[]
+    return rows.map(mapRow)
   }
 }

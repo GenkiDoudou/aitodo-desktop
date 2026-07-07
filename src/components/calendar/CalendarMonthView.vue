@@ -21,7 +21,7 @@
         <div class="cal-month__tasks">
           <CalendarTaskChip
             v-for="task in visibleTasks(day)"
-            :key="task.id"
+            :key="calendarTaskRowKey(task, dateField ?? 'dueAt')"
             :task="task"
             :category-color="colorOf(task)"
             @select="emit('select', $event)"
@@ -46,7 +46,7 @@ import { computed } from 'vue'
 import dayjs from 'dayjs'
 import type { Task } from '@shared/types'
 import type { TaskDateField } from '@shared/date-filter'
-import { CALENDAR_MONTH_CELL_MAX, groupTasksByDateField } from '@shared/calendar-tasks'
+import { CALENDAR_MONTH_CELL_MAX, calendarTaskRowKey, groupTasksByDateField } from '@shared/calendar-tasks'
 import { buildCalendarDays } from '@/utils/schedule-picker'
 import CalendarTaskChip from '@/components/calendar/CalendarTaskChip.vue'
 

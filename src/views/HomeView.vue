@@ -13,8 +13,11 @@
       :uncategorized-count="sidebarListCounts.uncategorized"
       :trash-count="taskStore.trashCount"
       :done-count="taskStore.doneCount"
+      :summary-active="isSummaryView"
+      :active-summary-section="navSummarySection"
       @select-smart="onSmart"
       @select-matrix="onMatrix"
+      @select-summary="onSummary"
       @select-done="onDone"
       @select-trash="onTrash"
       @select-calendar="onCalendar"
@@ -133,37 +136,27 @@
               <el-icon><Delete /></el-icon>
             </el-button>
 
-            <el-button v-if="!isSpecialListView" class="home__ai" @click="aiDialogOpen = true">
-
-              <el-icon class="home__ai-icon"><MagicStick /></el-icon>
-
-              AI
-
-            </el-button>
-
-            <el-button v-if="!isSpecialListView" type="primary" @click="openNewTask">新建</el-button>
-
           </div>
 
         </header>
 
 
 
-        <div v-if="!isSpecialListView" class="home__quick-add">
+        <div v-if="!isSpecialListView && !isMatrixView" class="home__quick-add">
 
           <el-icon class="home__quick-add-icon"><Plus /></el-icon>
 
-          <input
+          <QuickAddInput
 
             ref="quickAddInputRef"
 
             v-model="quickAddText"
 
-            class="home__quick-add-input"
-
             :placeholder="quickAddPlaceholder"
 
-            @keydown.enter.prevent="onQuickAdd"
+            :categories="categoryStore.categories.map((c) => ({ id: c.id, name: c.name }))"
+
+            @enter="onQuickAdd"
 
           />
 
@@ -205,6 +198,12 @@
           @change-priority="onChangePriority"
         />
 
+        <div v-else-if="isSummaryConfigView" class="home__summary-pane">
+          <SettingsSummarySection embedded />
+        </div>
+
+        <SummaryResultsView v-else-if="isSummaryResultsView" />
+
         <TaskKanbanView
           v-else-if="listViewMode === 'kanban'"
           v-model:selected-column-id="kanbanSelectedColumnId"
@@ -215,6 +214,7 @@
           :hide-done="taskStore.filter.hideDone"
           :meta-visibility="taskListMetaVisibility"
           :default-category-id="kanbanDefaultCategoryId"
+          :parse-categories="categoryStore.categories.map((c) => ({ id: c.id, name: c.name }))"
           @select="openTask"
           @toggle-status="onToggleStatus"
           @changed="onKanbanChanged"
@@ -287,18 +287,6 @@
 
     </div>
 
-
-
-    <AiTaskDialog
-
-      v-model="aiDialogOpen"
-
-      :categories="categoryStore.categories"
-
-      @created="onAiTaskCreated"
-
-    />
-
   </div>
 
 </template>
@@ -309,9 +297,9 @@
 
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
-import { MagicStick, Plus, Delete } from '@element-plus/icons-vue'
+import { Plus, Delete } from '@element-plus/icons-vue'
 
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -321,6 +309,7 @@ import TaskList from '@/components/TaskList.vue'
 import TaskListGroupSortPopover from '@/components/TaskListGroupSortPopover.vue'
 import TaskListViewMenu from '@/components/TaskListViewMenu.vue'
 import TaskKanbanView from '@/components/TaskKanbanView.vue'
+import QuickAddInput from '@/components/QuickAddInput.vue'
 import TaskTimelineView from '@/components/TaskTimelineView.vue'
 
 import CompletedTaskList from '@/components/CompletedTaskList.vue'
@@ -328,10 +317,10 @@ import CompletedTaskList from '@/components/CompletedTaskList.vue'
 import TrashTaskList from '@/components/TrashTaskList.vue'
 
 import QuadrantMatrixView from '@/components/QuadrantMatrixView.vue'
+import SummaryResultsView from '@/components/SummaryResultsView.vue'
+import SettingsSummarySection from '@/components/settings/SettingsSummarySection.vue'
 
 import TaskDetailPanel from '@/components/TaskDetailPanel.vue'
-
-import AiTaskDialog from '@/components/AiTaskDialog.vue'
 
 import type { TaskSavePayload } from '@/components/TaskDetailPanel.vue'
 
@@ -383,6 +372,7 @@ import type { CalendarViewMode } from '@shared/calendar-tasks'
 
 
 const router = useRouter()
+const route = useRoute()
 
 const taskStore = useTaskStore()
 
@@ -392,13 +382,11 @@ const categoryStore = useCategoryStore()
 
 const quickAddText = ref('')
 
-const quickAddInputRef = ref<HTMLInputElement>()
+const quickAddInputRef = ref<InstanceType<typeof QuickAddInput>>()
 
 const detailOpen = ref(false)
 
 const detailPanelExpanded = ref(false)
-
-const aiDialogOpen = ref(false)
 
 const activeTaskId = ref<string | null>(null)
 
@@ -409,6 +397,9 @@ const defaultPriorityForCreate = ref<TaskPriority>(DEFAULT_TASK_PRIORITY)
 const navCategoryId = ref<string | null | undefined>(undefined)
 
 const navSmart = ref<'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash'>('all')
+const navSummaryActive = ref(false)
+type SummarySection = 'config' | 'results'
+const navSummarySection = ref<SummarySection>('config')
 
 /** 已完成页「所有清单」筛选：all=不过滤；uncategorized=未分类；否则为清单 id */
 const doneListCategory = ref<'all' | 'uncategorized' | string>('all')
@@ -431,7 +422,7 @@ const showSmartDateFieldFilter = computed(
 
 /** 普通任务列表顶栏：分组/排序、三点菜单（已完成/垃圾桶/四象限不展示） */
 const showTaskListGroupSort = computed(
-  () => !isSpecialListView.value && !isMatrixView.value
+  () => !isSpecialListView.value && !isMatrixView.value && !isSummaryView.value
 )
 const showListViewMenu = showTaskListGroupSort
 
@@ -499,11 +490,14 @@ async function onKanbanChanged() {
 
 
 
-const sidebarActiveSmart = computed<'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash' | null>(() =>
+const sidebarActiveSmart = computed<'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash' | null>(() => {
+  if (isSummaryView.value) return null
+  return navCategoryId.value !== undefined ? null : navSmart.value
+})
 
-  navCategoryId.value !== undefined ? null : navSmart.value
-
-)
+const isSummaryView = computed(() => navSummaryActive.value)
+const isSummaryConfigView = computed(() => navSummaryActive.value && navSummarySection.value === 'config')
+const isSummaryResultsView = computed(() => navSummaryActive.value && navSummarySection.value === 'results')
 
 
 
@@ -511,9 +505,16 @@ const isDoneView = computed(() => navSmart.value === 'done' && navCategoryId.val
 
 const isTrashView = computed(() => navSmart.value === 'trash' && navCategoryId.value === undefined)
 
-const isSpecialListView = computed(() => isDoneView.value || isTrashView.value)
+const isSpecialListView = computed(
+  () => isDoneView.value || isTrashView.value || isSummaryView.value
+)
 
-const isMatrixView = computed(() => navSmart.value === 'matrix' && navCategoryId.value === undefined)
+const isMatrixView = computed(
+  () =>
+    !navSummaryActive.value &&
+    navSmart.value === 'matrix' &&
+    navCategoryId.value === undefined
+)
 
 const completedCategoryFilter = computed(() => {
   if (doneListCategory.value === 'all') return undefined
@@ -538,6 +539,8 @@ const defaultCategoryForCreate = computed(() => {
 
 
 const viewTitle = computed(() => {
+  if (isSummaryConfigView.value) return '定时汇总配置'
+  if (isSummaryResultsView.value) return '汇总结果'
 
   if (navCategoryId.value === undefined) {
 
@@ -569,7 +572,9 @@ const viewTitle = computed(() => {
 
 
 
-const quickAddPlaceholder = computed(() => `输入标题回车即可添加至「${viewTitle.value}」`)
+const quickAddPlaceholder = computed(
+  () => `输入任务，可含「明天下午3点」「每天」「30分钟后」等，回车添加至「${viewTitle.value}」`
+)
 
 
 
@@ -749,6 +754,7 @@ function smartListToNav(smart?: SmartList): 'all' | 'today' | 'week' | 'last7day
 
 
 async function onSmart(smart: 'all' | 'today' | 'week' | 'last7days') {
+  navSummaryActive.value = false
   navSmart.value = smart
   navCategoryId.value = undefined
   await taskStore.navigate({
@@ -761,7 +767,7 @@ async function onSmart(smart: 'all' | 'today' | 'week' | 'last7days') {
 
 
 async function onMatrix() {
-
+  navSummaryActive.value = false
   navSmart.value = 'matrix'
 
   navCategoryId.value = undefined
@@ -771,6 +777,15 @@ async function onMatrix() {
 }
 
 
+
+async function onSummary(section: SummarySection) {
+  navSummaryActive.value = true
+  navSummarySection.value = section
+  navCategoryId.value = undefined
+  detailOpen.value = false
+  activeTaskId.value = null
+  void router.replace({ path: '/', query: { view: 'summary', section } })
+}
 
 async function onListDateFieldChange(field: TaskDateField) {
   persistListDateField(field)
@@ -816,6 +831,7 @@ async function onDoneCustomRangeChange(val: [string, string] | null) {
 }
 
 async function onDone() {
+  navSummaryActive.value = false
   navSmart.value = 'done'
   navCategoryId.value = undefined
   doneListCategory.value = 'all'
@@ -832,6 +848,7 @@ async function onSelectTasks() {
 }
 
 async function onTrash() {
+  navSummaryActive.value = false
   navSmart.value = 'trash'
   navCategoryId.value = undefined
   detailOpen.value = false
@@ -954,7 +971,7 @@ async function onEmptyTrash() {
 
 
 async function onCategory(id: string | null) {
-
+  navSummaryActive.value = false
   navCategoryId.value = id
 
   if (id === null) {
@@ -987,23 +1004,17 @@ async function onQuickAdd() {
 
   try {
 
-    const opts: { categoryId?: string | null; kanbanGroupId?: string | null } = {}
-
-    if (defaultCategoryForCreate.value) {
-
-      opts.categoryId = defaultCategoryForCreate.value
-
-    }
-
     const kanbanGid = kanbanGroupIdForQuickAdd()
 
-    if (kanbanGid !== undefined) {
+    await taskStore.quickCreate(title, {
 
-      opts.kanbanGroupId = kanbanGid
+      categoryId: defaultCategoryForCreate.value ?? null,
 
-    }
+      kanbanGroupId: kanbanGid !== undefined ? kanbanGid : undefined,
 
-    await taskStore.quickCreate(title, Object.keys(opts).length ? opts : undefined)
+      parseCategories: categoryStore.categories.map((c) => ({ id: c.id, name: c.name }))
+
+    })
 
     quickAddText.value = ''
 
@@ -1071,18 +1082,6 @@ async function onTaskSaved({ task, mode }: TaskSavePayload) {
 
 
 
-async function onAiTaskCreated(task: Task) {
-
-  await taskStore.afterSave(task, 'create')
-
-  syncNavFromFilter()
-
-  openTask(task.id)
-
-}
-
-
-
 function openNewTask() {
 
   defaultPriorityForCreate.value = DEFAULT_TASK_PRIORITY
@@ -1142,6 +1141,7 @@ function openTask(id: string) {
 function closeDetail() {
   detailOpen.value = false
   activeTaskId.value = null
+  void taskStore.fetchWithCurrentFilter()
 }
 
 function onDetailDialogVisible(visible: boolean) {
@@ -1194,20 +1194,26 @@ function onFocusQuickAdd() {
 
 
 onMounted(async () => {
-
   await categoryStore.load()
-
   await taskStore.load()
-
   await taskStore.refreshSidebarCounts()
-
   syncNavFromFilter()
-
+  syncSummaryFromRoute()
   window.addEventListener('desktop:new-task', openNewTask)
-
   window.addEventListener('desktop:focus-search', onFocusQuickAdd)
-
 })
+
+function syncSummaryFromRoute() {
+  if (route.query.view !== 'summary') return
+  navSummaryActive.value = true
+  const section = route.query.section
+  navSummarySection.value = section === 'results' ? 'results' : 'config'
+}
+
+watch(
+  () => [route.query.view, route.query.section],
+  () => syncSummaryFromRoute()
+)
 
 
 
@@ -1292,6 +1298,12 @@ onUnmounted(() => {
 }
 
 
+
+.home__summary-pane {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 
 /* 点击列表区域关闭详情；详情面板 z-index 更高且 @click.stop */
 .home__detail-scrim {
@@ -1499,15 +1511,15 @@ onUnmounted(() => {
 
   display: flex;
 
-  align-items: center;
+  align-items: flex-start;
 
   gap: 8px;
 
   margin: 12px 16px;
 
-  padding: 0 14px;
+  padding: 8px 14px;
 
-  height: 40px;
+  min-height: 40px;
 
   border-radius: 20px;
 
@@ -1539,31 +1551,7 @@ onUnmounted(() => {
 
   flex-shrink: 0;
 
-}
-
-
-
-.home__quick-add-input {
-
-  flex: 1;
-
-  border: none;
-
-  outline: none;
-
-  background: transparent;
-
-  font-size: 14px;
-
-  color: var(--desktop-text);
-
-
-
-  &::placeholder {
-
-    color: var(--desktop-muted);
-
-  }
+  margin-top: 3px;
 
 }
 

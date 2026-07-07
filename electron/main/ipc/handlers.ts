@@ -1,15 +1,18 @@
-import { app, ipcMain, BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import type {
   CreateCategoryDto,
   CreateKanbanGroupDto,
+  CreateScheduledSummaryDto,
   CreateTaskDto,
   TaskListFilter,
   UpdateCategoryDto,
   UpdateKanbanGroupDto,
+  UpdateScheduledSummaryDto,
   UpdateTaskDto,
   AppMessage,
-  AppMessageKind
+  AppMessageKind,
+  AppMessageSource
 } from '@shared/types'
 import { getActiveDataDir, getDatabase } from '../db/database'
 import { CategoryRepository } from '../db/category-repository'
@@ -17,10 +20,12 @@ import { KanbanGroupRepository } from '../db/kanban-group-repository'
 import { AppMessageRepository } from '../db/app-message-repository'
 import { TaskReminderRepository } from '../db/task-reminder-repository'
 import { TaskRepository } from '../db/task-repository'
+import { ScheduledSummaryRepository } from '../db/scheduled-summary-repository'
 import { CategoryService } from '../services/category-service'
 import { AppMessageService } from '../services/app-message-service'
 import { KanbanGroupService } from '../services/kanban-group-service'
 import { TaskService } from '../services/task-service'
+import { ScheduledSummaryService } from '../services/scheduled-summary-service'
 import {
   getDefaultDataDir,
   isDirectoryWritable,
@@ -35,7 +40,7 @@ import {
 } from '../data-path'
 import { registerGlobalShortcuts } from '../shortcuts'
 import type { ShortcutBindings } from '@shared/shortcuts'
-import { findShortcutConflicts } from '@shared/shortcuts'
+import { findShortcutConflicts, mergeShortcutBindings } from '@shared/shortcuts'
 import type { LlmConfig } from '@shared/llm-config'
 import type { AiPromptConfig } from '@shared/ai-prompt-config'
 import { AppError } from '@shared/types'
@@ -49,6 +54,10 @@ import {
   saveAttachmentBuffer,
   downloadAttachment
 } from '../services/attachment-service'
+import {
+  exportUserConfigToFile,
+  importUserConfigFromFile
+} from '../services/user-config-service'
 
 function services() {
   const db = getDatabase()
@@ -57,11 +66,13 @@ function services() {
   const kanbanRepo = new KanbanGroupRepository(db)
   const messageRepo = new AppMessageRepository(db)
   const reminderRepo = new TaskReminderRepository(db)
+  const summaryRepo = new ScheduledSummaryRepository(db)
   return {
     tasks: new TaskService(taskRepo, reminderRepo),
     categories: new CategoryService(categoryRepo),
     kanbanGroups: new KanbanGroupService(kanbanRepo),
-    messages: new AppMessageService(messageRepo)
+    messages: new AppMessageService(messageRepo),
+    scheduledSummaries: new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo)
   }
 }
 
@@ -121,8 +132,10 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     })
   )
 
-  ipcMain.handle(IPC.MESSAGES_LIST, (_e, kind?: AppMessageKind) =>
-    wrapIpc(() => services().messages.list(kind))
+  ipcMain.handle(
+    IPC.MESSAGES_LIST,
+    (_e, kind?: AppMessageKind, source?: AppMessageSource) =>
+      wrapIpc(() => services().messages.list(kind, source))
   )
   ipcMain.handle(IPC.MESSAGES_COUNT_UNREAD, (_e, kind?: AppMessageKind) =>
     wrapIpc(() => services().messages.countUnread(kind))
@@ -132,6 +145,22 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   )
   ipcMain.handle(IPC.MESSAGES_MARK_ALL_READ, (_e, kind?: AppMessageKind) =>
     wrapIpc(() => services().messages.markAllRead(kind))
+  )
+
+  ipcMain.handle(IPC.SCHEDULED_SUMMARIES_LIST, () =>
+    wrapIpc(() => services().scheduledSummaries.list())
+  )
+  ipcMain.handle(IPC.SCHEDULED_SUMMARIES_CREATE, (_e, dto: CreateScheduledSummaryDto) =>
+    wrapIpc(() => services().scheduledSummaries.create(dto))
+  )
+  ipcMain.handle(IPC.SCHEDULED_SUMMARIES_UPDATE, (_e, id: string, dto: UpdateScheduledSummaryDto) =>
+    wrapIpc(() => services().scheduledSummaries.update(id, dto))
+  )
+  ipcMain.handle(IPC.SCHEDULED_SUMMARIES_DELETE, (_e, id: string) =>
+    wrapIpc(() => {
+      services().scheduledSummaries.delete(id)
+      return undefined
+    })
   )
 
   ipcMain.handle(IPC.CATEGORIES_LIST, () => wrapIpc(() => services().categories.list()))
@@ -162,8 +191,38 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       return {
         version: app.getVersion(),
         dataPath,
+        defaultDataPath: getDefaultDataDir(),
         writable: isDirectoryWritable(dataPath)
       }
+    })
+  )
+
+  ipcMain.handle(IPC.APP_PICK_DATA_DIR, async () =>
+    wrapIpcAsync(async () => {
+      const win = getMainWindow()
+      const result = await dialog.showOpenDialog(win && !win.isDestroyed() ? win : undefined, {
+        properties: ['openDirectory', 'createDirectory']
+      })
+      if (result.canceled || !result.filePaths[0]) {
+        return null
+      }
+      return result.filePaths[0]
+    })
+  )
+
+  ipcMain.handle(IPC.APP_EXPORT_USER_CONFIG, async (_e, uiPreferences?: Record<string, string>) =>
+    wrapIpcAsync(() => exportUserConfigToFile(getMainWindow() ?? undefined, uiPreferences))
+  )
+
+  ipcMain.handle(IPC.APP_IMPORT_USER_CONFIG, async () =>
+    wrapIpcAsync(async () => {
+      const result = await importUserConfigFromFile(getMainWindow() ?? undefined)
+      if (!result) return null
+      const win = getMainWindow()
+      if (win && result.applied.shortcuts) {
+        registerGlobalShortcuts(win, mergeShortcutBindings(result.applied.shortcuts))
+      }
+      return result
     })
   )
 

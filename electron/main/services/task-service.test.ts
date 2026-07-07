@@ -252,4 +252,23 @@ describe('TaskService', () => {
     expect(service.emptyTrash()).toBe(2)
     expect(service.countTrash()).toBe(0)
   })
+
+  it('updates task with recurrence rule', () => {
+    const due = dayjs().add(1, 'day').format('YYYY-MM-DDTHH:mm:ss')
+    const task = service.create({ title: '循环任务', dueAt: due })
+    const updated = service.update(task.id, {
+      recurrence: { type: 'daily' }
+    })
+    expect(updated.recurrence).toEqual({ type: 'daily' })
+    expect(service.get(task.id).recurrence).toEqual({ type: 'daily' })
+  })
+
+  it('rejects recurrence without due date', () => {
+    const task = service.create({ title: '无截止' })
+    expect(() =>
+      service.update(task.id, {
+        recurrence: { type: 'weekly' }
+      })
+    ).toThrow('设置重复规则需要先设置截止时间')
+  })
 })

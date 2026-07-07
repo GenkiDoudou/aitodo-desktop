@@ -2,6 +2,7 @@ import dayjs from 'dayjs'
 import type { Task } from './types'
 import { getTaskPriorityMeta, type TaskPriority } from './task-priority'
 import { resolveTaskDateIso, type TaskDateField, type DateRangeBounds } from './date-filter'
+import type { TaskRecurrenceRule } from './task-reminder'
 
 export type CalendarViewMode = 'month' | 'week' | 'day'
 
@@ -83,6 +84,136 @@ export function isTaskInCalendarFilter(
   const iso = resolveTaskDateIso(task, field)
   if (!iso) return false
   return iso >= presetBounds.from && iso <= presetBounds.to
+}
+
+/** 判断某日期是否命中循环规则（相对锚点 dueAt） */
+export function recurrenceMatchesDate(
+  date: dayjs.Dayjs,
+  anchor: dayjs.Dayjs,
+  rule: TaskRecurrenceRule
+): boolean {
+  switch (rule.type) {
+    case 'daily':
+      return true
+    case 'weekly':
+      return date.day() === anchor.day()
+    case 'monthly':
+      return date.date() === anchor.date()
+    case 'yearly':
+      return date.month() === anchor.month() && date.date() === anchor.date()
+    case 'workdays':
+      return date.day() >= 1 && date.day() <= 5
+    case 'weekend':
+      return date.day() === 0 || date.day() === 6
+    case 'custom': {
+      const n = rule.interval ?? 1
+      const unit = rule.unit ?? 'day'
+      if (unit === 'day') {
+        const diff = date.diff(anchor.startOf('day'), 'day')
+        return diff >= 0 && diff % n === 0
+      }
+      if (unit === 'week') {
+        if (date.day() !== anchor.day()) return false
+        const diff = date.diff(anchor.startOf('day'), 'week')
+        return diff >= 0 && diff % n === 0
+      }
+      if (unit === 'month') {
+        if (date.date() !== anchor.date()) return false
+        const diff = date.diff(anchor.startOf('day'), 'month')
+        return diff >= 0 && diff % n === 0
+      }
+      if (unit === 'year') {
+        if (date.month() !== anchor.month() || date.date() !== anchor.date()) return false
+        const diff = date.diff(anchor.startOf('day'), 'year')
+        return diff >= 0 && diff % n === 0
+      }
+      return false
+    }
+    default:
+      return date.isSame(anchor, 'day')
+  }
+}
+
+/** 将任务克隆到指定日期（保留锚点时间） */
+function cloneTaskOnCalendarDate(
+  task: Task,
+  field: TaskDateField,
+  date: dayjs.Dayjs,
+  anchorIso: string
+): Task {
+  const anchor = dayjs(anchorIso)
+  const merged = date.hour(anchor.hour()).minute(anchor.minute()).second(anchor.second())
+  const iso = merged.format('YYYY-MM-DDTHH:mm:ss')
+  if (field === 'dueAt') {
+    return { ...task, dueAt: iso }
+  }
+  if (field === 'remindAt') {
+    return { ...task, remindAt: iso }
+  }
+  if (field === 'completedAt') {
+    return { ...task, completedAt: iso }
+  }
+  return { ...task, createdAt: iso }
+}
+
+/** 展开单条任务在可见区间内的日历实例（含循环） */
+export function expandTaskCalendarInstances(
+  task: Task,
+  visibleStart: dayjs.Dayjs,
+  visibleEnd: dayjs.Dayjs,
+  field: TaskDateField
+): Task[] {
+  const baseIso = resolveTaskDateIso(task, field)
+  if (!baseIso) return []
+
+  const rule = task.recurrence
+  const canRecur = field === 'dueAt' && rule && rule.type !== 'none' && rule.type !== 'legal_holidays'
+
+  if (!canRecur) {
+    return isTaskInRangeByField(task, visibleStart, visibleEnd, field) ? [task] : []
+  }
+
+  const anchor = dayjs(baseIso)
+  const instances: Task[] = []
+  let cursor = visibleStart.startOf('day')
+  const end = visibleEnd.endOf('day')
+
+  while (!cursor.isAfter(end, 'day')) {
+    if (recurrenceMatchesDate(cursor, anchor, rule)) {
+      instances.push(cloneTaskOnCalendarDate(task, field, cursor, baseIso))
+    }
+    cursor = cursor.add(1, 'day')
+  }
+
+  return instances
+}
+
+/** 展开循环任务并应用日历筛选 */
+export function expandTasksForCalendar(
+  tasks: Task[],
+  visibleStart: dayjs.Dayjs,
+  visibleEnd: dayjs.Dayjs,
+  field: TaskDateField,
+  presetBounds: DateRangeBounds | null
+): Task[] {
+  const expanded: Task[] = []
+  for (const task of tasks) {
+    if (task.deletedAt) continue
+    const instances = expandTaskCalendarInstances(task, visibleStart, visibleEnd, field)
+    for (const inst of instances) {
+      if (isTaskInCalendarFilter(inst, visibleStart, visibleEnd, field, presetBounds)) {
+        expanded.push(inst)
+      }
+    }
+  }
+  return expanded
+}
+
+/** 日历列表项唯一 key（同一任务可能在多个日期出现） */
+export function calendarTaskRowKey(task: Task, field: TaskDateField = 'dueAt'): string {
+  const iso = resolveTaskDateIso(task, field)
+  const dateKey = iso?.slice(0, 10) ?? 'none'
+  return `${task.id}@${dateKey}`
 }
 
 export function taskDueMinutes(task: Task): number {

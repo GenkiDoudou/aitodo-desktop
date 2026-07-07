@@ -8,6 +8,12 @@ export type { TaskPriority } from './task-priority'
 export type IsoDateTime = string
 
 export type { TaskReminderItem, TaskRecurrenceRule, TaskReminderInput } from './task-reminder'
+export type {
+  ScheduledSummary,
+  CreateScheduledSummaryDto,
+  UpdateScheduledSummaryDto,
+  SummaryScheduleType
+} from './scheduled-summary'
 
 export interface Category {
   id: string
@@ -161,11 +167,15 @@ export interface SetDataPathResult {
 export interface AppInfo {
   version: string
   dataPath: string
+  /** 安装目录旁的默认数据路径（便携模式） */
+  defaultDataPath: string
   writable: boolean
 }
 
 /** 应用内消息：通知（提醒等）与动态（操作记录） */
 export type AppMessageKind = 'notification' | 'activity'
+
+export type AppMessageSource = 'task_reminder' | 'scheduled_summary'
 
 export interface AppMessage {
   id: string
@@ -174,6 +184,8 @@ export interface AppMessage {
   body: string | null
   /** 关联任务，点击可跳转详情 */
   taskId: string | null
+  /** 消息来源，便于首页汇总与通知区分展示 */
+  source: AppMessageSource | null
   readAt: IsoDateTime | null
   createdAt: IsoDateTime
 }
@@ -183,6 +195,7 @@ export interface CreateAppMessageDto {
   title: string
   body?: string | null
   taskId?: string | null
+  source?: AppMessageSource | null
 }
 
 /** 业务层可抛出的已知错误，由 IPC 包装为 error.code */

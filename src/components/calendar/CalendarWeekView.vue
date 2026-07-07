@@ -23,7 +23,7 @@
           <div v-for="h in hours" :key="h" class="cal-week__slot" />
           <div
             v-for="task in tasksOnDay(day)"
-            :key="task.id"
+            :key="calendarTaskRowKey(task, dateField ?? 'dueAt')"
             class="cal-week__event"
             :style="eventStyle(task)"
           >
@@ -46,7 +46,7 @@ import { computed } from 'vue'
 import dayjs from 'dayjs'
 import type { Task } from '@shared/types'
 import type { TaskDateField } from '@shared/date-filter'
-import { groupTasksByDateField, taskMinutesOnField, weekdayLabel } from '@shared/calendar-tasks'
+import { calendarTaskRowKey, groupTasksByDateField, taskMinutesOnField, weekdayLabel } from '@shared/calendar-tasks'
 import CalendarTaskChip from '@/components/calendar/CalendarTaskChip.vue'
 
 const props = defineProps<{

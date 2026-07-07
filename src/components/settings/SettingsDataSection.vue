@@ -10,9 +10,17 @@
       class="settings-section__alert"
     />
     <div class="settings-section__row">
-      <el-input v-model="newPath" placeholder="输入新的数据目录绝对路径" />
-      <el-button type="primary" @click="changePath">更改（重启后生效）</el-button>
+      <el-button type="primary" @click="pickAndChangePath">更改（重启后生效）</el-button>
+      <el-button
+        v-if="info && info.dataPath !== info.defaultDataPath"
+        @click="useDefaultPath"
+      >
+        使用安装目录
+      </el-button>
     </div>
+    <p v-if="info" class="settings-section__hint">
+      默认路径：{{ info.defaultDataPath }}
+    </p>
     <p v-if="info && !info.writable" class="settings-section__error">当前目录不可写，请尽快更改。</p>
   </section>
 </template>
@@ -24,24 +32,29 @@ import type { AppInfo } from '@shared/types'
 import { unwrapIpc } from '@/ipc/client'
 
 const info = ref<AppInfo | null>(null)
-const newPath = ref('')
 
 async function loadInfo() {
   info.value = unwrapIpc(await window.api.app.getInfo())
 }
 
-async function changePath() {
-  const path = newPath.value.trim()
-  if (!path) {
-    ElMessage.warning('请输入路径')
-    return
-  }
+async function applyNewPath(path: string) {
   const result = await unwrapIpc(await window.api.app.setDataPath(path))
   await ElMessageBox.alert(
     `新路径已保存：${result.pendingPath}\n请手动复制原 data 目录下的文件到新目录后重启应用。`,
     '需重启生效',
     { type: 'info' }
   )
+}
+
+async function pickAndChangePath() {
+  const picked = unwrapIpc(await window.api.app.pickDataDir())
+  if (!picked) return
+  await applyNewPath(picked)
+}
+
+async function useDefaultPath() {
+  if (!info.value) return
+  await applyNewPath(info.value.defaultDataPath)
 }
 
 onMounted(loadInfo)
@@ -71,8 +84,16 @@ onMounted(loadInfo)
 
 .settings-section__row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
+}
+
+.settings-section__hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--desktop-muted);
+  word-break: break-all;
 }
 
 .settings-section__error {

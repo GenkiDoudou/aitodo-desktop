@@ -219,10 +219,23 @@ function expandAncestors(taskId: string) {
 }
 
 watch(
-  () => props.layoutItems.map((i) => (i.type === 'task' ? i.task.id : i.key)).join('|'),
+  () =>
+    props.layoutItems
+      .filter((i) => i.type === 'task')
+      .map((i) => `${i.task.id}:${i.task.parentId ?? ''}`)
+      .join('|'),
   () => {
-    expandedIds.value = new Set()
-    if (props.selectedId) expandAncestors(props.selectedId)
+    const next = new Set(expandedIds.value)
+    for (const id of [...next]) {
+      if (!hasChildren(id)) next.delete(id)
+    }
+    expandedIds.value = next
+    if (props.selectedId) {
+      expandAncestors(props.selectedId)
+      if (hasChildren(props.selectedId)) {
+        expandedIds.value = new Set([...expandedIds.value, props.selectedId])
+      }
+    }
   }
 )
 

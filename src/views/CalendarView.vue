@@ -9,6 +9,7 @@
       :done-count="taskStore.doneCount"
       @select-smart="goHomeSmart"
       @select-matrix="goHomeMatrix"
+      @select-summary="goHomeSummary"
       @select-done="goHomeDone"
       @select-trash="goHomeTrash"
       @select-category="goHomeCategory"
@@ -155,8 +156,8 @@ import {
 } from '@shared/date-filter'
 import {
   calendarVisibleRange,
+  expandTasksForCalendar,
   formatCalendarTitle,
-  isTaskInCalendarFilter,
   type CalendarViewMode
 } from '@shared/calendar-tasks'
 import {
@@ -211,13 +212,16 @@ const presetBounds = computed(() => {
   return calendarPresetBounds(calendarRangePreset.value, anchor.value)
 })
 
-/** 当前视图区间内、且命中 dateField + 时间段筛选的任务 */
+/** 当前视图区间内、且命中 dateField + 时间段筛选的任务（含循环展开） */
 const calendarTasks = computed(() => {
   const { start, end } = calendarVisibleRange(anchor.value, viewMode.value)
-  return taskStore.tasks.filter(
-    (t) =>
-      !t.deletedAt &&
-      isTaskInCalendarFilter(t, start, end, calendarDateField.value, presetBounds.value)
+  const active = taskStore.tasks.filter((t) => !t.deletedAt)
+  return expandTasksForCalendar(
+    active,
+    start,
+    end,
+    calendarDateField.value,
+    presetBounds.value
   )
 })
 
@@ -280,6 +284,10 @@ function goHomeSmart(smart: 'all' | 'today' | 'week' | 'last7days') {
 
 function goHomeMatrix() {
   void router.push({ path: '/', query: { view: 'matrix' } })
+}
+
+function goHomeSummary(section: 'config' | 'results' = 'config') {
+  void router.push({ path: '/', query: { view: 'summary', section } })
 }
 
 function goHomeDone() {

@@ -63,13 +63,14 @@
 
         <div class="task-kanban__cards">
           <div v-if="quickAddColumn === col.id" class="task-kanban__quick-add">
-            <input
+            <QuickAddInput
               ref="quickAddInputRef"
               v-model="quickAddText"
-              class="task-kanban__quick-input"
-              placeholder="任务标题，回车保存"
-              @keydown.enter.prevent="submitQuickAdd(col.id)"
-              @keydown.esc.prevent="cancelQuickAdd"
+              placeholder="任务标题，可含日期/提醒/重复，回车保存"
+              :categories="parseCategories"
+              :show-meta="true"
+              @enter="submitQuickAdd(col.id)"
+              @escape="cancelQuickAdd"
               @blur="onQuickAddBlur"
             />
           </div>
@@ -145,6 +146,8 @@ import type { KanbanGroup, Task } from '@shared/types'
 import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { KANBAN_UNGROUPED_ID } from '@shared/kanban-scope'
 import { taskDescriptionPreview } from '@shared/task-description'
+import { buildCreateTaskDtoFromParsed, parseAiTaskInput } from '@shared/ai-task-parser'
+import QuickAddInput from '@/components/QuickAddInput.vue'
 import { formatTaskListTime } from '@/utils/format-task-time'
 import { unwrapIpc } from '@/ipc/client'
 
@@ -162,7 +165,11 @@ const props = defineProps<{
   metaVisibility?: TaskListMetaVisibility
   /** 快捷添加任务默认清单 */
   defaultCategoryId?: string | null
+  /** 用于快捷识别中的分类名匹配 */
+  parseCategories?: { id: string; name: string }[]
 }>()
+
+const parseCategories = computed(() => props.parseCategories ?? [])
 
 const emit = defineEmits<{
   select: [string]
@@ -179,7 +186,7 @@ const draggingTaskId = ref<string | null>(null)
 const doneExpanded = ref<Record<string, boolean>>({})
 const quickAddColumn = ref<string | null>(null)
 const quickAddText = ref('')
-const quickAddInputRef = ref<HTMLInputElement | HTMLInputElement[] | null>(null)
+const quickAddInputRef = ref<InstanceType<typeof QuickAddInput> | InstanceType<typeof QuickAddInput>[] | null>(null)
 
 const rootTasks = computed(() => props.tasks.filter((t) => !t.parentId))
 
@@ -398,13 +405,12 @@ async function submitQuickAdd(columnId: string) {
   }
   const kanbanGroupId = columnId === KANBAN_UNGROUPED_ID ? null : columnId
   try {
-    unwrapIpc(
-      await window.api.tasks.create({
-        title,
-        categoryId: props.defaultCategoryId,
-        kanbanGroupId
-      })
-    )
+    const parsed = parseAiTaskInput(title, { categories: props.parseCategories ?? [] })
+    const dto = buildCreateTaskDtoFromParsed(parsed, {
+      categoryId: parsed.category?.id ?? props.defaultCategoryId ?? null,
+      kanbanGroupId
+    })
+    unwrapIpc(await window.api.tasks.create(dto))
     cancelQuickAdd()
     emit('changed')
   } catch {
@@ -556,14 +562,6 @@ async function submitQuickAdd(columnId: string) {
   border: 1px solid var(--el-color-primary);
   border-radius: 10px;
   padding: 8px 10px;
-}
-
-.task-kanban__quick-input {
-  width: 100%;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  background: transparent;
 }
 
 .task-kanban__card {

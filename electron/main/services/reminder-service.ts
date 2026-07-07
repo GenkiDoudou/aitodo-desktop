@@ -1,4 +1,3 @@
-import { Notification } from 'electron'
 import { nowIso } from '@shared/datetime'
 import { nextDueAfterRecurrence, remindAtFromDueOffset } from '@shared/task-reminder'
 import type { AppMessage } from '@shared/types'
@@ -6,6 +5,7 @@ import type { TaskRepository } from '../db/task-repository'
 import type { TaskReminderRepository } from '../db/task-reminder-repository'
 import type { AppMessageService } from './app-message-service'
 import type { HolidayService } from './holiday-service'
+import { showSystemNotification } from './system-notification'
 
 const SCAN_INTERVAL_MS = 60_000
 
@@ -64,6 +64,9 @@ export class ReminderService {
         } as import('@shared/types').Task)
         this.onInAppMessage?.(inApp)
 
+        // 先弹系统通知，避免后续循环/DB 更新异常导致无 Toast
+        showSystemNotification('任务提醒', task.title)
+
         const continuous = task.remindContinuous
         const recurrence = task.recurrence
 
@@ -91,20 +94,7 @@ export class ReminderService {
           }
         }
 
-        if (!Notification.isSupported()) {
-          this.pendingIds.delete(reminder.id)
-          continue
-        }
-
-        const notification = new Notification({
-          title: '任务提醒',
-          body: task.title
-        })
-        const release = () => this.pendingIds.delete(reminder.id)
-        notification.on('close', release)
-        notification.on('click', release)
-        notification.on('failed', release)
-        notification.show()
+        this.pendingIds.delete(reminder.id)
       }
     } finally {
       this.ticking = false

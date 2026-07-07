@@ -1,13 +1,26 @@
+import { v4 as uuidv4 } from 'uuid'
+
+/** 用户自定义提示词（名称 + 内容） */
+export interface CustomPromptEntry {
+  id: string
+  name: string
+  content: string
+}
+
 /**
- * AI 一句话建任务的提示词配置，持久化于 config.json 的 aiPrompt 字段。
- * systemPrompt 定义解析规则；userTemplate 中 {input} 为用户输入占位符。
+ * AI 提示词配置，持久化于 config.json 的 aiPrompt 字段。
+ * - 内置「任务提示词」：systemPrompt + userTemplate（AI 一句话建任务）
+ * - customPrompts：供定时汇总等场景选择
  */
 export interface AiPromptConfig {
-  /** 系统提示词：指导模型如何从自然语言提取任务字段 */
+  /** 内置任务提示词展示名称 */
+  taskPromptName: string
   systemPrompt: string
-  /** 用户消息模板，须包含 {input} 占位符 */
   userTemplate: string
+  customPrompts: CustomPromptEntry[]
 }
+
+export const BUILTIN_TASK_PROMPT_NAME = '任务提示词'
 
 export const DEFAULT_AI_SYSTEM_PROMPT = `你是 aiTodo 桌面待办助手的任务解析器。用户会用一句中文描述待办，你需要提取结构化字段。
 
@@ -35,17 +48,40 @@ export const DEFAULT_AI_USER_TEMPLATE = `今天日期：{today}
 
 export function getDefaultAiPromptConfig(): AiPromptConfig {
   return {
+    taskPromptName: BUILTIN_TASK_PROMPT_NAME,
     systemPrompt: DEFAULT_AI_SYSTEM_PROMPT,
-    userTemplate: DEFAULT_AI_USER_TEMPLATE
+    userTemplate: DEFAULT_AI_USER_TEMPLATE,
+    customPrompts: []
   }
 }
 
 export function mergeAiPromptConfig(partial?: Partial<AiPromptConfig> | null): AiPromptConfig {
   const defaults = getDefaultAiPromptConfig()
-  if (!partial) return { ...defaults }
+  if (!partial) return { ...defaults, customPrompts: [] }
+
+  const customPrompts = Array.isArray(partial.customPrompts)
+    ? partial.customPrompts
+        .filter((p) => p?.name?.trim() && p?.content?.trim())
+        .map((p) => ({
+          id: p.id?.trim() || uuidv4(),
+          name: p.name.trim(),
+          content: p.content.trim()
+        }))
+    : defaults.customPrompts
+
   return {
+    taskPromptName: partial.taskPromptName?.trim() || BUILTIN_TASK_PROMPT_NAME,
     systemPrompt: partial.systemPrompt?.trim() || defaults.systemPrompt,
-    userTemplate: partial.userTemplate?.trim() || defaults.userTemplate
+    userTemplate: partial.userTemplate?.trim() || defaults.userTemplate,
+    customPrompts
+  }
+}
+
+export function createCustomPrompt(name: string, content: string): CustomPromptEntry {
+  return {
+    id: uuidv4(),
+    name: name.trim(),
+    content: content.trim()
   }
 }
 

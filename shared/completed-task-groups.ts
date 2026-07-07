@@ -66,3 +66,11 @@ export function groupCompletedTasksByDate(
       tasks: [...groupTasks].sort(sortByCompleted)
     }))
 }
+
+/** 已完成列表展示：子任务附带主任务标题 */
+export function completedTaskDisplayTitle(task: Task, taskById: Map<string, Task>): string {
+  if (!task.parentId) return task.title
+  const parent = taskById.get(task.parentId)
+  if (!parent) return task.title
+  return `${parent.title} / ${task.title}`
+}

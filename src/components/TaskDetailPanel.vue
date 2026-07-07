@@ -135,7 +135,7 @@
 
           <div v-show="scheduleOpen" class="task-panel__collapse-body">
 
-            <el-form-item label="截止时间">
+            <el-form-item label="截止时间" :error="timeError || undefined">
 
               <DatetimeShortcutPicker v-model="dueDate" dialog-title="选择截止时间" />
 
@@ -244,7 +244,7 @@
 
         <el-button :disabled="saving" @click="onClose">取消</el-button>
 
-        <el-button type="primary" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" native-type="button" :loading="saving" @click="save">保存</el-button>
 
       </div>
 
@@ -276,8 +276,9 @@ import { useTaskStore } from '@/stores/task-store'
 
 import { unwrapIpc } from '@/ipc/client'
 
-import { assertRemindersBeforeDue } from '@shared/task-reminder'
+import { assertRemindersBeforeDue, buildRemindersFromOffsets } from '@shared/task-reminder'
 import type { TaskRecurrenceRule } from '@shared/task-reminder'
+import { toPlainCreateTaskDto, toPlainUpdateTaskDto } from '@shared/task-write-dto'
 import { toIso } from '@/utils/datetime'
 
 import DatetimeShortcutPicker from '@/components/DatetimeShortcutPicker.vue'
@@ -553,6 +554,20 @@ watch(
 
 
 
+watch(dueDate, (due, prev) => {
+  if (due === prev) return
+  const dueAt = toIso(due)
+  if (dueAt && remindPicker.value.reminders.some((r) => r.offsetMinutes != null)) {
+    const offsets = remindPicker.value.reminders
+      .map((r) => r.offsetMinutes)
+      .filter((m): m is number => m != null)
+    remindPicker.value = {
+      ...remindPicker.value,
+      reminders: buildRemindersFromOffsets(dueAt, offsets)
+    }
+  }
+})
+
 watch([dueDate, remindPicker], () => {
   const dueAt = toIso(dueDate.value)
   const err = assertRemindersBeforeDue(remindPicker.value.reminders, dueAt)
@@ -573,16 +588,24 @@ function buildPayload() {
 
   const dueAt = toIso(dueDate.value)
 
-  const reminders = remindPicker.value.reminders.map((r) => ({
+  let reminders = remindPicker.value.reminders.map((r) => ({
     remindAt: r.remindAt,
     offsetMinutes: r.offsetMinutes ?? null
   }))
+
+  if (dueAt && reminders.some((r) => r.offsetMinutes != null)) {
+    const offsets = reminders
+      .map((r) => r.offsetMinutes)
+      .filter((m): m is number => m != null)
+    reminders = buildRemindersFromOffsets(dueAt, offsets)
+  }
 
   const err = assertRemindersBeforeDue(reminders, dueAt)
 
   if (err) {
 
     timeError.value = err
+    scheduleOpen.value = true
 
     ElMessage.warning(err)
 
@@ -590,7 +613,15 @@ function buildPayload() {
 
   }
 
-  return {
+  if (recurrenceRule.value && !dueAt) {
+    const recurrenceErr = '设置重复规则需要先设置截止时间'
+    timeError.value = recurrenceErr
+    scheduleOpen.value = true
+    ElMessage.warning(recurrenceErr)
+    return null
+  }
+
+  return toPlainUpdateTaskDto({
 
     title: form.title.trim(),
 
@@ -610,7 +641,7 @@ function buildPayload() {
 
     remindContinuous: remindPicker.value.continuous
 
-  }
+  })
 
 }
 
@@ -679,6 +710,7 @@ async function addSubtaskInline() {
   newSubtaskTitle.value = ''
 
   await refreshChildTasks()
+  void taskStore.fetchWithCurrentFilter()
 
 }
 
@@ -747,37 +779,34 @@ async function save() {
 
   if (saving.value) return
 
-  bodyEditorRef.value?.flushWysiwygToMarkdown()
-
-
-
-  const title = form.title.trim()
-
-  if (!title) {
-
-    ElMessage.warning('请填写任务标题')
-
-    return
-
-  }
-
-
-
-  const payload = buildPayload()
-
-  if (!payload) return
-
-
-
   saving.value = true
 
   try {
+
+    bodyEditorRef.value?.flushWysiwygToMarkdown()
+
+    const title = form.title.trim()
+
+    if (!title) {
+
+      ElMessage.warning('请填写任务标题')
+
+      return
+
+    }
+
+    const payload = buildPayload()
+
+    if (!payload) {
+      scheduleOpen.value = true
+      return
+    }
 
     let savedTask: Task | null = null
 
     if (isNew.value) {
 
-      savedTask = unwrapIpc(await window.api.tasks.create(payload))
+      savedTask = unwrapIpc(await window.api.tasks.create(toPlainCreateTaskDto(payload)))
 
       await createDraftSubtasks(savedTask.id)
 
@@ -793,19 +822,41 @@ async function save() {
 
     }
 
-
-
     emit('saved', { task: savedTask, mode: isNew.value ? 'create' : 'update' })
 
-  } catch {
+  } catch (err) {
 
-    /* unwrapIpc 已 Toast */
+    reportTaskSaveError(err)
 
   } finally {
 
     saving.value = false
 
   }
+
+}
+
+
+
+function reportTaskSaveError(err: unknown) {
+
+  if (err instanceof Error && /^[A-Z_]+$/.test(err.message)) {
+
+    return
+
+  }
+
+  const message = err instanceof Error ? err.message : '保存失败'
+
+  if (/could not be cloned|No handler registered/i.test(message)) {
+
+    ElMessage.error('保存失败：请完全退出应用后重新启动再试')
+
+    return
+
+  }
+
+  ElMessage.error(message || '保存失败')
 
 }
 

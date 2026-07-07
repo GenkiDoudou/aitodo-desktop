@@ -48,11 +48,9 @@
       </div>
     </nav>
 
-    <!-- 二级：右侧子菜单（随一级切换内容） -->
-    <div class="sidebar__panel">
-      <!-- 任务 -->
-      <template v-if="activePrimary === 'tasks'">
-        <div class="sidebar__panel-scroll">
+    <!-- 二级：右侧子菜单（仅任务模块展示） -->
+    <div v-if="activePrimary === 'tasks'" class="sidebar__panel">
+      <div class="sidebar__panel-scroll">
           <button
             v-for="item in visibleSmartItems"
             :key="item.key"
@@ -120,64 +118,47 @@
           <div v-if="showFilters" class="sidebar__filter-hint">
             根据清单、时间、优先级等过滤任务（开发中）
           </div>
-        </div>
+      </div>
 
-        <div v-if="showDone || showTrash" class="sidebar__panel-bottom">
-          <button
-            v-if="showDone"
-            type="button"
-            class="sidebar__row"
-            :class="{ 'is-active': isDoneActive() }"
-            @click="selectDone"
-          >
-            <el-icon class="sidebar__row-icon"><CircleCheck /></el-icon>
-            <span class="sidebar__row-label">已完成</span>
-          </button>
-          <button
-            v-if="showTrash"
-            type="button"
-            class="sidebar__row"
-            :class="{ 'is-active': isTrashActive() }"
-            @click="selectTrash"
-          >
-            <el-icon class="sidebar__row-icon"><Delete /></el-icon>
-            <span class="sidebar__row-label">垃圾桶</span>
-            <span v-if="trashCount > 0" class="sidebar__row-count">{{ trashCount }}</span>
-          </button>
-        </div>
-      </template>
+      <div v-if="showDone || showTrash" class="sidebar__panel-bottom">
+        <button
+          v-if="showDone"
+          type="button"
+          class="sidebar__row"
+          :class="{ 'is-active': isDoneActive() }"
+          @click="selectDone"
+        >
+          <el-icon class="sidebar__row-icon"><CircleCheck /></el-icon>
+          <span class="sidebar__row-label">已完成</span>
+        </button>
+        <button
+          v-if="showTrash"
+          type="button"
+          class="sidebar__row"
+          :class="{ 'is-active': isTrashActive() }"
+          @click="selectTrash"
+        >
+          <el-icon class="sidebar__row-icon"><Delete /></el-icon>
+          <span class="sidebar__row-label">垃圾桶</span>
+          <span v-if="trashCount > 0" class="sidebar__row-count">{{ trashCount }}</span>
+        </button>
+      </div>
+    </div>
 
-      <!-- 日历 -->
-      <template v-else-if="activePrimary === 'calendar'">
-        <div class="sidebar__panel-scroll">
-          <button
-            v-for="v in calendarViews"
-            :key="v.value"
-            type="button"
-            class="sidebar__row"
-            :class="{ 'is-active': calendarActive && activeCalendarView === v.value }"
-            @click="selectCalendarView(v.value)"
-          >
-            <el-icon class="sidebar__row-icon"><component :is="v.icon" /></el-icon>
-            <span class="sidebar__row-label">{{ v.label }}</span>
-          </button>
-        </div>
-      </template>
-
-      <!-- 四象限 -->
-      <template v-else>
-        <div class="sidebar__panel-scroll">
-          <button
-            type="button"
-            class="sidebar__row"
-            :class="{ 'is-active': isMatrixActive() }"
-            @click="selectMatrix"
-          >
-            <el-icon class="sidebar__row-icon"><Grid /></el-icon>
-            <span class="sidebar__row-label">四象限视图</span>
-          </button>
-        </div>
-      </template>
+    <div v-else-if="activePrimary === 'summary'" class="sidebar__panel">
+      <div class="sidebar__panel-scroll">
+        <button
+          v-for="item in summaryItems"
+          :key="item.key"
+          type="button"
+          class="sidebar__row"
+          :class="{ 'is-active': activeSummarySection === item.key }"
+          @click="selectSummarySection(item.key)"
+        >
+          <el-icon class="sidebar__row-icon"><component :is="item.icon" /></el-icon>
+          <span class="sidebar__row-label">{{ item.label }}</span>
+        </button>
+      </div>
     </div>
   </aside>
 </template>
@@ -197,8 +178,10 @@ import {
   Setting,
   Sunny,
   Finished,
-  View,
-  Clock
+  Clock,
+  Timer,
+  Document,
+  List
 } from '@element-plus/icons-vue'
 import type { CalendarViewMode } from '@shared/calendar-tasks'
 import { useCategoryStore } from '@/stores/category-store'
@@ -206,12 +189,15 @@ import { useSmartListSidebarStore } from '@/stores/smart-list-sidebar-store'
 import { useMessageStore } from '@/stores/message-store'
 import AppMessagePanel from '@/components/AppMessagePanel.vue'
 
-type PrimaryKey = 'tasks' | 'calendar' | 'matrix'
+type PrimaryKey = 'tasks' | 'calendar' | 'matrix' | 'summary'
+type SummarySectionKey = 'config' | 'results'
 
 const props = withDefaults(
   defineProps<{
     activeSmart?: 'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash' | null
     activeCategory?: string | null | undefined
+    summaryActive?: boolean
+    activeSummarySection?: SummarySectionKey | null
     taskCounts?: { all: number; today: number; week: number; last7days: number }
     categoryCounts?: Record<string, number>
     uncategorizedCount?: number
@@ -227,6 +213,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   'select-smart': ['all' | 'today' | 'week' | 'last7days']
   'select-matrix': []
+  'select-summary': [SummarySectionKey]
   'select-done': []
   'select-trash': []
   'select-calendar': [CalendarViewMode]
@@ -245,6 +232,7 @@ const categoryStore = useCategoryStore()
 /** 当前一级导航：日历页 / 四象限 / 默认任务 */
 const activePrimary = computed<PrimaryKey>(() => {
   if (props.calendarActive) return 'calendar'
+  if (props.summaryActive) return 'summary'
   if (props.activeSmart === 'matrix') return 'matrix'
   return 'tasks'
 })
@@ -252,7 +240,13 @@ const activePrimary = computed<PrimaryKey>(() => {
 const primaryItems: { key: PrimaryKey; label: string; icon: Component }[] = [
   { key: 'tasks', label: '任务', icon: Finished },
   { key: 'calendar', label: '日历', icon: Calendar },
-  { key: 'matrix', label: '四象限', icon: Grid }
+  { key: 'matrix', label: '四象限', icon: Grid },
+  { key: 'summary', label: '定时汇总', icon: Timer }
+]
+
+const summaryItems: { key: SummarySectionKey; label: string; icon: Component }[] = [
+  { key: 'config', label: '定时汇总配置', icon: List },
+  { key: 'results', label: '汇总结果', icon: Document }
 ]
 
 const smartItems: {
@@ -285,15 +279,9 @@ const showDone = computed(() => sidebarVisStore.isVisible('done', props.doneCoun
 
 const showTrash = computed(() => sidebarVisStore.isVisible('trash', props.trashCount ?? 0))
 
-const calendarViews: { value: CalendarViewMode; label: string; icon: Component }[] = [
-  { value: 'month', label: '月视图', icon: Calendar },
-  { value: 'week', label: '周视图', icon: View },
-  { value: 'day', label: '日视图', icon: Sunny }
-]
-
 function selectPrimary(key: PrimaryKey) {
   if (key === 'tasks') {
-    if (props.calendarActive || props.activeSmart === 'matrix') {
+    if (props.calendarActive || props.activeSmart === 'matrix' || props.summaryActive) {
       emit('select-tasks')
     }
     return
@@ -302,11 +290,15 @@ function selectPrimary(key: PrimaryKey) {
     emit('select-calendar', props.activeCalendarView ?? 'month')
     return
   }
+  if (key === 'summary') {
+    emit('select-summary', props.activeSummarySection ?? 'config')
+    return
+  }
   emit('select-matrix')
 }
 
-function isMatrixActive() {
-  return props.activeSmart === 'matrix'
+function selectSummarySection(key: SummarySectionKey) {
+  emit('select-summary', key)
 }
 
 function isDoneActive() {
@@ -323,14 +315,6 @@ function selectDone() {
 
 function selectTrash() {
   emit('select-trash')
-}
-
-function selectMatrix() {
-  emit('select-matrix')
-}
-
-function selectCalendarView(mode: CalendarViewMode) {
-  emit('select-calendar', mode)
 }
 
 function isSmartActive(key: 'all' | 'today' | 'week' | 'last7days') {

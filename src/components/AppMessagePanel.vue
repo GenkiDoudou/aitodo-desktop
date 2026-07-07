@@ -38,12 +38,15 @@
           :class="{ 'is-unread': !item.readAt }"
           @click="onItemClick(item)"
         >
-          <span class="app-message-panel__avatar" aria-hidden="true">
-            <el-icon><Bell /></el-icon>
+          <span class="app-message-panel__avatar" aria-hidden="true" :class="avatarClass(item)">
+            <el-icon><component :is="itemIcon(item)" /></el-icon>
           </span>
           <div class="app-message-panel__content">
             <div class="app-message-panel__head">
-              <span class="app-message-panel__title">{{ item.title }}</span>
+              <span class="app-message-panel__title">
+                <span v-if="isSummaryMessage(item)" class="app-message-panel__tag">定时汇总</span>
+                {{ displayTitle(item) }}
+              </span>
               <time class="app-message-panel__date">{{ formatDate(item.createdAt) }}</time>
             </div>
             <p v-if="item.body" class="app-message-panel__body-text">{{ item.body }}</p>
@@ -62,7 +65,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Bell } from '@element-plus/icons-vue'
+import { Bell, Timer } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import type { AppMessage, AppMessageKind } from '@shared/types'
 import { useMessageStore } from '@/stores/message-store'
@@ -83,6 +87,25 @@ function formatDate(iso: string) {
   return d.isValid() ? d.format('YYYY/MM/DD') : iso
 }
 
+function isSummaryMessage(item: AppMessage) {
+  return item.source === 'scheduled_summary'
+}
+
+function itemIcon(item: AppMessage) {
+  return isSummaryMessage(item) ? Timer : Bell
+}
+
+function avatarClass(item: AppMessage) {
+  return isSummaryMessage(item) ? 'is-summary' : 'is-reminder'
+}
+
+function displayTitle(item: AppMessage) {
+  if (isSummaryMessage(item)) {
+    return item.title.replace(/^定时汇总：/, '')
+  }
+  return item.title
+}
+
 async function onItemClick(item: AppMessage) {
   if (!item.readAt) {
     await messageStore.markRead(item.id)
@@ -94,6 +117,7 @@ async function onItemClick(item: AppMessage) {
 
 async function onMarkAllRead() {
   await messageStore.markAllRead(activeTab.value)
+  ElMessage.success('已全部标为已读')
 }
 
 onMounted(() => {
@@ -203,6 +227,10 @@ onMounted(() => {
   justify-content: center;
   color: #fff;
   font-size: 18px;
+
+  &.is-summary {
+    background: linear-gradient(135deg, #e6a23c 55%, #f56c6c 100%);
+  }
 }
 
 .app-message-panel__content {
@@ -221,6 +249,21 @@ onMounted(() => {
 .app-message-panel__title {
   font-size: 14px;
   color: var(--desktop-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.app-message-panel__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, #e6a23c 18%, #fff);
+  color: #b88230;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .app-message-panel__date {

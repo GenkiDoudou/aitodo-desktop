@@ -44,6 +44,15 @@
           <span class="ai-dialog__label">提醒</span>
           <span class="ai-dialog__value" :class="{ 'is-muted': !draft.remindAt }">
             {{ draft.remindAt ? formatDisplay(draft.remindAt) : '未设置' }}
+            <template v-if="draft.reminders.length > 1">
+              （共 {{ draft.reminders.length }} 条）
+            </template>
+          </span>
+        </div>
+        <div class="ai-dialog__card">
+          <span class="ai-dialog__label">重复</span>
+          <span class="ai-dialog__value" :class="{ 'is-muted': !draft.recurrence }">
+            {{ draft.recurrence ? recurrenceText(draft) : '不重复' }}
           </span>
         </div>
         <div class="ai-dialog__card">
@@ -87,7 +96,8 @@ import { ref, watch } from 'vue'
 import { MagicStick } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { Category, Task } from '@shared/types'
-import { parseAiTaskInput, type AiParsedTaskDraft } from '@shared/ai-task-parser'
+import { parseAiTaskInput, buildCreateTaskDtoFromParsed, type AiParsedTaskDraft } from '@shared/ai-task-parser'
+import { recurrenceLabel } from '@shared/task-reminder'
 import { unwrapIpc } from '@/ipc/client'
 
 const props = defineProps<{
@@ -111,6 +121,10 @@ function categoryColor(id: string): string {
 
 function formatDisplay(iso: string): string {
   return iso.slice(0, 16).replace('T', ' ')
+}
+
+function recurrenceText(draft: AiParsedTaskDraft): string {
+  return recurrenceLabel(draft.recurrence, draft.dueAt)
 }
 
 function runParse() {
@@ -152,14 +166,8 @@ async function submit() {
 
   saving.value = true
   try {
-    const task = unwrapIpc(
-      await window.api.tasks.create({
-        title: title.slice(0, 200),
-        categoryId: parsed.category?.id ?? null,
-        dueAt: parsed.dueAt,
-        remindAt: parsed.remindAt
-      })
-    )
+    const dto = buildCreateTaskDtoFromParsed(parsed)
+    const task = unwrapIpc(await window.api.tasks.create(dto))
     emit('created', task)
     emit('update:modelValue', false)
   } catch {

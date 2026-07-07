@@ -25,26 +25,50 @@
       <SettingsShortcutsSection v-else-if="activeSection === 'shortcuts'" />
       <SettingsLlmSection v-else-if="activeSection === 'llm'" />
       <SettingsPromptSection v-else-if="activeSection === 'prompt'" />
+      <SettingsSummarySection v-else-if="activeSection === 'summary'" />
+      <SettingsImportExportSection v-else-if="activeSection === 'importExport'" />
       <SettingsAboutSection v-else />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Coin, Cpu, Document, InfoFilled, Key, List } from '@element-plus/icons-vue'
+import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Coin, Cpu, Document, FolderOpened, InfoFilled, Key, List, Timer } from '@element-plus/icons-vue'
 import SettingsDataSection from '@/components/settings/SettingsDataSection.vue'
 import SettingsSmartListSection from '@/components/settings/SettingsSmartListSection.vue'
 import SettingsShortcutsSection from '@/components/settings/SettingsShortcutsSection.vue'
 import SettingsLlmSection from '@/components/settings/SettingsLlmSection.vue'
 import SettingsPromptSection from '@/components/settings/SettingsPromptSection.vue'
+import SettingsSummarySection from '@/components/settings/SettingsSummarySection.vue'
+import SettingsImportExportSection from '@/components/settings/SettingsImportExportSection.vue'
 import SettingsAboutSection from '@/components/settings/SettingsAboutSection.vue'
 
-type SettingsSection = 'data' | 'smartList' | 'shortcuts' | 'llm' | 'prompt' | 'about'
+type SettingsSection = 'data' | 'smartList' | 'shortcuts' | 'llm' | 'prompt' | 'summary' | 'importExport' | 'about'
 
 const router = useRouter()
+const route = useRoute()
 const activeSection = ref<SettingsSection>('data')
+
+watch(
+  () => route.query.section,
+  (section) => {
+    if (
+      section === 'data' ||
+      section === 'smartList' ||
+      section === 'shortcuts' ||
+      section === 'llm' ||
+      section === 'prompt' ||
+      section === 'summary' ||
+      section === 'importExport' ||
+      section === 'about'
+    ) {
+      activeSection.value = section
+    }
+  },
+  { immediate: true }
+)
 
 const menuItems = [
   { id: 'data' as const, label: '数据存储', icon: Coin },
@@ -52,6 +76,8 @@ const menuItems = [
   { id: 'shortcuts' as const, label: '快捷键', icon: Key },
   { id: 'llm' as const, label: '大模型', icon: Cpu },
   { id: 'prompt' as const, label: '提示词', icon: Document },
+  { id: 'summary' as const, label: '定时汇总', icon: Timer },
+  { id: 'importExport' as const, label: '导入导出', icon: FolderOpened },
   { id: 'about' as const, label: '关于', icon: InfoFilled }
 ]
 </script>

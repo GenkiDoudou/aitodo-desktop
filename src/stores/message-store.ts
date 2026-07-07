@@ -10,11 +10,18 @@ export const useMessageStore = defineStore('messages', () => {
   const unreadNotifications = ref(0)
   const unreadActivities = ref(0)
   const loading = ref(false)
+  const summaryReports = ref<AppMessage[]>([])
+
+  async function loadSummaryReports(limit = 8) {
+    summaryReports.value = unwrapIpc(
+      await window.api.messages.list('notification', 'scheduled_summary')
+    ).slice(0, limit)
+  }
 
   const totalUnread = computed(() => unreadNotifications.value + unreadActivities.value)
 
-  async function loadKind(kind: AppMessageKind) {
-    const list = unwrapIpc(await window.api.messages.list(kind))
+  async function loadKind(kind: AppMessageKind, source?: import('@shared/types').AppMessageSource) {
+    const list = unwrapIpc(await window.api.messages.list(kind, source))
     if (kind === 'notification') {
       notifications.value = list
     } else {
@@ -44,6 +51,12 @@ export const useMessageStore = defineStore('messages', () => {
   function prependMessage(message: AppMessage) {
     if (message.kind === 'notification') {
       notifications.value = [message, ...notifications.value.filter((m) => m.id !== message.id)]
+      if (message.source === 'scheduled_summary') {
+        summaryReports.value = [
+          message,
+          ...summaryReports.value.filter((m) => m.id !== message.id)
+        ].slice(0, 8)
+      }
       if (!message.readAt) unreadNotifications.value += 1
     } else {
       activities.value = [message, ...activities.value.filter((m) => m.id !== message.id)]
@@ -57,20 +70,19 @@ export const useMessageStore = defineStore('messages', () => {
       list.map((m) => (m.id === id ? { ...m, readAt: updated.readAt } : m))
     notifications.value = patch(notifications.value)
     activities.value = patch(activities.value)
+    summaryReports.value = patch(summaryReports.value)
     await refreshUnread()
     return updated
   }
 
   async function markAllRead(kind?: AppMessageKind) {
     unwrapIpc(await window.api.messages.markAllRead(kind))
-    const ts = new Date().toISOString().slice(0, 19)
-    const markList = (list: AppMessage[]) =>
-      list.map((m) => ({ ...m, readAt: m.readAt ?? ts }))
     if (!kind || kind === 'notification') {
-      notifications.value = markList(notifications.value)
+      await loadKind('notification')
+      await loadSummaryReports()
     }
     if (!kind || kind === 'activity') {
-      activities.value = markList(activities.value)
+      await loadKind('activity')
     }
     await refreshUnread()
   }
@@ -84,11 +96,13 @@ export const useMessageStore = defineStore('messages', () => {
   return {
     notifications,
     activities,
+    summaryReports,
     unreadNotifications,
     unreadActivities,
     totalUnread,
     loading,
     loadAll,
+    loadSummaryReports,
     refreshUnread,
     prependMessage,
     markRead,

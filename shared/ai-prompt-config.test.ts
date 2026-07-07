@@ -16,5 +16,15 @@ describe('ai-prompt-config', () => {
   it('mergeAiPromptConfig keeps defaults for empty strings', () => {
     const cfg = mergeAiPromptConfig({ systemPrompt: '  ' })
     expect(cfg.systemPrompt.length).toBeGreaterThan(20)
+    expect(cfg.taskPromptName).toBe('任务提示词')
+    expect(cfg.customPrompts).toEqual([])
+  })
+
+  it('mergeAiPromptConfig preserves custom prompts', () => {
+    const cfg = mergeAiPromptConfig({
+      customPrompts: [{ id: 'p1', name: '汇总', content: '优化内容' }]
+    })
+    expect(cfg.customPrompts).toHaveLength(1)
+    expect(cfg.customPrompts[0].name).toBe('汇总')
   })
 })

@@ -27,9 +27,13 @@ describe('AppMessageService', () => {
     expect(service.countUnread('notification')).toBe(1)
   })
 
-  it('markRead clears unread count', () => {
-    const msg = service.create({ kind: 'notification', title: '测试' })
-    service.markRead(msg.id)
+  it('markAllRead clears unread count for kind', () => {
+    service.create({ kind: 'notification', title: 'a' })
+    service.create({ kind: 'notification', title: 'b' })
+    service.create({ kind: 'activity', title: 'c' })
+    expect(service.countUnread('notification')).toBe(2)
+    service.markAllRead('notification')
     expect(service.countUnread('notification')).toBe(0)
+    expect(service.countUnread('activity')).toBe(1)
   })
 })

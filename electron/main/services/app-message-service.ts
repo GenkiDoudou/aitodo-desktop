@@ -7,8 +7,8 @@ import type { AppMessageRepository } from '../db/app-message-repository'
 export class AppMessageService {
   constructor(private readonly repo: AppMessageRepository) {}
 
-  list(kind?: AppMessageKind): AppMessage[] {
-    return this.repo.list(kind)
+  list(kind?: AppMessageKind, source?: AppMessage['source']): AppMessage[] {
+    return this.repo.list(kind, 100, source)
   }
 
   countUnread(kind?: AppMessageKind): number {
@@ -27,6 +27,7 @@ export class AppMessageService {
       title,
       body: dto.body?.trim() ? dto.body.trim() : null,
       taskId: dto.taskId ?? null,
+      source: dto.source ?? null,
       readAt: null,
       createdAt: ts
     }
@@ -40,7 +41,8 @@ export class AppMessageService {
       kind: 'notification',
       title: '任务提醒',
       body: task.title,
-      taskId: task.id
+      taskId: task.id,
+      source: 'task_reminder'
     })
   }
 

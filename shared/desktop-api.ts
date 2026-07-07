@@ -2,25 +2,29 @@ import type {
   AppInfo,
   AppMessage,
   AppMessageKind,
+  AppMessageSource,
   Category,
   CreateCategoryDto,
   CreateKanbanGroupDto,
+  CreateScheduledSummaryDto,
   CreateTaskDto,
   DeleteTaskOptions,
   IpcResult,
   KanbanBoardGroupsResult,
   KanbanGroup,
   SetDataPathResult,
+  ScheduledSummary,
   Task,
   TaskListFilter,
   UpdateCategoryDto,
   UpdateKanbanGroupDto,
+  UpdateScheduledSummaryDto,
   UpdateTaskDto
 } from './types'
 import type { ShortcutActionId, ShortcutBindings } from './shortcuts'
 import type { LlmConfig } from './llm-config'
 import type { AiPromptConfig } from './ai-prompt-config'
-import type { SavedAttachment } from './attachment'
+import type { UserConfigImportResult } from '@shared/user-config-export'
 
 /**
  * Preload 暴露给渲染进程的 API 形状。
@@ -56,14 +60,23 @@ export interface DesktopApi {
     delete(id: string): Promise<IpcResult<void>>
   }
   messages: {
-    list(kind?: AppMessageKind): Promise<IpcResult<AppMessage[]>>
+    list(kind?: AppMessageKind, source?: AppMessageSource): Promise<IpcResult<AppMessage[]>>
     countUnread(kind?: AppMessageKind): Promise<IpcResult<number>>
     markRead(id: string): Promise<IpcResult<AppMessage>>
     markAllRead(kind?: AppMessageKind): Promise<IpcResult<number>>
   }
+  scheduledSummaries: {
+    list(): Promise<IpcResult<ScheduledSummary[]>>
+    create(dto: CreateScheduledSummaryDto): Promise<IpcResult<ScheduledSummary>>
+    update(id: string, dto: UpdateScheduledSummaryDto): Promise<IpcResult<ScheduledSummary>>
+    delete(id: string): Promise<IpcResult<void>>
+  }
   app: {
     getDataPath(): Promise<IpcResult<string>>
     setDataPath(path: string): Promise<IpcResult<SetDataPathResult>>
+    pickDataDir(): Promise<IpcResult<string | null>>
+    exportUserConfig(uiPreferences?: Record<string, string>): Promise<IpcResult<string | null>>
+    importUserConfig(): Promise<IpcResult<UserConfigImportResult | null>>
     getVersion(): Promise<IpcResult<string>>
     getInfo(): Promise<IpcResult<AppInfo>>
     getShortcuts(): Promise<IpcResult<ShortcutBindings>>
