@@ -75,7 +75,7 @@ function showWithNodeNotifier(title: string, body: string): void {
 /** 弹出系统级通知（Windows/macOS/Linux） */
 export function showSystemNotification(title: string, body: string): void {
   const message = (body || title).trim().slice(0, 240)
-  const heading = title.trim() || 'aiTodo'
+  const heading = title.trim() || '小柒todo'
 
   if (process.platform === 'win32') {
     showWithNodeNotifier(heading, message)

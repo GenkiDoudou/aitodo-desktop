@@ -1,10 +1,34 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildHolidayCalendarMap,
   buildLegalHolidayDateMap,
   findNextLegalHolidayDueAfter
 } from './timor-holiday'
 
 describe('timor-holiday', () => {
+  it('buildHolidayCalendarMap keeps holidays and makeup workdays', () => {
+    const map = buildHolidayCalendarMap(
+      {
+        code: 0,
+        holiday: {
+          '10-01': { holiday: true, name: '国庆节' },
+          '10-07': { holiday: false, name: '国庆后补班' }
+        }
+      },
+      2026
+    )
+    expect(map.get('2026-10-01')).toEqual({
+      date: '2026-10-01',
+      kind: 'holiday',
+      name: '国庆节'
+    })
+    expect(map.get('2026-10-07')).toEqual({
+      date: '2026-10-07',
+      kind: 'workday',
+      name: '国庆后补班'
+    })
+  })
+
   it('buildLegalHolidayDateMap keeps only legal holidays', () => {
     const map = buildLegalHolidayDateMap(
       {

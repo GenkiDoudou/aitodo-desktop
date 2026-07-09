@@ -58,5 +58,22 @@ export const IPC = {
   SCHEDULED_SUMMARIES_LIST: 'scheduledSummaries:list',
   SCHEDULED_SUMMARIES_CREATE: 'scheduledSummaries:create',
   SCHEDULED_SUMMARIES_UPDATE: 'scheduledSummaries:update',
-  SCHEDULED_SUMMARIES_DELETE: 'scheduledSummaries:delete'
+  SCHEDULED_SUMMARIES_DELETE: 'scheduledSummaries:delete',
+  SCHEDULED_SUMMARIES_PREVIEW: 'scheduledSummaries:preview',
+  SCHEDULED_SUMMARIES_RUN_NOW: 'scheduledSummaries:runNow',
+  /** 日历法定放假 / 调休上班标注（按年份批量） */
+  HOLIDAYS_CALENDAR_MARKS: 'holidays:calendarMarks',
+  TASK_VIEWS_LIST: 'taskViews:list',
+  TASK_VIEWS_CREATE: 'taskViews:create',
+  TASK_VIEWS_UPDATE: 'taskViews:update',
+  TASK_VIEWS_DELETE: 'taskViews:delete',
+  TASK_VIEWS_PREVIEW_COUNT: 'taskViews:previewCount',
+  TASK_VIEWS_CREATE_FROM_TEMPLATE: 'taskViews:createFromTemplate',
+  TASK_ACTIVITIES_LIST_BY_TASK: 'taskActivities:listByTask',
+  TASK_ACTIVITIES_COUNT: 'taskActivities:count',
+  TASK_ACTIVITIES_DELETE_ALL: 'taskActivities:deleteAll',
+  TASK_ACTIVITIES_PURGE: 'taskActivities:purge',
+  TASK_ACTIVITIES_DELETE_TRASHED: 'taskActivities:deleteTrashed',
+  TASK_ACTIVITY_RETENTION_GET: 'taskActivityRetention:get',
+  TASK_ACTIVITY_RETENTION_SET: 'taskActivityRetention:set'
 } as const

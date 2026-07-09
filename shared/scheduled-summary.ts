@@ -5,22 +5,53 @@ import {
   type SummaryReportConfig
 } from './summary-report-config'
 
-export type { SummaryReportConfig, SummaryReportSection, SummaryTaskFilter, SummaryTimeScope, SummaryReportTemplate } from './summary-report-config'
+export type {
+  SummaryReportConfig,
+  SummaryReportConfigV2,
+  SummaryReportSection,
+  SummaryReportSectionV2,
+  SummaryTaskFilter,
+  SummaryTimeScope,
+  SummaryReportTemplate,
+  SummarySectionQuery,
+  SummarySectionRender,
+  SummaryGroupBy,
+  SummaryListStyle,
+  SummaryReportMode,
+  SummaryFreeTemplate
+} from './summary-report-config'
 export {
   SUMMARY_REPORT_TEMPLATES,
   SUMMARY_TASK_FILTER_LABELS,
   SUMMARY_TIME_SCOPE_LABELS,
+  SUMMARY_GROUP_BY_LABELS,
+  SUMMARY_LIST_STYLE_LABELS,
   DEFAULT_REPORT_CONFIG,
+  DEFAULT_FREE_TEMPLATE_BODY,
   applySummaryReportTemplate,
   cloneReportConfig,
   createReportSection,
+  createReportSectionV2,
+  createDefaultFreeTemplate,
   describeReportConfig,
   getSummaryReportTemplate,
   normalizeReportConfig,
+  normalizeReportConfigV2,
   buildReportSummaryText,
   buildSectionTasksSummaryText,
-  resolveSectionTimeBounds
+  resolveSectionTimeBounds,
+  resolveSectionCategoryIds,
+  localDayBounds,
+  sortSectionTasks
 } from './summary-report-config'
+
+export {
+  parseSummaryTemplate,
+  validateSummaryTemplateAst,
+  renderSummaryFreeTemplate,
+  assertValidSummaryFreeTemplate,
+  SummaryTemplateError
+} from './summary-free-template'
 
 export type SummaryScheduleType = 'daily' | 'weekly' | 'monthly'
 
@@ -79,7 +110,7 @@ export const SUMMARY_SCHEDULE_LABELS: Record<SummaryScheduleType, string> = {
   monthly: '每月'
 }
 
-export const DEFAULT_SUMMARY_PROMPT = `你是 aiTodo 的任务汇总助手。请根据用户提供的「任务汇总数据」生成简洁、有条理的中文汇总。
+export const DEFAULT_SUMMARY_PROMPT = `你是小柒todo 的任务汇总助手。请根据用户提供的「任务汇总数据」生成简洁、有条理的中文汇总。
 
 要求：
 1. 按报告中的区块与清单/分类分组展示

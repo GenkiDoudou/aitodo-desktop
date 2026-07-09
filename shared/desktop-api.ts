@@ -8,6 +8,7 @@ import type {
   CreateKanbanGroupDto,
   CreateScheduledSummaryDto,
   CreateTaskDto,
+  CreateTaskViewDto,
   DeleteTaskOptions,
   IpcResult,
   KanbanBoardGroupsResult,
@@ -15,16 +16,22 @@ import type {
   SetDataPathResult,
   ScheduledSummary,
   Task,
+  TaskView,
   TaskListFilter,
   UpdateCategoryDto,
   UpdateKanbanGroupDto,
   UpdateScheduledSummaryDto,
-  UpdateTaskDto
+  UpdateTaskDto,
+  UpdateTaskViewDto,
+  TaskActivity,
+  TaskActivityRetentionPolicy
 } from './types'
 import type { ShortcutActionId, ShortcutBindings } from './shortcuts'
 import type { LlmConfig } from './llm-config'
 import type { AiPromptConfig } from './ai-prompt-config'
 import type { UserConfigImportResult } from '@shared/user-config-export'
+import type { HolidayCalendarDay } from '@shared/timor-holiday'
+import type { FilterNode } from '@shared/task-filter-ast'
 
 /**
  * Preload 暴露给渲染进程的 API 形状。
@@ -70,6 +77,33 @@ export interface DesktopApi {
     create(dto: CreateScheduledSummaryDto): Promise<IpcResult<ScheduledSummary>>
     update(id: string, dto: UpdateScheduledSummaryDto): Promise<IpcResult<ScheduledSummary>>
     delete(id: string): Promise<IpcResult<void>>
+    /** 生成预览正文，无发送副作用 */
+    preview(dto: Partial<ScheduledSummary> & CreateScheduledSummaryDto): Promise<IpcResult<string>>
+    /** 立即生成并发送汇总（消息 + 通知） */
+    runNow(id: string): Promise<IpcResult<ScheduledSummary>>
+  }
+  holidays: {
+    /** 返回多年日历标注；key 为 YYYY-MM-DD */
+    calendarMarks(years: number[]): Promise<IpcResult<Record<string, HolidayCalendarDay>>>
+  }
+  taskViews: {
+    list(): Promise<IpcResult<TaskView[]>>
+    create(dto: CreateTaskViewDto): Promise<IpcResult<TaskView>>
+    update(id: string, dto: UpdateTaskViewDto): Promise<IpcResult<TaskView>>
+    delete(id: string): Promise<IpcResult<void>>
+    previewCount(rule: FilterNode): Promise<IpcResult<number>>
+    createFromTemplate(
+      templateId: import('./view-templates').ViewTemplateId
+    ): Promise<IpcResult<TaskView>>
+  }
+  taskActivities: {
+    listByTask(taskId: string, limit?: number, before?: string): Promise<IpcResult<TaskActivity[]>>
+    count(): Promise<IpcResult<number>>
+    deleteAll(): Promise<IpcResult<number>>
+    purge(): Promise<IpcResult<number>>
+    deleteTrashed(): Promise<IpcResult<number>>
+    getRetention(): Promise<IpcResult<TaskActivityRetentionPolicy>>
+    setRetention(policy: TaskActivityRetentionPolicy): Promise<IpcResult<TaskActivityRetentionPolicy>>
   }
   app: {
     getDataPath(): Promise<IpcResult<string>>

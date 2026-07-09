@@ -95,4 +95,20 @@ describe('calendar-tasks', () => {
     const all = expandTasksForCalendar([daily], start, end, 'dueAt', null)
     expect(all.length).toBe(7)
   })
+
+  it('marks only completed occurrence dates as DONE for recurring tasks', () => {
+    const { start, end } = calendarVisibleRange(anchor, 'week')
+    const daily = task({
+      id: 'daily',
+      dueAt: '2026-09-06T09:00:00',
+      status: 'TODO',
+      recurrence: { type: 'daily' },
+      completedOccurrenceDates: ['2026-09-07']
+    })
+    const instances = expandTaskCalendarInstances(daily, start, end, 'dueAt')
+    const byDate = new Map(instances.map((t) => [t.dueAt!.slice(0, 10), t.status]))
+    expect(byDate.get('2026-09-06')).toBe('TODO')
+    expect(byDate.get('2026-09-07')).toBe('DONE')
+    expect(byDate.get('2026-09-08')).toBe('TODO')
+  })
 })

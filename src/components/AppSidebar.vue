@@ -2,7 +2,7 @@
   <aside class="sidebar">
     <!-- 一级：左侧图标栏（参考 TickTick 式窄轨导航） -->
     <nav class="sidebar__rail" aria-label="主导航">
-      <button type="button" class="sidebar__rail-brand" title="aiTodo" @click="selectPrimary('tasks')">
+      <button type="button" class="sidebar__rail-brand" title="小柒todo" @click="selectPrimary('tasks')">
         <span class="sidebar__rail-logo" aria-hidden="true" />
       </button>
 
@@ -112,12 +112,40 @@
             </el-dropdown>
           </nav>
 
-          <div v-if="showFilters" class="sidebar__section-head sidebar__section-head--filter">
-            <span class="sidebar__section-title">过滤器</span>
+          <div v-if="showViews" class="sidebar__section-head sidebar__section-head--filter">
+            <span class="sidebar__section-title">视图</span>
+            <button type="button" class="sidebar__section-add" title="新建视图" @click="emit('create-view')">
+              <el-icon><Plus /></el-icon>
+            </button>
           </div>
-          <div v-if="showFilters" class="sidebar__filter-hint">
-            根据清单、时间、优先级等过滤任务（开发中）
-          </div>
+          <nav v-if="showViews" class="sidebar__list">
+            <p v-if="viewStore.items.length === 0" class="sidebar__filter-hint">
+              保存布局、筛选与分组，点击 + 新建
+            </p>
+            <el-dropdown
+              v-for="v in viewStore.items"
+              :key="v.id"
+              trigger="contextmenu"
+              @command="(cmd: string) => onViewCommand(cmd, v.id, v.name)"
+            >
+              <button
+                type="button"
+                class="sidebar__row"
+                :class="{ 'is-active': isViewActive(v.id) }"
+                @click="selectView(v.id)"
+              >
+                <el-icon class="sidebar__row-icon"><Grid /></el-icon>
+                <span class="sidebar__row-label">{{ v.name }}</span>
+              </button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="rename">重命名</el-dropdown-item>
+                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                  <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </nav>
       </div>
 
       <div v-if="showDone || showTrash" class="sidebar__panel-bottom">
@@ -185,6 +213,7 @@ import {
 } from '@element-plus/icons-vue'
 import type { CalendarViewMode } from '@shared/calendar-tasks'
 import { useCategoryStore } from '@/stores/category-store'
+import { useViewStore } from '@/stores/view-store'
 import { useSmartListSidebarStore } from '@/stores/smart-list-sidebar-store'
 import { useMessageStore } from '@/stores/message-store'
 import AppMessagePanel from '@/components/AppMessagePanel.vue'
@@ -196,6 +225,7 @@ const props = withDefaults(
   defineProps<{
     activeSmart?: 'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash' | null
     activeCategory?: string | null | undefined
+    activeViewId?: string | null
     summaryActive?: boolean
     activeSummarySection?: SummarySectionKey | null
     taskCounts?: { all: number; today: number; week: number; last7days: number }
@@ -207,7 +237,13 @@ const props = withDefaults(
     calendarActive?: boolean
     activeCalendarView?: CalendarViewMode
   }>(),
-  { trashCount: 0, doneCount: 0, calendarActive: false, activeCalendarView: 'month' }
+  {
+    trashCount: 0,
+    doneCount: 0,
+    calendarActive: false,
+    activeCalendarView: 'month',
+    activeViewId: null
+  }
 )
 
 const emit = defineEmits<{
@@ -218,6 +254,9 @@ const emit = defineEmits<{
   'select-trash': []
   'select-calendar': [CalendarViewMode]
   'select-category': [string | null]
+  'select-view': [string]
+  'create-view': []
+  'edit-view': [string]
   'select-tasks': []
   'open-settings': []
   'open-task': [string]
@@ -228,6 +267,7 @@ const messageStore = useMessageStore()
 let unsubscribeMessagePush: (() => void) | null = null
 
 const categoryStore = useCategoryStore()
+const viewStore = useViewStore()
 
 /** 当前一级导航：日历页 / 四象限 / 默认任务 */
 const activePrimary = computed<PrimaryKey>(() => {
@@ -272,8 +312,9 @@ const showUncategorized = computed(() =>
   sidebarVisStore.isVisible('uncategorized', props.uncategorizedCount ?? 0)
 )
 
-/** 过滤器尚未实现，内容数恒为 0；仅「显示」策略下可见 */
-const showFilters = computed(() => sidebarVisStore.isVisible('filters', 0))
+const showViews = computed(() =>
+  sidebarVisStore.isVisible('filters', viewStore.items.length)
+)
 
 const showDone = computed(() => sidebarVisStore.isVisible('done', props.doneCount ?? 0))
 
@@ -322,11 +363,19 @@ function isSmartActive(key: 'all' | 'today' | 'week' | 'last7days') {
 }
 
 function isUncategorizedActive() {
-  return props.activeCategory === null && props.activeSmart === null
+  return (
+    props.activeCategory === null &&
+    props.activeSmart === null &&
+    !props.activeViewId
+  )
 }
 
 function isCategoryActive(id: string) {
-  return props.activeCategory === id
+  return props.activeCategory === id && !props.activeViewId
+}
+
+function isViewActive(id: string) {
+  return props.activeViewId === id
 }
 
 function selectSmart(key: 'all' | 'today' | 'week' | 'last7days') {
@@ -335,6 +384,36 @@ function selectSmart(key: 'all' | 'today' | 'week' | 'last7days') {
 
 function selectCategory(id: string | null) {
   emit('select-category', id)
+}
+
+function selectView(id: string) {
+  emit('select-view', id)
+}
+
+async function onViewCommand(command: string, id: string, name: string) {
+  if (command === 'rename') {
+    const { value } = await ElMessageBox.prompt('视图名称', '重命名', {
+      confirmButtonText: '保存',
+      cancelButtonText: '取消',
+      inputValue: name
+    })
+    if (value?.trim() && value.trim() !== name) {
+      await viewStore.update(id, { name: value.trim() })
+    }
+    return
+  }
+  if (command === 'edit') {
+    emit('edit-view', id)
+    return
+  }
+  if (command === 'delete') {
+    await ElMessageBox.confirm(`确定删除视图「${name}」？`, '删除视图', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+    await viewStore.remove(id)
+  }
 }
 
 async function promptCategory() {
@@ -377,6 +456,7 @@ function onMessageOpenTask(taskId: string) {
 
 onMounted(() => {
   sidebarVisStore.reload()
+  void viewStore.load()
   void messageStore.refreshUnread()
   unsubscribeMessagePush = messageStore.subscribePush()
 })

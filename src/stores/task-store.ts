@@ -299,6 +299,7 @@ export const useTaskStore = defineStore('tasks', () => {
       categoryId?: string | null
       priority?: TaskPriority
       kanbanGroupId?: string | null
+      status?: TaskStatus
       parseCategories?: AiParseCategoryRef[]
     }
   ) {
@@ -310,7 +311,8 @@ export const useTaskStore = defineStore('tasks', () => {
     const dto = buildCreateTaskDtoFromParsed(parsed, {
       categoryId: options?.categoryId ?? null,
       priority: options?.priority,
-      kanbanGroupId: options?.kanbanGroupId
+      kanbanGroupId: options?.kanbanGroupId,
+      status: options?.status
     })
     if (!dto.title.trim()) {
       throw new Error('title required')

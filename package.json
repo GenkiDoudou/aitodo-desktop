@@ -1,9 +1,9 @@
 {
   "name": "ai-todo-desktop",
   "version": "1.0.0",
-  "description": "aiTodo 纯本地桌面客户端（Electron + Vue3 + SQLite）",
+  "description": "小柒todo 纯本地桌面客户端（Electron + Vue3 + SQLite）",
   "main": "./out/main/index.js",
-  "author": "aiTodo",
+  "author": "小柒todo",
   "license": "MIT",
   "scripts": {
     "rebuild:native": "node scripts/rebuild-native.cjs",
@@ -57,7 +57,7 @@
   },
   "build": {
     "appId": "com.aitodo.desktop",
-    "productName": "aiTodo",
+    "productName": "小柒todo",
     "directories": {
       "output": "dist"
     },

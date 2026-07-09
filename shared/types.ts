@@ -15,6 +15,84 @@ export type {
   SummaryScheduleType
 } from './scheduled-summary'
 
+export type { FilterNode, FilterField, FilterOp } from './task-filter-ast'
+
+export type TaskViewLayout = 'list' | 'kanban' | 'timeline'
+
+/** 命名任务视图（对齐 GitHub Projects View） */
+export interface TaskView {
+  id: string
+  name: string
+  layout: TaskViewLayout
+  scopeKey: string | null
+  filterRule: import('./task-filter-ast').FilterNode | null
+  groupBy: import('./task-list-layout').TaskGroupBy
+  sortBy: import('./task-list-layout').TaskSortBy
+  kanbanBoardMode: import('./kanban-config').KanbanBoardMode | null
+  sortOrder: number
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface CreateTaskViewDto {
+  name: string
+  layout: TaskViewLayout
+  scopeKey?: string | null
+  filterRule?: import('./task-filter-ast').FilterNode | null
+  groupBy?: import('./task-list-layout').TaskGroupBy
+  sortBy?: import('./task-list-layout').TaskSortBy
+  kanbanBoardMode?: import('./kanban-config').KanbanBoardMode | null
+  sortOrder?: number
+}
+
+export interface UpdateTaskViewDto {
+  name?: string
+  layout?: TaskViewLayout
+  scopeKey?: string | null
+  filterRule?: import('./task-filter-ast').FilterNode | null
+  groupBy?: import('./task-list-layout').TaskGroupBy
+  sortBy?: import('./task-list-layout').TaskSortBy
+  kanbanBoardMode?: import('./kanban-config').KanbanBoardMode | null
+  sortOrder?: number
+}
+
+export type TaskActivityType =
+  | 'created'
+  | 'title_updated'
+  | 'description_updated'
+  | 'priority_updated'
+  | 'category_updated'
+  | 'due_updated'
+  | 'reminders_updated'
+  | 'recurrence_updated'
+  | 'kanban_group_updated'
+  | 'subtask_added'
+  | 'subtask_removed'
+  | 'subtask_completed'
+  | 'subtask_reopened'
+  | 'completed'
+  | 'reopened'
+  | 'deleted'
+  | 'restored'
+  | 'permanently_deleted'
+
+export interface TaskActivity {
+  id: string
+  taskId: string
+  type: TaskActivityType
+  /** 一句话描述「发生了什么」，不记录字段 diff */
+  summary: string
+  createdAt: IsoDateTime
+}
+
+export type TaskActivityRetentionMode = 'forever' | 'max_count' | 'max_days'
+
+export interface TaskActivityRetentionPolicy {
+  mode: TaskActivityRetentionMode
+  maxCount?: number
+  maxDays?: number
+}
+
 export interface Category {
   id: string
   name: string
@@ -49,6 +127,11 @@ export interface Task {
   reminders?: import('./task-reminder').TaskReminderItem[]
   /** 循环规则；null 表示不重复 */
   recurrence?: import('./task-reminder').TaskRecurrenceRule | null
+  /**
+   * 循环任务已完成的单日日期（YYYY-MM-DD）。
+   * 与整条 status 独立：日历某一天点完成只写入此列表。
+   */
+  completedOccurrenceDates?: string[]
   /** 持续提醒：触发后仍按间隔重复通知直至处理 */
   remindContinuous?: boolean
 }
@@ -85,6 +168,8 @@ export interface UpdateTaskDto {
   remindAt?: IsoDateTime | null
   reminders?: import('./task-reminder').TaskReminderInput[]
   recurrence?: import('./task-reminder').TaskRecurrenceRule | null
+  /** 覆盖循环单日完成列表；传 [] 清空 */
+  completedOccurrenceDates?: string[]
   remindContinuous?: boolean
   sortOrder?: number
   kanbanGroupId?: string | null

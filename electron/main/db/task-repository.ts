@@ -5,6 +5,10 @@ import { doneTimeRangeBounds, smartListDateBounds } from '@shared/date-filter'
 import { dueCutoffIsoForSmartList, isDueSmartList, type DueSmartList } from '@shared/smart-list'
 import type { Task, TaskListFilter, TaskStatus } from '@shared/types'
 import { parseRecurrenceRule, primaryRemindAt, serializeRecurrenceRule, type TaskReminderItem } from '@shared/task-reminder'
+import {
+  parseCompletedOccurrenceDates,
+  serializeCompletedOccurrenceDates
+} from '@shared/recurrence-occurrences'
 import { DEFAULT_TASK_PRIORITY, normalizeTaskPriority } from '@shared/task-priority'
 
 interface TaskRow {
@@ -27,6 +31,7 @@ interface TaskRow {
   kanban_group_id: string | null
   recurrence_rule: string | null
   remind_continuous: number
+  completed_occurrence_dates: string | null
 }
 
 function mapRow(row: TaskRow, reminders: TaskReminderItem[] = []): Task {
@@ -53,6 +58,7 @@ function mapRow(row: TaskRow, reminders: TaskReminderItem[] = []): Task {
     kanbanGroupId: row.kanban_group_id ?? null,
     reminders: syncedReminders,
     recurrence: parseRecurrenceRule(row.recurrence_rule ?? null),
+    completedOccurrenceDates: parseCompletedOccurrenceDates(row.completed_occurrence_dates),
     remindContinuous: (row.remind_continuous ?? 0) === 1
   }
 }
@@ -254,12 +260,12 @@ export class TaskRepository {
           id, title, description, status, priority, category_id, parent_id,
           due_at, remind_at, remind_fired_at, completed_at, sort_order,
           created_at, updated_at, deleted_at, sync_version, kanban_group_id,
-          recurrence_rule, remind_continuous
+          recurrence_rule, remind_continuous, completed_occurrence_dates
         ) VALUES (
           @id, @title, @description, @status, @priority, @categoryId, @parentId,
           @dueAt, @remindAt, @remindFiredAt, @completedAt, @sortOrder,
           @createdAt, @updatedAt, NULL, @syncVersion, @kanbanGroupId,
-          @recurrenceRule, @remindContinuous
+          @recurrenceRule, @remindContinuous, @completedOccurrenceDates
         )`
       )
       .run(
@@ -281,7 +287,8 @@ export class TaskRepository {
           syncVersion: task.syncVersion,
           kanbanGroupId: task.kanbanGroupId,
           recurrenceRule: serializeRecurrenceRule(task.recurrence),
-          remindContinuous: task.remindContinuous ? 1 : 0
+          remindContinuous: task.remindContinuous ? 1 : 0,
+          completedOccurrenceDates: serializeCompletedOccurrenceDates(task.completedOccurrenceDates)
         })
       )
   }
@@ -295,7 +302,8 @@ export class TaskRepository {
           due_at = @dueAt, remind_at = @remindAt, remind_fired_at = @remindFiredAt,
           completed_at = @completedAt, sort_order = @sortOrder, updated_at = @updatedAt,
           kanban_group_id = @kanbanGroupId,
-          recurrence_rule = @recurrenceRule, remind_continuous = @remindContinuous
+          recurrence_rule = @recurrenceRule, remind_continuous = @remindContinuous,
+          completed_occurrence_dates = @completedOccurrenceDates
          WHERE id = @id AND deleted_at IS NULL`
       )
       .run(
@@ -315,7 +323,8 @@ export class TaskRepository {
           updatedAt: task.updatedAt,
           kanbanGroupId: task.kanbanGroupId,
           recurrenceRule: serializeRecurrenceRule(task.recurrence),
-          remindContinuous: task.remindContinuous ? 1 : 0
+          remindContinuous: task.remindContinuous ? 1 : 0,
+          completedOccurrenceDates: serializeCompletedOccurrenceDates(task.completedOccurrenceDates)
         })
       )
   }
@@ -383,7 +392,12 @@ export class TaskRepository {
   }
 
   /** 按完成时间区间查询已完成任务（供定时汇总） */
-  listCompletedInRange(from: string, to: string, categoryIds?: string[]): Task[] {
+  listCompletedInRange(
+    from: string,
+    to: string,
+    categoryIds?: string[],
+    dueBetween?: { from: string; to: string } | null
+  ): Task[] {
     const clauses = [
       `deleted_at IS NULL`,
       `status = 'DONE'`,
@@ -391,6 +405,12 @@ export class TaskRepository {
       `COALESCE(completed_at, updated_at) < @to`
     ]
     const params: Record<string, unknown> = { from, to }
+
+    if (dueBetween) {
+      clauses.push(`due_at IS NOT NULL`, `due_at >= @dueFrom`, `due_at <= @dueTo`)
+      params.dueFrom = dueBetween.from
+      params.dueTo = dueBetween.to
+    }
 
     if (categoryIds && categoryIds.length > 0) {
       const placeholders = categoryIds.map((_, i) => `@cat${i}`).join(', ')
@@ -410,16 +430,29 @@ export class TaskRepository {
     filter: SummaryTaskFilter,
     from: string,
     to: string,
-    categoryIds?: string[]
+    categoryIds?: string[],
+    options?: {
+      /** 仅 dueAt 落在 [dueFrom, dueTo]（含）的任务；启用后覆盖 pending/overdue 的 due 相对逻辑 */
+      dueBetween?: { from: string; to: string } | null
+    }
   ): Task[] {
     if (filter === 'completed') {
-      return this.listCompletedInRange(from, to, categoryIds)
+      return this.listCompletedInRange(from, to, categoryIds, options?.dueBetween)
     }
 
     const clauses = [`deleted_at IS NULL`, `status != 'DONE'`]
     const params: Record<string, unknown> = { from, to }
+    const dueBetween = options?.dueBetween
 
-    if (filter === 'overdue') {
+    if (dueBetween) {
+      // 「只看今天到期」：以日历日窗口为准；status 只控制完成态
+      clauses.push(`due_at IS NOT NULL`, `due_at >= @dueFrom`, `due_at <= @dueTo`)
+      params.dueFrom = dueBetween.from
+      params.dueTo = dueBetween.to
+      if (filter === 'overdue') {
+        clauses.push(`due_at < @to`)
+      }
+    } else if (filter === 'overdue') {
       clauses.push(`due_at IS NOT NULL`, `due_at < @to`)
     } else {
       clauses.push(`(due_at IS NULL OR due_at >= @to)`)

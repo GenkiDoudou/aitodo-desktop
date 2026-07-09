@@ -4,7 +4,7 @@
       <div v-if="!embedded">
         <h2 class="settings-section__title">定时汇总</h2>
         <p class="settings-section__hint">
-          按每天/每周/每月在指定时间推送任务汇总，支持模板与多区块配置（已完成/未完成/逾期等）。
+          按每天/每周/每月推送任务汇总；支持多区块 Query/Time/Group/Render 配置。
         </p>
       </div>
       <el-button type="primary" @click="openCreate">新建汇总</el-button>
@@ -28,6 +28,9 @@
         <p v-if="item.useLlm" class="summary-card__llm">已启用大模型优化</p>
         <p v-if="item.lastSentAt" class="summary-card__last">上次发送：{{ formatTime(item.lastSentAt) }}</p>
         <div class="summary-card__actions">
+          <el-button size="small" type="primary" plain :loading="runningId === item.id" @click="onRunNow(item)">
+            立即生成
+          </el-button>
           <el-button size="small" @click="openEdit(item)">编辑</el-button>
           <el-button size="small" type="danger" plain @click="onDelete(item)">删除</el-button>
         </div>
@@ -37,7 +40,7 @@
     <el-dialog
       v-model="dialogOpen"
       :title="editingId ? '编辑汇总' : '新建汇总'"
-      width="560px"
+      width="720px"
       destroy-on-close
       @closed="resetForm"
     >
@@ -46,6 +49,15 @@
           <el-input v-model="form.name" placeholder="例如：每日工作回顾" />
         </el-form-item>
 
+        <el-form-item label="配置模式">
+          <el-radio-group v-model="form.reportConfig.mode">
+            <el-radio-button value="form">表单配置</el-radio-button>
+            <el-radio-button value="template">自由模板</el-radio-button>
+          </el-radio-group>
+          <p class="settings-section__mode-hint">两套配置独立保存，切换不会互相覆盖。</p>
+        </el-form-item>
+
+        <template v-if="form.reportConfig.mode === 'form'">
         <el-form-item label="汇总模板">
           <el-select v-model="selectedTemplateId" placeholder="选择模板" @change="onTemplateChange">
             <el-option
@@ -71,18 +83,34 @@
             >
               <div class="report-section__head">
                 <el-checkbox v-model="section.enabled">启用</el-checkbox>
-                <el-button
-                  v-if="form.reportConfig.sections.length > 1"
-                  link
-                  type="danger"
-                  @click="removeSection(index)"
-                >
-                  删除
-                </el-button>
+                <div class="report-section__move">
+                  <el-button link :disabled="index === 0" @click="moveSection(index, -1)">上移</el-button>
+                  <el-button
+                    link
+                    :disabled="index === form.reportConfig.sections.length - 1"
+                    @click="moveSection(index, 1)"
+                  >
+                    下移
+                  </el-button>
+                  <el-button
+                    v-if="form.reportConfig.sections.length > 1"
+                    link
+                    type="danger"
+                    @click="removeSection(index)"
+                  >
+                    删除
+                  </el-button>
+                </div>
               </div>
-              <el-input v-model="section.title" placeholder="区块标题" />
+
+              <el-input v-model="section.title" placeholder="区块标题" @input="markCustomTemplate" />
+
               <div class="report-section__row">
-                <el-select v-model="section.taskFilter" placeholder="任务范围" @change="markCustomTemplate">
+                <el-select
+                  v-model="section.query.status"
+                  placeholder="任务范围"
+                  @change="onStatusChange(section)"
+                >
                   <el-option
                     v-for="(label, key) in taskFilterLabels"
                     :key="key"
@@ -90,7 +118,11 @@
                     :value="key"
                   />
                 </el-select>
-                <el-select v-model="section.timeScope" placeholder="时间范围" @change="markCustomTemplate">
+                <el-select
+                  v-model="section.time.preset"
+                  placeholder="时间范围"
+                  @change="markCustomTemplate"
+                >
                   <el-option
                     v-for="(label, key) in timeScopeLabels"
                     :key="key"
@@ -99,12 +131,106 @@
                   />
                 </el-select>
               </div>
+
+              <div class="report-section__row">
+                <el-select
+                  v-model="section.query.listScope.mode"
+                  placeholder="清单范围"
+                  @change="onListScopeModeChange(section)"
+                >
+                  <el-option label="全部清单（跟随汇总）" value="all" />
+                  <el-option label="只看某清单" value="only_list" />
+                </el-select>
+                <el-select
+                  v-if="section.query.listScope.mode === 'only_list'"
+                  v-model="section.query.listScope.listId"
+                  placeholder="选择清单"
+                  @change="markCustomTemplate"
+                >
+                  <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+                </el-select>
+              </div>
+
+              <el-checkbox
+                :model-value="section.query.dueScope === 'due_today_only'"
+                @change="(v: boolean) => onDueTodayChange(section, v)"
+              >
+                只看今天到期（dueAt 落在今天 00:00–23:59）
+              </el-checkbox>
+
+              <div class="report-section__row">
+                <el-select v-model="section.group.by" placeholder="分组" @change="markCustomTemplate">
+                  <el-option
+                    v-for="(label, key) in groupByLabels"
+                    :key="key"
+                    :label="label"
+                    :value="key"
+                  />
+                </el-select>
+                <el-select v-model="section.render.style" placeholder="列表样式" @change="markCustomTemplate">
+                  <el-option
+                    v-for="(label, key) in listStyleLabels"
+                    :key="key"
+                    :label="label"
+                    :value="key"
+                  />
+                </el-select>
+              </div>
+
+              <div class="report-section__checks">
+                <el-checkbox v-model="section.render.showCount" @change="markCustomTemplate">显示数量</el-checkbox>
+                <el-checkbox v-model="section.render.showDueAt" @change="markCustomTemplate">显示截止时间</el-checkbox>
+                <el-checkbox v-model="section.render.showCompletedAt" @change="markCustomTemplate">
+                  显示完成时间
+                </el-checkbox>
+                <el-checkbox v-model="section.render.hideEmptySection" @change="markCustomTemplate">
+                  隐藏空区块
+                </el-checkbox>
+              </div>
+
+              <el-form-item label="最多显示条数（空=不限制）" class="report-section__limit">
+                <el-input-number
+                  v-model="section.render.limit"
+                  :min="1"
+                  :max="500"
+                  controls-position="right"
+                  @change="markCustomTemplate"
+                />
+              </el-form-item>
             </article>
             <el-button plain @click="addSection">添加区块</el-button>
           </div>
         </el-form-item>
+        </template>
 
-        <el-form-item label="指定分类（可多选，不选表示全部）">
+        <template v-else>
+          <el-form-item label="自由模板">
+            <div class="free-template">
+              <div class="free-template__toolbar">
+                <el-button size="small" @click="insertSnippet('section')">插入 section</el-button>
+                <el-button size="small" @click="insertSnippet('tasks')">插入 tasks</el-button>
+                <el-button size="small" @click="insertSnippet('fields')">插入字段</el-button>
+                <el-button size="small" link @click="showSyntaxHelp = !showSyntaxHelp">
+                  {{ showSyntaxHelp ? '隐藏语法速查' : '语法速查' }}
+                </el-button>
+              </div>
+              <el-collapse-transition>
+                <pre v-if="showSyntaxHelp" class="free-template__help">{{ syntaxHelp }}</pre>
+              </el-collapse-transition>
+              <el-input
+                ref="templateInputRef"
+                v-model="form.reportConfig.freeTemplate.body"
+                type="textarea"
+                :rows="14"
+                resize="vertical"
+                placeholder="在此编写自由模板..."
+              />
+              <p v-if="templateError" class="free-template__error">{{ templateError }}</p>
+            </div>
+          </el-form-item>
+        </template>
+
+        <el-form-item label="指定分类（可多选，不选表示全部；可被区块「只看某清单」覆盖）">
           <el-select v-model="form.categoryIds" multiple clearable collapse-tags placeholder="全部清单">
             <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
@@ -159,6 +285,13 @@
         <el-form-item v-if="form.useLlm" label="提示词内容">
           <el-input v-model="form.promptText" type="textarea" :rows="8" resize="vertical" />
         </el-form-item>
+
+        <el-form-item label="预览">
+          <div class="preview-box">
+            <el-button :loading="previewing" @click="preview">生成预览（不发送）</el-button>
+            <pre v-if="previewText" class="preview-box__text">{{ previewText }}</pre>
+          </div>
+        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -175,25 +308,32 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Category, ScheduledSummary, SummaryScheduleType } from '@shared/types'
 import {
   DEFAULT_SUMMARY_PROMPT,
+  DEFAULT_FREE_TEMPLATE_BODY,
   SUMMARY_SCHEDULE_LABELS,
   applySummaryReportTemplate,
   cloneReportConfig,
-  createReportSection,
+  createReportSectionV2,
+  createDefaultFreeTemplate,
   describeReportConfig,
-  normalizeReportConfig,
+  normalizeReportConfigV2,
   normalizeSendTime,
   SUMMARY_REPORT_TEMPLATES,
   SUMMARY_TASK_FILTER_LABELS,
   SUMMARY_TIME_SCOPE_LABELS,
-  type SummaryReportConfig
+  SUMMARY_GROUP_BY_LABELS,
+  SUMMARY_LIST_STYLE_LABELS,
+  type SummaryReportConfig,
+  type SummaryReportSectionV2,
+  type SummaryTaskFilter
 } from '@shared/scheduled-summary'
 import { useScheduledSummaryStore } from '@/stores/scheduled-summary-store'
 import { useCategoryStore } from '@/stores/category-store'
 import { useAiPromptStore } from '@/stores/ai-prompt-store'
+import { unwrapIpc } from '@/ipc/client'
+import { toPlainScheduledSummaryDto } from '@shared/scheduled-summary'
 
 withDefaults(
   defineProps<{
-    /** 嵌入首页主区域时隐藏区块标题 */
     embedded?: boolean
   }>(),
   { embedded: false }
@@ -206,8 +346,12 @@ const promptStore = useAiPromptStore()
 const dialogOpen = ref(false)
 const editingId = ref<string | null>(null)
 const saving = ref(false)
+const runningId = ref<string | null>(null)
+const previewing = ref(false)
+const previewText = ref('')
+const templateError = ref('')
+const showSyntaxHelp = ref(false)
 const selectedPromptId = ref('')
-
 const selectedTemplateId = ref('daily_completed')
 
 const form = reactive({
@@ -222,12 +366,45 @@ const form = reactive({
   reportConfig: cloneReportConfig(applySummaryReportTemplate('daily_completed'))
 })
 
+const syntaxHelp = `可用语法（syntaxVersion=1）：
+{{#section status="pending" due="today" list="工作" title="今日" time="today" hideEmpty="true"}}
+【{{sectionTitle}}】{{count}} 项
+{{#tasks}}
+- {{title}}{{#if dueAt}}（截止 {{dueAt}}）{{/if}}
+{{/tasks}}
+{{/section}}
+
+字段：title / dueAt / completedAt / categoryName / status / count / sectionTitle`
+
+const SNIPPETS = {
+  section: `{{#section status="pending" due="today" title="今日待办" hideEmpty="true"}}
+【{{sectionTitle}}】共 {{count}} 项
+{{#tasks}}
+- {{title}}{{#if dueAt}}（截止 {{dueAt}}）{{/if}}
+{{/tasks}}
+{{/section}}
+`,
+  tasks: `{{#tasks}}
+- {{title}}
+{{/tasks}}
+`,
+  fields: `{{title}} {{dueAt}} {{completedAt}} {{categoryName}} {{count}} {{sectionTitle}}`
+} as const
+
+function insertSnippet(kind: keyof typeof SNIPPETS) {
+  const text = SNIPPETS[kind]
+  const body = form.reportConfig.freeTemplate.body || ''
+  form.reportConfig.freeTemplate.body = body.trim() ? `${body.replace(/\s*$/, '')}\n${text}` : text
+  templateError.value = ''
+}
+
 const reportTemplates = SUMMARY_REPORT_TEMPLATES
 const taskFilterLabels = SUMMARY_TASK_FILTER_LABELS
 const timeScopeLabels = SUMMARY_TIME_SCOPE_LABELS
+const groupByLabels = SUMMARY_GROUP_BY_LABELS
+const listStyleLabels = SUMMARY_LIST_STYLE_LABELS
 
 const categories = computed<Category[]>(() => categoryStore.categories)
-
 const promptOptions = computed(() => promptStore.config?.customPrompts ?? [])
 
 function onPromptSelected(id: string) {
@@ -283,7 +460,15 @@ function reportLabel(item: ScheduledSummary) {
 }
 
 function onTemplateChange(templateId: string) {
+  const previousFree = form.reportConfig.freeTemplate
+  const previousMode = form.reportConfig.mode
   form.reportConfig = cloneReportConfig(applySummaryReportTemplate(templateId))
+  // 预设模板只替换 form sections，保留已有自由模板与当前 mode
+  form.reportConfig.freeTemplate = previousFree?.body
+    ? { ...previousFree }
+    : createDefaultFreeTemplate()
+  form.reportConfig.mode = previousMode
+  previewText.value = ''
 }
 
 function markCustomTemplate() {
@@ -291,9 +476,39 @@ function markCustomTemplate() {
   form.reportConfig.templateId = 'custom'
 }
 
+function onStatusChange(section: SummaryReportSectionV2) {
+  markCustomTemplate()
+  const status = section.query.status as SummaryTaskFilter
+  if (status === 'completed') {
+    section.render.showCompletedAt = true
+    section.render.showDueAt = false
+    section.sort.field = 'completedAt'
+    section.sort.order = 'desc'
+  } else {
+    section.render.showCompletedAt = false
+    section.render.showDueAt = true
+    section.sort.field = 'dueAt'
+    section.sort.order = 'asc'
+  }
+}
+
+function onListScopeModeChange(section: SummaryReportSectionV2) {
+  markCustomTemplate()
+  if (section.query.listScope.mode === 'all') {
+    section.query.listScope.listId = undefined
+  } else if (!section.query.listScope.listId && categories.value[0]) {
+    section.query.listScope.listId = categories.value[0].id
+  }
+}
+
+function onDueTodayChange(section: SummaryReportSectionV2, checked: boolean) {
+  markCustomTemplate()
+  section.query.dueScope = checked ? 'due_today_only' : null
+}
+
 function addSection() {
   markCustomTemplate()
-  form.reportConfig.sections.push(createReportSection())
+  form.reportConfig.sections.push(createReportSectionV2())
 }
 
 function removeSection(index: number) {
@@ -301,10 +516,23 @@ function removeSection(index: number) {
   form.reportConfig.sections.splice(index, 1)
 }
 
+function moveSection(index: number, delta: number) {
+  const next = index + delta
+  if (next < 0 || next >= form.reportConfig.sections.length) return
+  markCustomTemplate()
+  const list = form.reportConfig.sections
+  const tmp = list[index]
+  list[index] = list[next]
+  list[next] = tmp
+}
+
 function resetForm() {
   editingId.value = null
   selectedPromptId.value = ''
   selectedTemplateId.value = 'daily_completed'
+  previewText.value = ''
+  templateError.value = ''
+  showSyntaxHelp.value = false
   form.name = ''
   form.categoryIds = []
   form.scheduleType = 'daily'
@@ -331,9 +559,79 @@ function openEdit(item: ScheduledSummary) {
   form.sendDay = item.sendDay ?? 1
   form.useLlm = item.useLlm
   form.promptText = item.promptText ?? DEFAULT_SUMMARY_PROMPT
-  form.reportConfig = cloneReportConfig(normalizeReportConfig(item.reportConfig))
+  form.reportConfig = cloneReportConfig(normalizeReportConfigV2(item.reportConfig))
   selectedTemplateId.value = form.reportConfig.templateId ?? 'custom'
+  previewText.value = ''
   dialogOpen.value = true
+}
+
+function buildPayload() {
+  const reportConfig: SummaryReportConfig = cloneReportConfig({
+    mode: form.reportConfig.mode,
+    templateId: selectedTemplateId.value,
+    sections: form.reportConfig.sections.map((section) => ({
+      ...section,
+      query: {
+        ...section.query,
+        listScope: { ...section.query.listScope },
+        dueScope: section.query.dueScope ?? null
+      },
+      time: { ...section.time },
+      group: { ...section.group },
+      sort: { ...section.sort },
+      render: {
+        ...section.render,
+        limit: section.render.limit || null
+      }
+    })),
+    freeTemplate: {
+      body: form.reportConfig.freeTemplate?.body ?? DEFAULT_FREE_TEMPLATE_BODY,
+      syntaxVersion: 1
+    }
+  })
+  return {
+    id: editingId.value ?? undefined,
+    name: form.name.trim(),
+    categoryIds: [...form.categoryIds],
+    scheduleType: form.scheduleType,
+    sendTime: normalizeSendTime(form.sendTime),
+    sendWeekday: form.scheduleType === 'weekly' ? form.sendWeekday : null,
+    sendDay: form.scheduleType === 'monthly' ? form.sendDay : null,
+    useLlm: form.useLlm,
+    promptText: form.useLlm ? form.promptText : null,
+    reportConfig
+  }
+}
+
+async function preview() {
+  if (!form.name.trim()) {
+    ElMessage.warning('请先填写汇总名称')
+    return
+  }
+  templateError.value = ''
+  if (form.reportConfig.mode === 'form') {
+    const enabledSections = form.reportConfig.sections.filter((section) => section.enabled)
+    if (!enabledSections.length) {
+      ElMessage.warning('请至少启用一个报告区块')
+      return
+    }
+  } else if (!form.reportConfig.freeTemplate.body.trim()) {
+    ElMessage.warning('请填写自由模板内容')
+    return
+  }
+  previewing.value = true
+  try {
+    const payload = toPlainScheduledSummaryDto(buildPayload())
+    previewText.value = unwrapIpc(await window.api.scheduledSummaries.preview(payload))
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : ''
+    if (/第 \d+ 行/.test(msg) || /自由模板|未知/.test(msg)) {
+      templateError.value = msg
+      previewText.value = ''
+    }
+  } finally {
+    previewing.value = false
+  }
 }
 
 async function save() {
@@ -341,28 +639,26 @@ async function save() {
     ElMessage.warning('请填写汇总名称')
     return
   }
-  const enabledSections = form.reportConfig.sections.filter((section) => section.enabled)
-  if (!enabledSections.length) {
-    ElMessage.warning('请至少启用一个报告区块')
+  templateError.value = ''
+  if (form.reportConfig.mode === 'form') {
+    const enabledSections = form.reportConfig.sections.filter((section) => section.enabled)
+    if (!enabledSections.length) {
+      ElMessage.warning('请至少启用一个报告区块')
+      return
+    }
+    for (const section of enabledSections) {
+      if (section.query.listScope.mode === 'only_list' && !section.query.listScope.listId) {
+        ElMessage.warning(`区块「${section.title}」请选择清单`)
+        return
+      }
+    }
+  } else if (!form.reportConfig.freeTemplate.body.trim()) {
+    ElMessage.warning('请填写自由模板内容')
     return
   }
   saving.value = true
   try {
-    const reportConfig: SummaryReportConfig = cloneReportConfig({
-      templateId: selectedTemplateId.value,
-      sections: form.reportConfig.sections.map((section) => ({ ...section }))
-    })
-    const payload = {
-      name: form.name.trim(),
-      categoryIds: [...form.categoryIds],
-      scheduleType: form.scheduleType,
-      sendTime: normalizeSendTime(form.sendTime),
-      sendWeekday: form.scheduleType === 'weekly' ? form.sendWeekday : null,
-      sendDay: form.scheduleType === 'monthly' ? form.sendDay : null,
-      useLlm: form.useLlm,
-      promptText: form.useLlm ? form.promptText : null,
-      reportConfig
-    }
+    const payload = buildPayload()
     if (editingId.value) {
       await summaryStore.update(editingId.value, payload)
       ElMessage.success('汇总已更新')
@@ -372,10 +668,25 @@ async function save() {
     }
     await summaryStore.load()
     dialogOpen.value = false
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : ''
+    if (/第 \d+ 行/.test(msg)) {
+      templateError.value = msg
+    }
+  } finally {
+    saving.value = false
+  }
+}
+
+async function onRunNow(item: ScheduledSummary) {
+  runningId.value = item.id
+  try {
+    await summaryStore.runNow(item.id)
+    ElMessage.success('汇总已生成并发送到消息列表')
   } catch {
     /* store / unwrapIpc 已 Toast */
   } finally {
-    saving.value = false
+    runningId.value = null
   }
 }
 
@@ -494,6 +805,43 @@ onMounted(async () => {
   color: var(--desktop-muted);
 }
 
+.settings-section__mode-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--desktop-muted);
+}
+
+.free-template {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.free-template__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.free-template__help {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--desktop-border);
+  background: var(--desktop-bg, #f7f8fa);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.free-template__error {
+  margin: 0;
+  color: var(--el-color-danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .template-option {
   display: flex;
   flex-direction: column;
@@ -529,9 +877,45 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
+.report-section__move {
+  display: flex;
+  gap: 4px;
+}
+
 .report-section__row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.report-section__checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.report-section__limit {
+  margin-bottom: 0;
+}
+
+.preview-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.preview-box__text {
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--desktop-border);
+  background: var(--desktop-bg, #f7f8fa);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 </style>

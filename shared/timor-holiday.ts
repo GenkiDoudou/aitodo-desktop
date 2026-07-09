@@ -13,11 +13,51 @@ export interface TimorYearHolidayResponse {
   holiday: Record<string, TimorHolidayEntry | null>
 }
 
+/** 日历展示用：法定放假 / 调休上班 */
+export type HolidayCalendarKind = 'holiday' | 'workday'
+
+export interface HolidayCalendarDay {
+  date: string
+  kind: HolidayCalendarKind
+  name: string
+}
+
 const TIMOR_HOLIDAY_YEAR_URL = 'https://timor.tech/api/holiday/year'
 
 /** 年度接口 URL（文档要求整年后加斜杠） */
 export function timorHolidayYearUrl(year: number): string {
   return `${TIMOR_HOLIDAY_YEAR_URL}/${year}/`
+}
+
+function toFullDate(year: number, mmdd: string, entryDate?: string): string | null {
+  if (entryDate && /^\d{4}-\d{2}-\d{2}$/.test(entryDate)) return entryDate
+  const parts = mmdd.split('-')
+  if (parts.length !== 2) return null
+  return `${year}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`
+}
+
+/**
+ * 将 timor 年度接口转为日历标注图：
+ * - holiday=true → 法定放假（休）
+ * - holiday=false → 调休补班（班）
+ */
+export function buildHolidayCalendarMap(
+  response: TimorYearHolidayResponse,
+  year: number
+): Map<string, HolidayCalendarDay> {
+  const map = new Map<string, HolidayCalendarDay>()
+  if (response.code !== 0 || !response.holiday) return map
+  for (const [mmdd, entry] of Object.entries(response.holiday)) {
+    if (!entry || typeof entry.holiday !== 'boolean') continue
+    const full = toFullDate(year, mmdd, entry.date)
+    if (!full) continue
+    map.set(full, {
+      date: full,
+      kind: entry.holiday ? 'holiday' : 'workday',
+      name: entry.name || (entry.holiday ? '法定节假日' : '调休上班')
+    })
+  }
+  return map
 }
 
 /**
@@ -29,13 +69,26 @@ export function buildLegalHolidayDateMap(
   year: number
 ): Map<string, TimorHolidayEntry> {
   const map = new Map<string, TimorHolidayEntry>()
-  if (response.code !== 0 || !response.holiday) return map
-  for (const [mmdd, entry] of Object.entries(response.holiday)) {
-    if (!entry?.holiday) continue
-    const parts = mmdd.split('-')
-    if (parts.length !== 2) continue
-    const full = `${year}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`
-    map.set(full, { ...entry, date: entry.date ?? full })
+  const calendar = buildHolidayCalendarMap(response, year)
+  for (const [date, day] of calendar) {
+    if (day.kind !== 'holiday') continue
+    map.set(date, {
+      holiday: true,
+      name: day.name,
+      date
+    })
+  }
+  return map
+}
+
+/** 从日历全量图中提取法定放假日（供循环提醒） */
+export function legalHolidayMapFromCalendar(
+  calendar: Map<string, HolidayCalendarDay>
+): Map<string, TimorHolidayEntry> {
+  const map = new Map<string, TimorHolidayEntry>()
+  for (const [date, day] of calendar) {
+    if (day.kind !== 'holiday') continue
+    map.set(date, { holiday: true, name: day.name, date })
   }
   return map
 }

@@ -6,6 +6,7 @@ import {
   primaryRemindAt,
   type TaskReminderInput
 } from '@shared/task-reminder'
+import { normalizeCompletedOccurrenceDates } from '@shared/recurrence-occurrences'
 import type {
   CreateTaskDto,
   Task,
@@ -16,6 +17,8 @@ import type {
 import { AppError } from '@shared/types'
 import type { TaskRepository } from '../db/task-repository'
 import type { TaskReminderRepository } from '../db/task-reminder-repository'
+import type { TaskActivityService } from './task-activity-service'
+import type { TaskActivityRecorder } from './task-activity-recorder'
 
 const VALID_STATUS: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE']
 
@@ -26,7 +29,9 @@ const VALID_STATUS: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE']
 export class TaskService {
   constructor(
     private readonly repo: TaskRepository,
-    private readonly reminderRepo: TaskReminderRepository
+    private readonly reminderRepo: TaskReminderRepository,
+    private readonly activityService?: TaskActivityService,
+    private readonly activityRecorder?: TaskActivityRecorder
   ) {}
 
   list(filter?: TaskListFilter): Task[] {
@@ -134,6 +139,7 @@ export class TaskService {
       syncVersion: 0,
       kanbanGroupId: dto.kanbanGroupId ?? null,
       recurrence,
+      completedOccurrenceDates: [],
       remindContinuous: dto.remindContinuous ?? false
     }
 
@@ -141,6 +147,7 @@ export class TaskService {
     if (reminderInputs.length) {
       this.reminderRepo.replaceForTask(task.id, reminderInputs, ts)
     }
+    this.recordActivities(this.activityRecorder?.buildCreateEvents(task, dto) ?? [])
     return this.enrichTask(task)
   }
 
@@ -191,6 +198,14 @@ export class TaskService {
       throw new AppError('VALIDATION_ERROR', '设置重复规则需要先设置截止时间')
     }
 
+    let nextCompletedOccurrences = existing.completedOccurrenceDates ?? []
+    if (dto.completedOccurrenceDates !== undefined) {
+      nextCompletedOccurrences = normalizeCompletedOccurrenceDates(dto.completedOccurrenceDates)
+    } else if (dto.recurrence !== undefined && !nextRecurrence) {
+      // 关闭重复时清空单日完成记录
+      nextCompletedOccurrences = []
+    }
+
     let remindFiredAt = existing.remindFiredAt
     if (remindersTouched) {
       remindFiredAt = null
@@ -215,6 +230,7 @@ export class TaskService {
       kanbanGroupId:
         dto.kanbanGroupId !== undefined ? (dto.kanbanGroupId ?? null) : existing.kanbanGroupId,
       recurrence: nextRecurrence,
+      completedOccurrenceDates: nextCompletedOccurrences,
       remindContinuous:
         dto.remindContinuous !== undefined ? dto.remindContinuous : existing.remindContinuous,
       updatedAt: ts
@@ -231,11 +247,14 @@ export class TaskService {
       // 截止变更时，按 offset 重算相对提醒
       this.reminderRepo.rebuildOffsetsForTask(id, dueAt)
     }
+    this.recordActivities(
+      this.activityRecorder?.buildUpdateEvents(existing, updated, dto) ?? []
+    )
     return this.enrichTask(updated)
   }
 
   delete(id: string, options?: { cascadeChildren?: boolean }): void {
-    this.get(id)
+    const task = this.get(id)
     const ts = nowIso()
     const childCount = this.repo.countChildren(id)
 
@@ -246,18 +265,32 @@ export class TaskService {
           `该任务下有 ${childCount} 个子任务，请确认是否一并删除`
         )
       }
-      this.softDeleteSubtree(id, ts)
+      this.softDeleteSubtree(task, ts)
       return
     }
 
+    this.recordDelete(task, ts)
     this.repo.softDelete(id, ts)
   }
 
-  private softDeleteSubtree(id: string, ts: string): void {
-    for (const child of this.repo.findChildrenByParentId(id)) {
-      this.softDeleteSubtree(child.id, ts)
+  private recordDelete(task: Task, ts: string): void {
+    if (!this.activityRecorder) return
+    const events = []
+    if (task.parentId) {
+      events.push(
+        this.activityRecorder.buildSubtaskParentEvents(task.parentId, task, 'removed', ts)
+      )
     }
-    this.repo.softDelete(id, ts)
+    events.push(this.activityRecorder.buildDeleteEvent(task, ts))
+    this.recordActivities(events)
+  }
+
+  private softDeleteSubtree(task: Task, ts: string): void {
+    for (const child of this.repo.findChildrenByParentId(task.id)) {
+      this.softDeleteSubtree(child, ts)
+    }
+    this.recordDelete(task, ts)
+    this.repo.softDelete(task.id, ts)
   }
 
   restore(id: string): Task {
@@ -275,6 +308,9 @@ export class TaskService {
     }
     const ts = nowIso()
     this.repo.restore(id, ts)
+    if (this.activityRecorder) {
+      this.recordActivities([this.activityRecorder.buildRestoreEvent(id, ts)])
+    }
     return this.get(id)
   }
 
@@ -295,11 +331,21 @@ export class TaskService {
         this.permanentDelete(child.id, { cascadeChildren: true })
       }
     }
+    const ts = nowIso()
     this.reminderRepo.deleteByTaskId(id)
+    this.activityService?.deleteByTaskId(id)
     this.repo.hardDelete(id)
   }
 
   emptyTrash(): number {
+    this.activityService?.deleteForTrashedTasks()
     return this.repo.hardDeleteAllTrash()
+  }
+
+  private recordActivities(inputs: import('./task-activity-recorder').TaskActivityRecordInput[]): void {
+    if (!this.activityService || !this.activityRecorder || !inputs.length) {
+      return
+    }
+    this.activityService.recordMany(this.activityRecorder.toActivities(inputs))
   }
 }

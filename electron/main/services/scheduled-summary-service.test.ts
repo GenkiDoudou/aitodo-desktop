@@ -67,9 +67,92 @@ describe('ScheduledSummaryService', () => {
             enabled: true
           }
         ]
-      }
+      } as never
     })
     expect(created.reportConfig.templateId).toBe('weekly_overview')
     expect(created.reportConfig.sections).toHaveLength(1)
+    expect(created.reportConfig.sections[0].query.status).toBe('completed')
+  })
+
+  it('previewSummaryBody returns text without persisting', async () => {
+    const before = service.list().length
+    const text = await service.previewSummaryBody({
+      name: '预览',
+      scheduleType: 'daily',
+      sendTime: '09:00',
+      categoryIds: [],
+      useLlm: false,
+      reportConfig: {
+        templateId: 'custom',
+        sections: [
+          {
+            id: 's1',
+            title: '已完成',
+            taskFilter: 'completed',
+            timeScope: 'today',
+            enabled: true
+          }
+        ]
+      } as never
+    })
+    expect(typeof text).toBe('string')
+    expect(text.length).toBeGreaterThan(0)
+    expect(service.list()).toHaveLength(before)
+  })
+
+  it('rejects invalid free template on create', () => {
+    expect(() =>
+      service.create({
+        name: '坏模板',
+        scheduleType: 'daily',
+        sendTime: '09:00',
+        reportConfig: {
+          mode: 'template',
+          templateId: 'custom',
+          sections: [
+            {
+              id: 's1',
+              title: '已完成',
+              taskFilter: 'completed',
+              timeScope: 'today',
+              enabled: true
+            }
+          ],
+          freeTemplate: {
+            body: '{{#section status="pending"}}\n未闭合',
+            syntaxVersion: 1
+          }
+        } as never
+      })
+    ).toThrow(/未闭合|第 \d+ 行/)
+  })
+
+  it('preview free template without side effects', async () => {
+    const before = service.list().length
+    const text = await service.previewSummaryBody({
+      name: '模板预览',
+      scheduleType: 'daily',
+      sendTime: '09:00',
+      useLlm: false,
+      reportConfig: {
+        mode: 'template',
+        templateId: 'custom',
+        sections: [
+          {
+            id: 's1',
+            title: '已完成',
+            taskFilter: 'completed',
+            timeScope: 'today',
+            enabled: true
+          }
+        ],
+        freeTemplate: {
+          body: '{{#section status="completed" time="today" title="完成" hideEmpty="false"}}【{{sectionTitle}}】{{count}}{{/section}}',
+          syntaxVersion: 1
+        }
+      } as never
+    })
+    expect(text).toContain('完成')
+    expect(service.list()).toHaveLength(before)
   })
 })

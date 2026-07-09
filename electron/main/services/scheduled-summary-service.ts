@@ -10,9 +10,16 @@ import {
 } from '@shared/scheduled-summary'
 import {
   buildReportSummaryText,
-  normalizeReportConfig,
+  localDayBounds,
+  normalizeReportConfigV2,
+  resolveSectionCategoryIds,
   resolveSectionTimeBounds
 } from '@shared/summary-report-config'
+import {
+  assertValidSummaryFreeTemplate,
+  renderSummaryFreeTemplate,
+  SummaryTemplateError
+} from '@shared/summary-free-template'
 import { AppError } from '@shared/types'
 import type { ScheduledSummaryRepository } from '../db/scheduled-summary-repository'
 import type { TaskRepository } from '../db/task-repository'
@@ -45,6 +52,8 @@ export class ScheduledSummaryService {
       throw new AppError('VALIDATION_ERROR', '汇总名称不能为空')
     }
     this.validateSchedule(dto.scheduleType, dto.sendTime, dto.sendWeekday, dto.sendDay)
+    const reportConfig = normalizeReportConfigV2(dto.reportConfig)
+    this.validateReportConfigForSave(reportConfig)
 
     const ts = nowIso()
     const summary: ScheduledSummary = {
@@ -57,7 +66,7 @@ export class ScheduledSummaryService {
       sendDay: dto.scheduleType === 'monthly' ? (dto.sendDay ?? dayjs().date()) : null,
       useLlm: dto.useLlm ?? false,
       promptText: dto.promptText?.trim() || DEFAULT_SUMMARY_PROMPT,
-      reportConfig: normalizeReportConfig(dto.reportConfig),
+      reportConfig,
       enabled: dto.enabled ?? true,
       lastSentAt: null,
       createdAt: ts,
@@ -86,6 +95,12 @@ export class ScheduledSummaryService {
 
     this.validateSchedule(scheduleType, sendTime, sendWeekday, sendDay)
 
+    const reportConfig =
+      dto.reportConfig !== undefined
+        ? normalizeReportConfigV2(dto.reportConfig)
+        : normalizeReportConfigV2(existing.reportConfig)
+    this.validateReportConfigForSave(reportConfig)
+
     const updated: ScheduledSummary = {
       ...existing,
       name: dto.name?.trim() ?? existing.name,
@@ -99,10 +114,7 @@ export class ScheduledSummaryService {
         dto.promptText !== undefined
           ? dto.promptText?.trim() || DEFAULT_SUMMARY_PROMPT
           : existing.promptText,
-      reportConfig:
-        dto.reportConfig !== undefined
-          ? normalizeReportConfig(dto.reportConfig)
-          : existing.reportConfig,
+      reportConfig,
       enabled: dto.enabled ?? existing.enabled,
       updatedAt: nowIso()
     }
@@ -118,40 +130,13 @@ export class ScheduledSummaryService {
     this.repo.delete(id)
   }
 
-  /** 生成并返回汇总正文（供调度器发送） */
+  /** 生成并返回汇总正文（供调度器发送 / 预览） */
   async buildSummaryBody(summary: ScheduledSummary, now = dayjs()): Promise<string> {
-    const categoryIds =
-      summary.categoryIds.length > 0 ? summary.categoryIds : undefined
-    const reportConfig = normalizeReportConfig(summary.reportConfig)
-    const enabledSections = reportConfig.sections.filter((section) => section.enabled)
-
-    if (!enabledSections.length) {
-      return '未启用任何汇总区块，请在设置中配置报告内容。'
-    }
-
-    const categories = this.categoryRepo.list()
-    const categoryNames = new Map(categories.map((c) => [c.id, c.name]))
-
-    const sectionResults = enabledSections.map((section) => {
-      const bounds = resolveSectionTimeBounds(
-        section.timeScope,
-        summary.scheduleType,
-        now,
-        summary.lastSentAt
-      )
-      const tasks = this.taskRepo.listForSummaryReport(
-        section.taskFilter,
-        bounds.from,
-        bounds.to,
-        categoryIds
-      )
-      return { section, bounds, tasks }
-    })
-
-    const raw = buildReportSummaryText(sectionResults, categoryNames)
-    const rangeHint = sectionResults
-      .map(({ section, bounds }) => `${section.title}：${bounds.label}`)
-      .join('；')
+    const reportConfig = normalizeReportConfigV2(summary.reportConfig)
+    const raw =
+      reportConfig.mode === 'template'
+        ? this.buildTemplateBody(summary, reportConfig.freeTemplate.body, now)
+        : this.buildFormBody(summary, reportConfig, now)
 
     if (!summary.useLlm) {
       return raw
@@ -160,7 +145,7 @@ export class ScheduledSummaryService {
     try {
       const llmConfig = readLlmConfig()
       const prompt = summary.promptText?.trim() || DEFAULT_SUMMARY_PROMPT
-      const userContent = `汇总名称：${summary.name}\n统计说明：${rangeHint}\n\n任务汇总数据：\n${raw}`
+      const userContent = `汇总名称：${summary.name}\n\n任务汇总数据：\n${raw}`
       return await chatCompletion(llmConfig, prompt, userContent)
     } catch (err) {
       console.error('[ScheduledSummaryService] LLM failed, fallback to raw', err)
@@ -168,8 +153,151 @@ export class ScheduledSummaryService {
     }
   }
 
+  /**
+   * 预览汇总正文：不落库、不 markSent、不发消息。
+   */
+  async previewSummaryBody(
+    dto: Partial<ScheduledSummary> & {
+      name?: string
+      scheduleType?: ScheduledSummary['scheduleType']
+      reportConfig?: ScheduledSummary['reportConfig']
+    }
+  ): Promise<string> {
+    const existing = dto.id ? this.repo.findById(dto.id) : null
+    const summary: ScheduledSummary = {
+      id: existing?.id ?? 'preview',
+      name: dto.name?.trim() || existing?.name || '预览汇总',
+      categoryIds: dto.categoryIds ?? existing?.categoryIds ?? [],
+      scheduleType: dto.scheduleType ?? existing?.scheduleType ?? 'daily',
+      sendTime: normalizeSendTime(dto.sendTime ?? existing?.sendTime ?? '09:00'),
+      sendWeekday: dto.sendWeekday !== undefined ? dto.sendWeekday : (existing?.sendWeekday ?? null),
+      sendDay: dto.sendDay !== undefined ? dto.sendDay : (existing?.sendDay ?? null),
+      useLlm: dto.useLlm ?? existing?.useLlm ?? false,
+      promptText:
+        dto.promptText !== undefined
+          ? dto.promptText?.trim() || DEFAULT_SUMMARY_PROMPT
+          : existing?.promptText ?? DEFAULT_SUMMARY_PROMPT,
+      reportConfig: normalizeReportConfigV2(dto.reportConfig ?? existing?.reportConfig),
+      enabled: true,
+      lastSentAt: existing?.lastSentAt ?? null,
+      createdAt: existing?.createdAt ?? nowIso(),
+      updatedAt: existing?.updatedAt ?? nowIso()
+    }
+    return this.buildSummaryBody(summary)
+  }
+
   markSent(id: string, sentAt: string): void {
     this.repo.markSent(id, sentAt)
+  }
+
+  private buildFormBody(
+    summary: ScheduledSummary,
+    reportConfig: ReturnType<typeof normalizeReportConfigV2>,
+    now: dayjs.Dayjs
+  ): string {
+    const enabledSections = reportConfig.sections.filter((section) => section.enabled)
+    if (!enabledSections.length) {
+      return '未启用任何汇总区块，请在设置中配置报告内容。'
+    }
+
+    const categories = this.categoryRepo.list()
+    const categoryNames = new Map(categories.map((c) => [c.id, c.name]))
+    const todayBounds = localDayBounds(now)
+
+    const sectionResults = enabledSections.map((section) => {
+      const bounds = resolveSectionTimeBounds(
+        section.time.preset,
+        summary.scheduleType,
+        now,
+        summary.lastSentAt
+      )
+      const categoryIds = resolveSectionCategoryIds(section, summary.categoryIds)
+      const tasks = this.taskRepo.listForSummaryReport(
+        section.query.status,
+        bounds.from,
+        bounds.to,
+        categoryIds,
+        {
+          dueBetween: section.query.dueScope === 'due_today_only' ? todayBounds : null
+        }
+      )
+      return { section, bounds, tasks }
+    })
+
+    return buildReportSummaryText(sectionResults, categoryNames)
+  }
+
+  private buildTemplateBody(summary: ScheduledSummary, body: string, now: dayjs.Dayjs): string {
+    if (!body.trim()) {
+      throw new AppError('VALIDATION_ERROR', '自由模板内容为空')
+    }
+    const categories = this.categoryRepo.list()
+    const categoryNames = new Map(categories.map((c) => [c.id, c.name]))
+    const byName = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c]))
+    const byId = new Map(categories.map((c) => [c.id, c]))
+
+    try {
+      return renderSummaryFreeTemplate(body, {
+        scheduleType: summary.scheduleType,
+        now,
+        lastSentAt: summary.lastSentAt,
+        categoryNames,
+        resolveListId: ({ listName, listId, line }) => {
+          if (listId) {
+            if (!byId.has(listId)) {
+              throw new SummaryTemplateError(line, `找不到清单 id「${listId}」`)
+            }
+            return listId
+          }
+          if (listName) {
+            const hit = byName.get(listName.trim().toLowerCase())
+            if (!hit) {
+              throw new SummaryTemplateError(line, `找不到清单「${listName}」`)
+            }
+            return hit.id
+          }
+          // 未指定清单：可回落到汇总级 categoryIds
+          return undefined
+        },
+        fetchTasks: ({ status, bounds, categoryIds, dueBetween }) => {
+          const ids =
+            categoryIds && categoryIds.length > 0
+              ? categoryIds
+              : summary.categoryIds.length > 0
+                ? summary.categoryIds
+                : undefined
+          return this.taskRepo.listForSummaryReport(status, bounds.from, bounds.to, ids, {
+            dueBetween: dueBetween ?? null
+          })
+        }
+      })
+    } catch (err) {
+      if (err instanceof SummaryTemplateError) {
+        throw new AppError('VALIDATION_ERROR', err.message)
+      }
+      throw err
+    }
+  }
+
+  private validateReportConfigForSave(reportConfig: ReturnType<typeof normalizeReportConfigV2>): void {
+    if (reportConfig.mode === 'template') {
+      try {
+        assertValidSummaryFreeTemplate(reportConfig.freeTemplate.body || '')
+      } catch (err) {
+        if (err instanceof SummaryTemplateError) {
+          throw new AppError('VALIDATION_ERROR', err.message)
+        }
+        throw err
+      }
+      if (!reportConfig.freeTemplate.body.trim()) {
+        throw new AppError('VALIDATION_ERROR', '自由模板内容不能为空')
+      }
+      return
+    }
+    const enabled = reportConfig.sections.filter((s) => s.enabled)
+    if (!enabled.length) {
+      throw new AppError('VALIDATION_ERROR', '请至少启用一个报告区块')
+    }
   }
 
   private validateSchedule(

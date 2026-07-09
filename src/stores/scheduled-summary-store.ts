@@ -57,7 +57,18 @@ export const useScheduledSummaryStore = defineStore('scheduledSummaries', () => 
     }
   }
 
-  return { items, loading, load, create, update, remove }
+  async function runNow(id: string) {
+    try {
+      const updated = unwrapIpc(await window.api.scheduledSummaries.runNow(id))
+      items.value = items.value.map((s) => (s.id === id ? updated : s))
+      return updated
+    } catch (err) {
+      reportScheduledSummaryError(err, '立即生成失败')
+      throw err
+    }
+  }
+
+  return { items, loading, load, create, update, remove, runNow }
 })
 
 function reportScheduledSummaryError(err: unknown, fallback: string) {

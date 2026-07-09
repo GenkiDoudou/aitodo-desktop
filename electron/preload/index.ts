@@ -6,13 +6,17 @@ import type {
   CreateKanbanGroupDto,
   CreateScheduledSummaryDto,
   CreateTaskDto,
+  CreateTaskViewDto,
   DeleteTaskOptions,
   TaskListFilter,
   UpdateCategoryDto,
   UpdateKanbanGroupDto,
   UpdateScheduledSummaryDto,
-  UpdateTaskDto
+  UpdateTaskDto,
+  UpdateTaskViewDto
 } from '@shared/types'
+import type { FilterNode } from '@shared/task-filter-ast'
+import type { ViewTemplateId } from '@shared/view-templates'
 
 /**
  * 白名单 IPC 封装：渲染进程仅可调用此处暴露的方法。
@@ -56,7 +60,34 @@ const api: DesktopApi = {
       ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_CREATE, dto),
     update: (id: string, dto: UpdateScheduledSummaryDto) =>
       ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_UPDATE, id, dto),
-    delete: (id: string) => ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_DELETE, id)
+    delete: (id: string) => ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_DELETE, id),
+    preview: (dto: CreateScheduledSummaryDto & { id?: string }) =>
+      ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_PREVIEW, dto),
+    runNow: (id: string) => ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_RUN_NOW, id)
+  },
+  holidays: {
+    calendarMarks: (years: number[]) => ipcRenderer.invoke(IPC.HOLIDAYS_CALENDAR_MARKS, years)
+  },
+  taskViews: {
+    list: () => ipcRenderer.invoke(IPC.TASK_VIEWS_LIST),
+    create: (dto: CreateTaskViewDto) => ipcRenderer.invoke(IPC.TASK_VIEWS_CREATE, dto),
+    update: (id: string, dto: UpdateTaskViewDto) =>
+      ipcRenderer.invoke(IPC.TASK_VIEWS_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.TASK_VIEWS_DELETE, id),
+    previewCount: (rule: FilterNode) => ipcRenderer.invoke(IPC.TASK_VIEWS_PREVIEW_COUNT, rule),
+    createFromTemplate: (templateId: ViewTemplateId) =>
+      ipcRenderer.invoke(IPC.TASK_VIEWS_CREATE_FROM_TEMPLATE, templateId)
+  },
+  taskActivities: {
+    listByTask: (taskId: string, limit?: number, before?: string) =>
+      ipcRenderer.invoke(IPC.TASK_ACTIVITIES_LIST_BY_TASK, taskId, limit, before),
+    count: () => ipcRenderer.invoke(IPC.TASK_ACTIVITIES_COUNT),
+    deleteAll: () => ipcRenderer.invoke(IPC.TASK_ACTIVITIES_DELETE_ALL),
+    purge: () => ipcRenderer.invoke(IPC.TASK_ACTIVITIES_PURGE),
+    deleteTrashed: () => ipcRenderer.invoke(IPC.TASK_ACTIVITIES_DELETE_TRASHED),
+    getRetention: () => ipcRenderer.invoke(IPC.TASK_ACTIVITY_RETENTION_GET),
+    setRetention: (policy: import('@shared/types').TaskActivityRetentionPolicy) =>
+      ipcRenderer.invoke(IPC.TASK_ACTIVITY_RETENTION_SET, policy)
   },
   categories: {
     list: () => ipcRenderer.invoke(IPC.CATEGORIES_LIST),

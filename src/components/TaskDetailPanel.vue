@@ -32,9 +32,26 @@
 
     </header>
 
+    <div v-if="!isNew" class="task-panel__tabs">
+      <button
+        type="button"
+        class="task-panel__tab"
+        :class="{ 'is-active': activeTab === 'detail' }"
+        @click="activeTab = 'detail'"
+      >
+        详情
+      </button>
+      <button
+        type="button"
+        class="task-panel__tab"
+        :class="{ 'is-active': activeTab === 'activity' }"
+        @click="activeTab = 'activity'"
+      >
+        动态
+      </button>
+    </div>
 
-
-    <div class="task-panel__body">
+    <div v-show="activeTab === 'detail'" class="task-panel__body">
 
       <el-form label-position="top" size="default" class="task-panel__form" @submit.prevent="save">
 
@@ -230,9 +247,13 @@
 
     </div>
 
+    <div v-show="activeTab === 'activity' && !isNew" class="task-panel__body task-panel__body--activity">
+      <TaskActivityList ref="activityListRef" :task-id="props.taskId" />
+    </div>
 
 
-    <footer class="task-panel__footer">
+
+    <footer v-show="activeTab === 'detail'" class="task-panel__footer">
 
       <el-button v-if="!isNew" type="danger" plain :disabled="saving" @click="remove">
 
@@ -290,6 +311,7 @@ import TaskRecurrencePicker from '@/components/TaskRecurrencePicker.vue'
 import TaskBodyEditor from '@/components/TaskBodyEditor.vue'
 
 import TaskPriorityFlagMenu from '@/components/TaskPriorityFlagMenu.vue'
+import TaskActivityList from '@/components/TaskActivityList.vue'
 
 
 
@@ -395,6 +417,10 @@ const newSubtaskTitle = ref('')
 
 const subtaskInputRef = ref<InputInstance>()
 
+const activeTab = ref<'detail' | 'activity'>('detail')
+
+const activityListRef = ref<InstanceType<typeof TaskActivityList> | null>(null)
+
 
 
 const childTasks = ref<Task[]>([])
@@ -483,6 +509,7 @@ watch(
       panelExpanded.value = false
 
       contentExpanded.value = false
+      activeTab.value = 'detail'
 
     }
 
@@ -500,6 +527,7 @@ watch(
 
     if (!open) return
 
+    activeTab.value = 'detail'
     timeError.value = null
 
     draftSubtasks.value = []
@@ -823,6 +851,9 @@ async function save() {
     }
 
     emit('saved', { task: savedTask, mode: isNew.value ? 'create' : 'update' })
+    if (!isNew.value) {
+      activityListRef.value?.reload()
+    }
 
   } catch (err) {
 
@@ -992,6 +1023,34 @@ async function remove() {
 
   gap: 4px;
 
+}
+
+.task-panel__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--desktop-border);
+}
+
+.task-panel__tab {
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--desktop-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+
+  &.is-active {
+    color: var(--el-color-primary);
+    border-bottom-color: var(--el-color-primary);
+    font-weight: 600;
+  }
+}
+
+.task-panel__body--activity {
+  padding-top: 8px;
 }
 
 

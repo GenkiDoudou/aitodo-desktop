@@ -263,6 +263,21 @@ describe('TaskService', () => {
     expect(service.get(task.id).recurrence).toEqual({ type: 'daily' })
   })
 
+  it('stores completed occurrence dates independently of status', () => {
+    const due = dayjs().add(1, 'day').format('YYYY-MM-DDTHH:mm:ss')
+    const task = service.create({
+      title: '按日循环',
+      dueAt: due,
+      recurrence: { type: 'daily' }
+    })
+    const updated = service.update(task.id, {
+      completedOccurrenceDates: ['2026-09-07', '2026-09-07', 'bad']
+    })
+    expect(updated.status).toBe('TODO')
+    expect(updated.completedOccurrenceDates).toEqual(['2026-09-07'])
+    expect(service.get(task.id).completedOccurrenceDates).toEqual(['2026-09-07'])
+  })
+
   it('rejects recurrence without due date', () => {
     const task = service.create({ title: '无截止' })
     expect(() =>

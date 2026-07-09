@@ -38,7 +38,7 @@ export async function exportUserConfigToFile(
   }
   const result = await dialog.showSaveDialog(parent ?? undefined, {
     title: '导出个人配置',
-    defaultPath: `ai-todo-config-${new Date().toISOString().slice(0, 10)}.json`,
+    defaultPath: `小柒todo-config-${new Date().toISOString().slice(0, 10)}.json`,
     filters: [{ name: 'JSON', extensions: ['json'] }]
   })
   if (result.canceled || !result.filePath) {

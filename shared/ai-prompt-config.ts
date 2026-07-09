@@ -22,7 +22,7 @@ export interface AiPromptConfig {
 
 export const BUILTIN_TASK_PROMPT_NAME = '任务提示词'
 
-export const DEFAULT_AI_SYSTEM_PROMPT = `你是 aiTodo 桌面待办助手的任务解析器。用户会用一句中文描述待办，你需要提取结构化字段。
+export const DEFAULT_AI_SYSTEM_PROMPT = `你是小柒todo 桌面待办助手的任务解析器。用户会用一句中文描述待办，你需要提取结构化字段。
 
 请严格只输出 JSON，不要 markdown 代码块，格式如下：
 {

@@ -9,9 +9,19 @@
         :class="{ 'is-today': day.isSame(today, 'day') }"
       >
         <span class="cal-week__weekday">{{ weekdayLabel(day) }}</span>
-        <span class="cal-week__date" :class="{ 'is-today': day.isSame(today, 'day') }">
-          {{ day.date() }}
-        </span>
+        <div class="cal-week__date-row">
+          <span class="cal-week__date" :class="{ 'is-today': day.isSame(today, 'day') }">
+            {{ day.date() }}
+          </span>
+          <span
+            v-if="holidayOf(day)"
+            class="cal-week__mark"
+            :class="holidayOf(day)!.kind === 'holiday' ? 'is-off' : 'is-work'"
+            :title="holidayOf(day)!.name"
+          >
+            {{ holidayOf(day)!.kind === 'holiday' ? '休' : '班' }}
+          </span>
+        </div>
       </div>
     </div>
     <div class="cal-week__body" ref="bodyRef">
@@ -46,6 +56,7 @@ import { computed } from 'vue'
 import dayjs from 'dayjs'
 import type { Task } from '@shared/types'
 import type { TaskDateField } from '@shared/date-filter'
+import type { HolidayCalendarDay } from '@shared/timor-holiday'
 import { calendarTaskRowKey, groupTasksByDateField, taskMinutesOnField, weekdayLabel } from '@shared/calendar-tasks'
 import CalendarTaskChip from '@/components/calendar/CalendarTaskChip.vue'
 
@@ -54,6 +65,7 @@ const props = defineProps<{
   tasks: Task[]
   categoryColorMap: Map<string, string>
   dateField?: TaskDateField
+  holidayMarks?: Record<string, HolidayCalendarDay>
 }>()
 
 const emit = defineEmits<{
@@ -79,6 +91,10 @@ function tasksOnDay(day: dayjs.Dayjs) {
 function colorOf(task: Task) {
   if (!task.categoryId) return null
   return props.categoryColorMap.get(task.categoryId) ?? null
+}
+
+function holidayOf(day: dayjs.Dayjs) {
+  return props.holidayMarks?.[day.format('YYYY-MM-DD')]
 }
 
 function eventStyle(task: Task) {
@@ -120,15 +136,41 @@ function eventStyle(task: Task) {
   color: var(--desktop-muted);
 }
 
+.cal-week__date-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+  min-height: 26px;
+}
+
 .cal-week__date {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
-  margin-top: 4px;
   font-size: 14px;
   font-weight: 600;
+}
+
+.cal-week__mark {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+
+  &.is-off {
+    color: #c45656;
+    background: rgba(196, 86, 86, 0.12);
+  }
+
+  &.is-work {
+    color: #2f6fed;
+    background: rgba(47, 111, 237, 0.12);
+  }
 }
 
 .cal-week__body {

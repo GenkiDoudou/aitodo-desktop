@@ -8,6 +8,8 @@ import type { LlmConfig } from '@shared/llm-config'
 import { mergeLlmConfig } from '@shared/llm-config'
 import type { AiPromptConfig } from '@shared/ai-prompt-config'
 import { mergeAiPromptConfig } from '@shared/ai-prompt-config'
+import type { TaskActivityRetentionPolicy } from '@shared/types'
+import { mergeTaskActivityRetention } from '@shared/task-activity-retention'
 
 const CONFIG_FILE = 'config.json'
 
@@ -20,6 +22,8 @@ interface DesktopConfig {
   llm?: Partial<LlmConfig>
   /** AI 一句话解析提示词 */
   aiPrompt?: Partial<AiPromptConfig>
+  /** 任务动态全局保留策略 */
+  taskActivityRetention?: Partial<TaskActivityRetentionPolicy>
 }
 
 /**
@@ -203,5 +207,31 @@ export function saveAiPromptConfig(config: AiPromptConfig): void {
     }
   }
   const next: DesktopConfig = { ...existing, aiPrompt: mergeAiPromptConfig(config) }
+  fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
+}
+
+/** 读取任务动态保留策略（合并默认值） */
+export function readTaskActivityRetention(): TaskActivityRetentionPolicy {
+  const cfg = readActiveConfig()
+  return mergeTaskActivityRetention(cfg.taskActivityRetention)
+}
+
+/** 持久化任务动态保留策略 */
+export function saveTaskActivityRetention(policy: TaskActivityRetentionPolicy): void {
+  const defaultDir = getDefaultDataDir()
+  fs.mkdirSync(defaultDir, { recursive: true })
+  const configPath = path.join(defaultDir, CONFIG_FILE)
+  let existing: DesktopConfig = {}
+  if (fs.existsSync(configPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as DesktopConfig
+    } catch {
+      existing = {}
+    }
+  }
+  const next: DesktopConfig = {
+    ...existing,
+    taskActivityRetention: mergeTaskActivityRetention(policy)
+  }
   fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
 }

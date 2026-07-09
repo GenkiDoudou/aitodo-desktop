@@ -3,6 +3,10 @@ import type { Task } from './types'
 import { getTaskPriorityMeta, type TaskPriority } from './task-priority'
 import { resolveTaskDateIso, type TaskDateField, type DateRangeBounds } from './date-filter'
 import type { TaskRecurrenceRule } from './task-reminder'
+import {
+  isOccurrenceDateCompleted,
+  isRecurringCalendarTask
+} from './recurrence-occurrences'
 
 export type CalendarViewMode = 'month' | 'week' | 'day'
 
@@ -134,7 +138,7 @@ export function recurrenceMatchesDate(
   }
 }
 
-/** 将任务克隆到指定日期（保留锚点时间） */
+/** 将任务克隆到指定日期（保留锚点时间）；循环任务按单日完成列表设置 status */
 function cloneTaskOnCalendarDate(
   task: Task,
   field: TaskDateField,
@@ -144,16 +148,35 @@ function cloneTaskOnCalendarDate(
   const anchor = dayjs(anchorIso)
   const merged = date.hour(anchor.hour()).minute(anchor.minute()).second(anchor.second())
   const iso = merged.format('YYYY-MM-DDTHH:mm:ss')
+  const dateKey = date.format('YYYY-MM-DD')
+  let status = task.status
+  let completedAt = task.completedAt
+  if (isRecurringCalendarTask(task.recurrence) && field === 'dueAt') {
+    if (task.status === 'DONE') {
+      status = 'DONE'
+    } else if (isOccurrenceDateCompleted(task.completedOccurrenceDates, dateKey)) {
+      status = 'DONE'
+      completedAt = iso
+    } else {
+      status = 'TODO'
+      completedAt = null
+    }
+  }
+  const base = {
+    ...task,
+    status,
+    completedAt
+  }
   if (field === 'dueAt') {
-    return { ...task, dueAt: iso }
+    return { ...base, dueAt: iso }
   }
   if (field === 'remindAt') {
-    return { ...task, remindAt: iso }
+    return { ...base, remindAt: iso }
   }
   if (field === 'completedAt') {
-    return { ...task, completedAt: iso }
+    return { ...base, completedAt: iso }
   }
-  return { ...task, createdAt: iso }
+  return { ...base, createdAt: iso }
 }
 
 /** 展开单条任务在可见区间内的日历实例（含循环） */

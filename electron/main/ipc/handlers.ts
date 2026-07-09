@@ -5,27 +5,39 @@ import type {
   CreateKanbanGroupDto,
   CreateScheduledSummaryDto,
   CreateTaskDto,
+  CreateTaskViewDto,
+  ScheduledSummary,
   TaskListFilter,
   UpdateCategoryDto,
   UpdateKanbanGroupDto,
   UpdateScheduledSummaryDto,
   UpdateTaskDto,
+  UpdateTaskViewDto,
   AppMessage,
   AppMessageKind,
-  AppMessageSource
+  AppMessageSource,
+  TaskActivityRetentionPolicy
 } from '@shared/types'
+import type { ViewTemplateId } from '@shared/view-templates'
+import { getViewTemplate } from '@shared/view-templates'
 import { getActiveDataDir, getDatabase } from '../db/database'
 import { CategoryRepository } from '../db/category-repository'
 import { KanbanGroupRepository } from '../db/kanban-group-repository'
 import { AppMessageRepository } from '../db/app-message-repository'
 import { TaskReminderRepository } from '../db/task-reminder-repository'
 import { TaskRepository } from '../db/task-repository'
+import { TaskViewRepository } from '../db/task-view-repository'
+import { TaskActivityRepository } from '../db/task-activity-repository'
 import { ScheduledSummaryRepository } from '../db/scheduled-summary-repository'
 import { CategoryService } from '../services/category-service'
 import { AppMessageService } from '../services/app-message-service'
 import { KanbanGroupService } from '../services/kanban-group-service'
 import { TaskService } from '../services/task-service'
+import { TaskViewService } from '../services/task-view-service'
+import { TaskActivityService } from '../services/task-activity-service'
+import { TaskActivityRecorder } from '../services/task-activity-recorder'
 import { ScheduledSummaryService } from '../services/scheduled-summary-service'
+import type { SummarySchedulerService } from '../services/summary-scheduler-service'
 import {
   getDefaultDataDir,
   isDirectoryWritable,
@@ -58,6 +70,7 @@ import {
   exportUserConfigToFile,
   importUserConfigFromFile
 } from '../services/user-config-service'
+import type { HolidayService } from '../services/holiday-service'
 
 function services() {
   const db = getDatabase()
@@ -67,12 +80,18 @@ function services() {
   const messageRepo = new AppMessageRepository(db)
   const reminderRepo = new TaskReminderRepository(db)
   const summaryRepo = new ScheduledSummaryRepository(db)
+  const viewRepo = new TaskViewRepository(db)
+  const activityRepo = new TaskActivityRepository(db)
+  const activityService = new TaskActivityService(activityRepo)
+  const activityRecorder = new TaskActivityRecorder(categoryRepo, kanbanRepo)
   return {
-    tasks: new TaskService(taskRepo, reminderRepo),
+    tasks: new TaskService(taskRepo, reminderRepo, activityService, activityRecorder),
     categories: new CategoryService(categoryRepo),
     kanbanGroups: new KanbanGroupService(kanbanRepo),
     messages: new AppMessageService(messageRepo),
-    scheduledSummaries: new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo)
+    scheduledSummaries: new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo),
+    taskViews: new TaskViewService(viewRepo, taskRepo),
+    taskActivities: activityService
   }
 }
 
@@ -81,6 +100,19 @@ let getMainWindowRef: () => BrowserWindow | null = () => null
 /** 主进程写入消息后推送给渲染进程（侧栏角标与列表刷新） */
 export function pushAppMessageToRenderer(message: AppMessage): void {
   getMainWindowRef()?.webContents.send(IPC.APP_MESSAGE_PUSH, message)
+}
+
+/** 由 index 注入，供「立即生成」复用调度器发送链路 */
+let summarySchedulerRef: SummarySchedulerService | null = null
+
+export function setSummarySchedulerService(scheduler: SummarySchedulerService | null): void {
+  summarySchedulerRef = scheduler
+}
+
+let holidayServiceRef: HolidayService | null = null
+
+export function setHolidayService(service: HolidayService | null): void {
+  holidayServiceRef = service
 }
 
 /** 注册全部 IPC handler；在 app.whenReady 且数据库可用后调用 */
@@ -162,6 +194,17 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       return undefined
     })
   )
+  ipcMain.handle(IPC.SCHEDULED_SUMMARIES_PREVIEW, (_e, dto: Partial<ScheduledSummary> & CreateScheduledSummaryDto) =>
+    wrapIpcAsync(() => services().scheduledSummaries.previewSummaryBody(dto))
+  )
+  ipcMain.handle(IPC.SCHEDULED_SUMMARIES_RUN_NOW, (_e, id: string) =>
+    wrapIpcAsync(async () => {
+      if (!summarySchedulerRef) {
+        throw new AppError('INTERNAL_ERROR', '汇总调度器尚未就绪，请稍后重试')
+      }
+      return summarySchedulerRef.runNow(id)
+    })
+  )
 
   ipcMain.handle(IPC.CATEGORIES_LIST, () => wrapIpc(() => services().categories.list()))
   ipcMain.handle(IPC.CATEGORIES_CREATE, (_e, dto: CreateCategoryDto) =>
@@ -200,9 +243,10 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.APP_PICK_DATA_DIR, async () =>
     wrapIpcAsync(async () => {
       const win = getMainWindow()
-      const result = await dialog.showOpenDialog(win && !win.isDestroyed() ? win : undefined, {
-        properties: ['openDirectory', 'createDirectory']
-      })
+      const result =
+        win && !win.isDestroyed()
+          ? await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] })
+          : await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] })
       if (result.canceled || !result.filePaths[0]) {
         return null
       }
@@ -294,5 +338,64 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
 
   ipcMain.handle(IPC.APP_DOWNLOAD_ATTACHMENT, async (_e, uri: string, suggestedName?: string) =>
     wrapIpcAsync(() => downloadAttachment(getMainWindow() ?? undefined, uri, suggestedName))
+  )
+
+  ipcMain.handle(IPC.HOLIDAYS_CALENDAR_MARKS, async (_e, years: number[]) =>
+    wrapIpcAsync(async () => {
+      if (!holidayServiceRef) {
+        throw new AppError('INTERNAL', '节假日服务未初始化')
+      }
+      const list = Array.isArray(years)
+        ? years.filter((y) => Number.isInteger(y) && y >= 2000 && y <= 2100)
+        : []
+      return holidayServiceRef.getCalendarMarks(list)
+    })
+  )
+
+  ipcMain.handle(IPC.TASK_VIEWS_LIST, () => wrapIpc(() => services().taskViews.list()))
+  ipcMain.handle(IPC.TASK_VIEWS_CREATE, (_e, dto: CreateTaskViewDto) =>
+    wrapIpc(() => services().taskViews.create(dto))
+  )
+  ipcMain.handle(IPC.TASK_VIEWS_UPDATE, (_e, id: string, dto: UpdateTaskViewDto) =>
+    wrapIpc(() => services().taskViews.update(id, dto))
+  )
+  ipcMain.handle(IPC.TASK_VIEWS_DELETE, (_e, id: string) =>
+    wrapIpc(() => {
+      services().taskViews.delete(id)
+    })
+  )
+  ipcMain.handle(IPC.TASK_VIEWS_PREVIEW_COUNT, (_e, rule: import('@shared/task-filter-ast').FilterNode) =>
+    wrapIpc(() => services().taskViews.previewCount(rule))
+  )
+  ipcMain.handle(IPC.TASK_VIEWS_CREATE_FROM_TEMPLATE, (_e, templateId: ViewTemplateId) =>
+    wrapIpc(() => {
+      const tpl = getViewTemplate(templateId)
+      if (!tpl) throw new AppError('VALIDATION_ERROR', '未知模板')
+      const created = services().taskViews.createFromPreset(tpl.preset, tpl.preset.name)
+      if (!created) throw new AppError('VALIDATION_ERROR', '无法添加视图')
+      return created
+    })
+  )
+
+  ipcMain.handle(IPC.TASK_ACTIVITIES_LIST_BY_TASK, (_e, taskId: string, limit?: number, before?: string) =>
+    wrapIpc(() => services().taskActivities.listByTask(taskId, limit, before))
+  )
+  ipcMain.handle(IPC.TASK_ACTIVITIES_COUNT, () =>
+    wrapIpc(() => services().taskActivities.countAll())
+  )
+  ipcMain.handle(IPC.TASK_ACTIVITIES_DELETE_ALL, () =>
+    wrapIpc(() => services().taskActivities.deleteAll())
+  )
+  ipcMain.handle(IPC.TASK_ACTIVITIES_PURGE, () =>
+    wrapIpc(() => services().taskActivities.purgeByCurrentPolicy())
+  )
+  ipcMain.handle(IPC.TASK_ACTIVITIES_DELETE_TRASHED, () =>
+    wrapIpc(() => services().taskActivities.deleteForTrashedTasks())
+  )
+  ipcMain.handle(IPC.TASK_ACTIVITY_RETENTION_GET, () =>
+    wrapIpc(() => services().taskActivities.getRetentionPolicy())
+  )
+  ipcMain.handle(IPC.TASK_ACTIVITY_RETENTION_SET, (_e, policy: TaskActivityRetentionPolicy) =>
+    wrapIpc(() => services().taskActivities.updateRetentionPolicy(policy))
   )
 }

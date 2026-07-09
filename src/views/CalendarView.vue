@@ -3,6 +3,7 @@
     <AppSidebar
       :active-smart="null"
       :active-category="undefined"
+      :active-view-id="viewStore.selectedViewId"
       :calendar-active="true"
       :active-calendar-view="viewMode"
       :trash-count="taskStore.trashCount"
@@ -13,6 +14,9 @@
       @select-done="goHomeDone"
       @select-trash="goHomeTrash"
       @select-category="goHomeCategory"
+      @select-view="goHomeView"
+      @create-view="goHomeCreateView"
+      @edit-view="goHomeEditView"
       @select-calendar="onSidebarCalendar"
       @select-tasks="goHomeTasks"
       @open-settings="router.push('/settings')"
@@ -60,6 +64,21 @@
             end-placeholder="结束"
             value-format="YYYY-MM-DD"
           />
+          <el-select
+            :model-value="viewStore.selectedViewId"
+            clearable
+            size="small"
+            class="calendar-page__filter calendar-page__filter--filter"
+            placeholder="视图"
+            @update:model-value="onCalendarViewChange"
+          >
+            <el-option
+              v-for="v in viewStore.items"
+              :key="v.id"
+              :label="v.name"
+              :value="v.id"
+            />
+          </el-select>
         </div>
         <div class="calendar-page__head-actions">
           <el-button text circle title="新建任务" @click="goHomeNew">
@@ -84,6 +103,7 @@
         :tasks="calendarTasks"
         :category-color-map="categoryColorMap"
         :date-field="calendarDateField"
+        :holiday-marks="holidayMarks"
         @select="openTask"
         @toggle-status="onToggleStatus"
         @select-day="onSelectDay"
@@ -94,6 +114,7 @@
         :tasks="calendarTasks"
         :category-color-map="categoryColorMap"
         :date-field="calendarDateField"
+        :holiday-marks="holidayMarks"
         @select="openTask"
         @toggle-status="onToggleStatus"
       />
@@ -103,6 +124,7 @@
         :tasks="calendarTasks"
         :category-color-map="categoryColorMap"
         :date-field="calendarDateField"
+        :holiday-marks="holidayMarks"
         @select="openTask"
         @toggle-status="onToggleStatus"
       />
@@ -146,7 +168,10 @@ import CalendarWeekView from '@/components/calendar/CalendarWeekView.vue'
 import CalendarDayView from '@/components/calendar/CalendarDayView.vue'
 import { useTaskStore } from '@/stores/task-store'
 import { useCategoryStore } from '@/stores/category-store'
+import { useViewStore } from '@/stores/view-store'
+import { isFilterRuleActive } from '@shared/apply-task-view'
 import type { Task, TaskStatus } from '@shared/types'
+import { matchTask } from '@shared/task-filter-ast'
 import {
   CALENDAR_RANGE_PRESET_LABELS,
   TASK_DATE_FIELD_LABELS,
@@ -160,6 +185,8 @@ import {
   formatCalendarTitle,
   type CalendarViewMode
 } from '@shared/calendar-tasks'
+import type { HolidayCalendarDay } from '@shared/timor-holiday'
+import { toggleCompletedOccurrenceDate } from '@shared/recurrence-occurrences'
 import {
   persistCalendarDateField,
   persistCalendarRangePreset,
@@ -171,11 +198,15 @@ const router = useRouter()
 const route = useRoute()
 const taskStore = useTaskStore()
 const categoryStore = useCategoryStore()
+const viewStore = useViewStore()
 
 const anchor = ref(dayjs())
 const viewMode = ref<CalendarViewMode>('month')
 const detailOpen = ref(false)
 const activeTaskId = ref<string | null>(null)
+/** 法定放假 / 调休上班标注；拉取失败时保持空对象，日历仍可用 */
+const holidayMarks = ref<Record<string, HolidayCalendarDay>>({})
+const loadedHolidayYears = ref<Set<number>>(new Set())
 
 /** 按哪列时间落在日历格子上 */
 const calendarDateField = ref<TaskDateField>(readCalendarDateField())
@@ -216,14 +247,43 @@ const presetBounds = computed(() => {
 const calendarTasks = computed(() => {
   const { start, end } = calendarVisibleRange(anchor.value, viewMode.value)
   const active = taskStore.tasks.filter((t) => !t.deletedAt)
-  return expandTasksForCalendar(
+  const expanded = expandTasksForCalendar(
     active,
     start,
     end,
     calendarDateField.value,
     presetBounds.value
   )
+  const rule = viewStore.selectedView?.filterRule
+  if (!isFilterRuleActive(rule)) return expanded
+  const hasSubtasksById = new Map<string, boolean>()
+  for (const t of active) {
+    if (t.parentId) hasSubtasksById.set(t.parentId, true)
+  }
+  return expanded.filter((instance) => {
+    const dateKey = instance.dueAt?.slice(0, 10) ?? undefined
+    return matchTask(instance, rule!, {
+      hasSubtasksById,
+      instanceDateKey: dateKey
+    })
+  })
 })
+
+function onCalendarViewChange(id: string | null | undefined) {
+  viewStore.selectView(id ?? viewStore.selectedViewId)
+}
+
+function goHomeView(id: string) {
+  void router.push({ path: '/', query: { viewId: id } })
+}
+
+function goHomeCreateView() {
+  void router.push({ path: '/', query: { createView: '1' } })
+}
+
+function goHomeEditView(id: string) {
+  void router.push({ path: '/', query: { viewId: id, editView: '1' } })
+}
 
 function shift(dir: -1 | 1) {
   const unit = viewMode.value === 'month' ? 'month' : viewMode.value === 'week' ? 'week' : 'day'
@@ -265,6 +325,18 @@ function closeDetail() {
 async function onToggleStatus(task: Task) {
   const next: TaskStatus = task.status === 'DONE' ? 'TODO' : 'DONE'
   try {
+    const rule = task.recurrence
+    const isRecurring = Boolean(rule && rule.type !== 'none')
+    const dateKey = task.dueAt?.slice(0, 10)
+    // 循环任务：只标记当天实例，不改整条 status
+    if (isRecurring && dateKey && calendarDateField.value === 'dueAt') {
+      const master = taskStore.tasks.find((t) => t.id === task.id)
+      const current = master?.completedOccurrenceDates ?? task.completedOccurrenceDates ?? []
+      await taskStore.update(task.id, {
+        completedOccurrenceDates: toggleCompletedOccurrenceDate(current, dateKey, next === 'DONE')
+      })
+      return
+    }
     await taskStore.update(task.id, { status: next })
   } catch {
     /* store 已 Toast */
@@ -319,11 +391,37 @@ function syncViewFromRoute() {
 
 watch(() => route.query.view, syncViewFromRoute)
 
+/** 月历格子可能跨年；周/日按锚点年份，保险再取前后年 */
+function yearsNeededForView(): number[] {
+  const { start, end } = calendarVisibleRange(anchor.value, viewMode.value)
+  const years = new Set<number>([start.year(), end.year(), anchor.value.year()])
+  return [...years].sort((a, b) => a - b)
+}
+
+async function loadHolidayMarks() {
+  const needed = yearsNeededForView().filter((y) => !loadedHolidayYears.value.has(y))
+  if (needed.length === 0) return
+  try {
+    const result = await window.api.holidays.calendarMarks(needed)
+    if (!result.ok) return
+    holidayMarks.value = { ...holidayMarks.value, ...result.data }
+    for (const y of needed) loadedHolidayYears.value.add(y)
+  } catch {
+    /* 网络/服务失败时静默，不打断日历 */
+  }
+}
+
+watch([anchor, viewMode], () => {
+  void loadHolidayMarks()
+})
+
 onMounted(async () => {
   syncViewFromRoute()
   await categoryStore.load()
+  await viewStore.load()
   await taskStore.load({ smartList: 'all', hideDone: false })
   await taskStore.refreshSidebarCounts()
+  void loadHolidayMarks()
 })
 </script>
 
@@ -373,6 +471,10 @@ onMounted(async () => {
 
 .calendar-page__filter {
   width: 120px;
+}
+
+.calendar-page__filter--filter {
+  width: 140px;
 }
 
 .calendar-page__custom-range {

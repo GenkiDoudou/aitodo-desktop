@@ -17,6 +17,14 @@
           <span class="cal-month__date-num" :class="{ 'is-today': day.isSame(today, 'day') }">
             {{ day.date() }}
           </span>
+          <span
+            v-if="holidayOf(day)"
+            class="cal-month__mark"
+            :class="holidayOf(day)!.kind === 'holiday' ? 'is-off' : 'is-work'"
+            :title="holidayOf(day)!.name"
+          >
+            {{ holidayOf(day)!.kind === 'holiday' ? '休' : '班' }}
+          </span>
         </div>
         <div class="cal-month__tasks">
           <CalendarTaskChip
@@ -46,6 +54,7 @@ import { computed } from 'vue'
 import dayjs from 'dayjs'
 import type { Task } from '@shared/types'
 import type { TaskDateField } from '@shared/date-filter'
+import type { HolidayCalendarDay } from '@shared/timor-holiday'
 import { CALENDAR_MONTH_CELL_MAX, calendarTaskRowKey, groupTasksByDateField } from '@shared/calendar-tasks'
 import { buildCalendarDays } from '@/utils/schedule-picker'
 import CalendarTaskChip from '@/components/calendar/CalendarTaskChip.vue'
@@ -55,6 +64,7 @@ const props = defineProps<{
   tasks: Task[]
   categoryColorMap: Map<string, string>
   dateField?: TaskDateField
+  holidayMarks?: Record<string, HolidayCalendarDay>
 }>()
 
 const emit = defineEmits<{
@@ -86,6 +96,10 @@ function overflowCount(day: dayjs.Dayjs) {
 function colorOf(task: Task) {
   if (!task.categoryId) return null
   return props.categoryColorMap.get(task.categoryId) ?? null
+}
+
+function holidayOf(day: dayjs.Dayjs) {
+  return props.holidayMarks?.[day.format('YYYY-MM-DD')]
 }
 </script>
 
@@ -145,8 +159,11 @@ function colorOf(task: Task) {
 
 .cal-month__date {
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
   margin-bottom: 4px;
+  min-height: 24px;
 }
 
 .cal-month__date-num {
@@ -163,6 +180,25 @@ function colorOf(task: Task) {
     background: var(--el-color-primary);
     color: #fff;
     border-radius: 50%;
+  }
+}
+
+.cal-month__mark {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+
+  &.is-off {
+    color: #c45656;
+    background: rgba(196, 86, 86, 0.12);
+  }
+
+  &.is-work {
+    color: #2f6fed;
+    background: rgba(47, 111, 237, 0.12);
   }
 }
 

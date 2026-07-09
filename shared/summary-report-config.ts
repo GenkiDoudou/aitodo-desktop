@@ -4,10 +4,10 @@ import type { SummaryScheduleType } from './scheduled-summary'
 import { summaryPeriodBounds } from './scheduled-summary'
 import { endOfWeekSunday, startOfWeekMonday } from './smart-list'
 
-/** 区块统计的任务范围 */
+/** 区块统计的任务范围（V1 / V2 status） */
 export type SummaryTaskFilter = 'completed' | 'pending' | 'overdue'
 
-/** 区块统计的时间范围 */
+/** 区块统计的时间范围 preset */
 export type SummaryTimeScope =
   | 'since_last'
   | 'today'
@@ -16,7 +16,8 @@ export type SummaryTimeScope =
   | 'last_7_days'
   | 'last_30_days'
 
-export interface SummaryReportSection {
+/** @deprecated 旧版区块结构；新代码请用 SummaryReportSectionV2 */
+export interface SummaryReportSectionV1 {
   id: string
   title: string
   taskFilter: SummaryTaskFilter
@@ -24,10 +25,77 @@ export interface SummaryReportSection {
   enabled: boolean
 }
 
-export interface SummaryReportConfig {
-  templateId: string | null
-  sections: SummaryReportSection[]
+export type SummaryListScopeMode = 'all' | 'only_list'
+export type SummaryDueScope = 'due_today_only'
+export type SummaryGroupBy = 'none' | 'category' | 'list'
+export type SummaryEmptyGroups = 'hide' | 'show'
+export type SummarySortField = 'dueAt' | 'createdAt' | 'completedAt'
+export type SummarySortOrder = 'asc' | 'desc'
+export type SummaryListStyle = 'bullets' | 'numbered'
+
+export interface SummarySectionQuery {
+  status: SummaryTaskFilter
+  listScope: {
+    mode: SummaryListScopeMode
+    listId?: string
+  }
+  dueScope?: SummaryDueScope | null
 }
+
+export interface SummarySectionTime {
+  mode: 'preset'
+  preset: SummaryTimeScope
+}
+
+export interface SummarySectionGroup {
+  by: SummaryGroupBy
+  emptyGroups: SummaryEmptyGroups
+}
+
+export interface SummarySectionSort {
+  field: SummarySortField
+  order: SummarySortOrder
+}
+
+export interface SummarySectionRender {
+  style: SummaryListStyle
+  showCount: boolean
+  showDueAt: boolean
+  showCompletedAt: boolean
+  limit?: number | null
+  hideEmptySection: boolean
+}
+
+export interface SummaryReportSectionV2 {
+  id: string
+  title: string
+  enabled: boolean
+  query: SummarySectionQuery
+  time: SummarySectionTime
+  group: SummarySectionGroup
+  sort: SummarySectionSort
+  render: SummarySectionRender
+}
+
+/** 统一对外类型：存取均为 V2 */
+export type SummaryReportSection = SummaryReportSectionV2
+
+export type SummaryReportMode = 'form' | 'template'
+
+export interface SummaryFreeTemplate {
+  body: string
+  syntaxVersion: 1
+}
+
+export interface SummaryReportConfig {
+  mode: SummaryReportMode
+  templateId: string | null
+  sections: SummaryReportSectionV2[]
+  freeTemplate: SummaryFreeTemplate
+}
+
+/** @deprecated 使用 SummaryReportConfig */
+export type SummaryReportConfigV2 = SummaryReportConfig
 
 export interface SummaryReportTemplate {
   id: string
@@ -51,26 +119,125 @@ export const SUMMARY_TIME_SCOPE_LABELS: Record<SummaryTimeScope, string> = {
   last_30_days: '最近 30 天'
 }
 
-export const DEFAULT_REPORT_CONFIG: SummaryReportConfig = {
-  templateId: 'daily_completed',
-  sections: [
-    {
-      id: 'completed_since_last',
-      title: '已完成',
-      taskFilter: 'completed',
-      timeScope: 'since_last',
-      enabled: true
-    }
-  ]
+export const SUMMARY_GROUP_BY_LABELS: Record<SummaryGroupBy, string> = {
+  none: '不分组',
+  category: '按清单/分类',
+  list: '按清单'
 }
 
-function section(
+export const SUMMARY_LIST_STYLE_LABELS: Record<SummaryListStyle, string> = {
+  bullets: '项目符号',
+  numbered: '编号列表'
+}
+
+function defaultRenderForStatus(status: SummaryTaskFilter): SummarySectionRender {
+  return {
+    style: 'bullets',
+    showCount: true,
+    showDueAt: status !== 'completed',
+    showCompletedAt: status === 'completed',
+    limit: null,
+    hideEmptySection: false
+  }
+}
+
+function defaultGroup(): SummarySectionGroup {
+  return { by: 'category', emptyGroups: 'hide' }
+}
+
+function defaultSort(status: SummaryTaskFilter): SummarySectionSort {
+  if (status === 'completed') {
+    return { field: 'completedAt', order: 'desc' }
+  }
+  return { field: 'dueAt', order: 'asc' }
+}
+
+export function createReportSectionV2(
+  partial: Partial<SummaryReportSectionV2> & {
+    taskFilter?: SummaryTaskFilter
+    timeScope?: SummaryTimeScope
+  } = {}
+): SummaryReportSectionV2 {
+  const id =
+    partial.id ??
+    `section-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+  const status = partial.query?.status ?? partial.taskFilter ?? 'completed'
+  const preset = partial.time?.preset ?? partial.timeScope ?? 'this_week'
+  return {
+    id,
+    title: partial.title?.trim() || '新区块',
+    enabled: partial.enabled !== false,
+    query: {
+      status,
+      listScope: partial.query?.listScope ?? { mode: 'all' },
+      dueScope: partial.query?.dueScope ?? null
+    },
+    time: {
+      mode: 'preset',
+      preset
+    },
+    group: partial.group ?? defaultGroup(),
+    sort: partial.sort ?? defaultSort(status),
+    render: partial.render ?? defaultRenderForStatus(status)
+  }
+}
+
+/** @deprecated 使用 createReportSectionV2 */
+export function createReportSection(
+  partial: Partial<SummaryReportSectionV1> = {}
+): SummaryReportSectionV2 {
+  return createReportSectionV2({
+    id: partial.id,
+    title: partial.title,
+    enabled: partial.enabled,
+    taskFilter: partial.taskFilter,
+    timeScope: partial.timeScope
+  })
+}
+
+function sectionV2(
   id: string,
   title: string,
-  taskFilter: SummaryTaskFilter,
-  timeScope: SummaryTimeScope
-): SummaryReportSection {
-  return { id, title, taskFilter, timeScope, enabled: true }
+  status: SummaryTaskFilter,
+  preset: SummaryTimeScope
+): SummaryReportSectionV2 {
+  return createReportSectionV2({ id, title, taskFilter: status, timeScope: preset })
+}
+
+export const DEFAULT_FREE_TEMPLATE_BODY = `{{!-- 自由模板示例：可按需修改 --}}
+{{#section status="completed" time="since_last" title="已完成" hideEmpty="true"}}
+【{{sectionTitle}}】共 {{count}} 项
+{{#tasks}}
+- {{title}}{{#if completedAt}}（完成 {{completedAt}}）{{/if}}
+{{/tasks}}
+{{/section}}
+`
+
+export function createDefaultFreeTemplate(body?: string): SummaryFreeTemplate {
+  const text = typeof body === 'string' ? body : ''
+  return {
+    body: text.length > 0 ? text : DEFAULT_FREE_TEMPLATE_BODY,
+    syntaxVersion: 1
+  }
+}
+
+export const DEFAULT_REPORT_CONFIG: SummaryReportConfig = {
+  mode: 'form',
+  templateId: 'daily_completed',
+  sections: [sectionV2('completed_since_last', '已完成', 'completed', 'since_last')],
+  freeTemplate: createDefaultFreeTemplate()
+}
+
+function withFormConfig(
+  templateId: string,
+  sections: SummaryReportSectionV2[]
+): SummaryReportConfig {
+  return {
+    mode: 'form',
+    templateId,
+    sections,
+    freeTemplate: createDefaultFreeTemplate()
+  }
 }
 
 export const SUMMARY_REPORT_TEMPLATES: SummaryReportTemplate[] = [
@@ -78,62 +245,52 @@ export const SUMMARY_REPORT_TEMPLATES: SummaryReportTemplate[] = [
     id: 'daily_completed',
     name: '每日已完成回顾',
     description: '汇总自上次发送以来已完成的任务',
-    config: {
-      templateId: 'daily_completed',
-      sections: [section('completed_since_last', '已完成', 'completed', 'since_last')]
-    }
+    config: withFormConfig('daily_completed', [
+      sectionV2('completed_since_last', '已完成', 'completed', 'since_last')
+    ])
   },
   {
     id: 'weekly_completed',
     name: '本周已完成',
     description: '汇总本周内完成的任务',
-    config: {
-      templateId: 'weekly_completed',
-      sections: [section('completed_week', '本周已完成', 'completed', 'this_week')]
-    }
+    config: withFormConfig('weekly_completed', [
+      sectionV2('completed_week', '本周已完成', 'completed', 'this_week')
+    ])
   },
   {
     id: 'weekly_pending',
     name: '本周未完成',
     description: '汇总本周内待办与进行中的任务',
-    config: {
-      templateId: 'weekly_pending',
-      sections: [section('pending_week', '本周未完成', 'pending', 'this_week')]
-    }
+    config: withFormConfig('weekly_pending', [
+      sectionV2('pending_week', '本周未完成', 'pending', 'this_week')
+    ])
   },
   {
     id: 'weekly_overview',
     name: '本周工作全景',
     description: '同时包含本周已完成、未完成与当前逾期',
-    config: {
-      templateId: 'weekly_overview',
-      sections: [
-        section('completed_week', '本周已完成', 'completed', 'this_week'),
-        section('pending_week', '本周未完成', 'pending', 'this_week'),
-        section('overdue_now', '已逾期', 'overdue', 'today')
-      ]
-    }
+    config: withFormConfig('weekly_overview', [
+      sectionV2('completed_week', '本周已完成', 'completed', 'this_week'),
+      sectionV2('pending_week', '本周未完成', 'pending', 'this_week'),
+      sectionV2('overdue_now', '已逾期', 'overdue', 'today')
+    ])
   },
   {
     id: 'monthly_completed',
     name: '本月已完成',
     description: '汇总本月内完成的任务',
-    config: {
-      templateId: 'monthly_completed',
-      sections: [section('completed_month', '本月已完成', 'completed', 'this_month')]
-    }
+    config: withFormConfig('monthly_completed', [
+      sectionV2('completed_month', '本月已完成', 'completed', 'this_month')
+    ])
   },
   {
     id: 'custom',
     name: '自定义',
     description: '自行勾选区块并配置统计范围',
-    config: {
-      templateId: 'custom',
-      sections: [
-        section('completed_since_last', '已完成', 'completed', 'since_last'),
-        section('pending_week', '未完成', 'pending', 'this_week')
-      ]
-    }
+    config: withFormConfig('custom', [
+      sectionV2('completed_since_last', '已完成', 'completed', 'since_last'),
+      sectionV2('pending_week', '未完成', 'pending', 'this_week')
+    ])
   }
 ]
 
@@ -151,80 +308,183 @@ export function applySummaryReportTemplate(templateId: string): SummaryReportCon
   if (!template) {
     return cloneReportConfig(DEFAULT_REPORT_CONFIG)
   }
-  return cloneReportConfig(template.config)
+  // 应用预设模板时保留独立 freeTemplate（默认示例），mode 回到 form
+  return cloneReportConfig({
+    ...template.config,
+    mode: 'form',
+    freeTemplate: createDefaultFreeTemplate(template.config.freeTemplate?.body)
+  })
 }
 
-export function normalizeReportConfig(raw: unknown): SummaryReportConfig {
-  if (!raw || typeof raw !== 'object') {
-    return cloneReportConfig(DEFAULT_REPORT_CONFIG)
-  }
-  const input = raw as Partial<SummaryReportConfig>
-  const sections = Array.isArray(input.sections)
-    ? input.sections
-        .map((item, index) => normalizeSection(item, index))
-        .filter((item): item is SummaryReportSection => item !== null)
-    : []
-
-  if (!sections.length) {
-    return cloneReportConfig(DEFAULT_REPORT_CONFIG)
-  }
-
-  return {
-    templateId: typeof input.templateId === 'string' ? input.templateId : 'custom',
-    sections
-  }
+function isTimeScope(value: unknown): value is SummaryTimeScope {
+  return (
+    value === 'since_last' ||
+    value === 'today' ||
+    value === 'this_week' ||
+    value === 'this_month' ||
+    value === 'last_7_days' ||
+    value === 'last_30_days'
+  )
 }
 
-function normalizeSection(raw: unknown, index: number): SummaryReportSection | null {
+function isTaskFilter(value: unknown): value is SummaryTaskFilter {
+  return value === 'completed' || value === 'pending' || value === 'overdue'
+}
+
+function mapLegacySectionToV2(raw: unknown, index: number): SummaryReportSectionV2 | null {
   if (!raw || typeof raw !== 'object') return null
-  const item = raw as Partial<SummaryReportSection>
-  const taskFilter = item.taskFilter
-  const timeScope = item.timeScope
-  if (
-    taskFilter !== 'completed' &&
-    taskFilter !== 'pending' &&
-    taskFilter !== 'overdue'
-  ) {
-    return null
+  const item = raw as Partial<SummaryReportSectionV1>
+  if (!isTaskFilter(item.taskFilter) || !isTimeScope(item.timeScope)) return null
+  return createReportSectionV2({
+    id: typeof item.id === 'string' && item.id ? item.id : `section-${index + 1}`,
+    title: typeof item.title === 'string' && item.title.trim() ? item.title.trim() : '未命名区块',
+    enabled: item.enabled !== false,
+    taskFilter: item.taskFilter,
+    timeScope: item.timeScope
+  })
+}
+
+function normalizeListScope(raw: unknown): SummarySectionQuery['listScope'] {
+  if (!raw || typeof raw !== 'object') return { mode: 'all' }
+  const item = raw as { mode?: unknown; listId?: unknown }
+  if (item.mode === 'only_list' && typeof item.listId === 'string' && item.listId.trim()) {
+    return { mode: 'only_list', listId: item.listId.trim() }
   }
+  return { mode: 'all' }
+}
+
+function normalizeSectionV2(raw: unknown, index: number): SummaryReportSectionV2 | null {
+  if (!raw || typeof raw !== 'object') return null
+  const item = raw as Record<string, unknown>
+
+  // V1 形状：有 taskFilter/timeScope，没有 query
   if (
-    timeScope !== 'since_last' &&
-    timeScope !== 'today' &&
-    timeScope !== 'this_week' &&
-    timeScope !== 'this_month' &&
-    timeScope !== 'last_7_days' &&
-    timeScope !== 'last_30_days'
+    (item.taskFilter != null || item.timeScope != null) &&
+    (item.query == null || typeof item.query !== 'object')
   ) {
-    return null
+    return mapLegacySectionToV2(item, index)
   }
+
+  const queryRaw = (item.query ?? {}) as Partial<SummarySectionQuery>
+  const status = isTaskFilter(queryRaw.status)
+    ? queryRaw.status
+    : isTaskFilter(item.taskFilter)
+      ? item.taskFilter
+      : null
+  if (!status) return null
+
+  const timeRaw = (item.time ?? {}) as Partial<SummarySectionTime>
+  const preset = isTimeScope(timeRaw.preset)
+    ? timeRaw.preset
+    : isTimeScope(item.timeScope)
+      ? item.timeScope
+      : 'this_week'
+
+  const groupRaw = (item.group ?? {}) as Partial<SummarySectionGroup>
+  const by: SummaryGroupBy =
+    groupRaw.by === 'none' || groupRaw.by === 'list' || groupRaw.by === 'category'
+      ? groupRaw.by
+      : 'category'
+  const emptyGroups: SummaryEmptyGroups = groupRaw.emptyGroups === 'show' ? 'show' : 'hide'
+
+  const sortRaw = (item.sort ?? {}) as Partial<SummarySectionSort>
+  const field: SummarySortField =
+    sortRaw.field === 'createdAt' || sortRaw.field === 'completedAt' || sortRaw.field === 'dueAt'
+      ? sortRaw.field
+      : defaultSort(status).field
+  const order: SummarySortOrder = sortRaw.order === 'desc' ? 'desc' : 'asc'
+
+  const renderRaw = (item.render ?? {}) as Partial<SummarySectionRender>
+  const baseRender = defaultRenderForStatus(status)
+  const limit =
+    typeof renderRaw.limit === 'number' && Number.isFinite(renderRaw.limit) && renderRaw.limit > 0
+      ? Math.floor(renderRaw.limit)
+      : null
+
   return {
     id: typeof item.id === 'string' && item.id ? item.id : `section-${index + 1}`,
     title: typeof item.title === 'string' && item.title.trim() ? item.title.trim() : '未命名区块',
-    taskFilter,
-    timeScope,
-    enabled: item.enabled !== false
+    enabled: item.enabled !== false,
+    query: {
+      status,
+      listScope: normalizeListScope(queryRaw.listScope),
+      dueScope: queryRaw.dueScope === 'due_today_only' ? 'due_today_only' : null
+    },
+    time: { mode: 'preset', preset },
+    group: { by, emptyGroups },
+    sort: { field, order },
+    render: {
+      style: renderRaw.style === 'numbered' ? 'numbered' : 'bullets',
+      showCount: renderRaw.showCount !== false && (renderRaw.showCount ?? baseRender.showCount),
+      showDueAt: renderRaw.showDueAt ?? baseRender.showDueAt,
+      showCompletedAt: renderRaw.showCompletedAt ?? baseRender.showCompletedAt,
+      limit,
+      hideEmptySection: renderRaw.hideEmptySection === true
+    }
   }
 }
 
-export function createReportSection(
-  partial: Partial<SummaryReportSection> = {}
-): SummaryReportSection {
-  const id =
-    partial.id ??
-    `section-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
-  return {
-    id,
-    title: partial.title?.trim() || '新区块',
-    taskFilter: partial.taskFilter ?? 'completed',
-    timeScope: partial.timeScope ?? 'this_week',
-    enabled: partial.enabled !== false
+/** 兼容旧版与 V2：统一输出含 mode/freeTemplate 的配置 */
+export function normalizeReportConfigV2(raw: unknown): SummaryReportConfig {
+  if (!raw || typeof raw !== 'object') {
+    return cloneReportConfig(DEFAULT_REPORT_CONFIG)
   }
+  const input = raw as Partial<SummaryReportConfig> & {
+    freeTemplate?: Partial<SummaryFreeTemplate> | string
+  }
+  const sections = Array.isArray(input.sections)
+    ? input.sections
+        .map((item, index) => normalizeSectionV2(item, index))
+        .filter((item): item is SummaryReportSectionV2 => item !== null)
+    : []
+
+  if (!sections.length) {
+    const fallback = cloneReportConfig(DEFAULT_REPORT_CONFIG)
+    fallback.mode = input.mode === 'template' ? 'template' : 'form'
+    fallback.freeTemplate = normalizeFreeTemplate(input.freeTemplate)
+    fallback.templateId = typeof input.templateId === 'string' ? input.templateId : fallback.templateId
+    return fallback
+  }
+
+  return {
+    mode: input.mode === 'template' ? 'template' : 'form',
+    templateId: typeof input.templateId === 'string' ? input.templateId : 'custom',
+    sections,
+    freeTemplate: normalizeFreeTemplate(input.freeTemplate)
+  }
+}
+
+function normalizeFreeTemplate(raw: unknown): SummaryFreeTemplate {
+  if (typeof raw === 'string') {
+    return createDefaultFreeTemplate(raw)
+  }
+  if (raw && typeof raw === 'object') {
+    const body = typeof (raw as SummaryFreeTemplate).body === 'string' ? (raw as SummaryFreeTemplate).body : ''
+    // 已有 body（含空字符串）保留；仅 undefined/缺失时填示例
+    if ('body' in (raw as object)) {
+      return { body, syntaxVersion: 1 }
+    }
+  }
+  return createDefaultFreeTemplate()
+}
+
+/** 兼容入口：统一走 V2 normalize */
+export function normalizeReportConfig(raw: unknown): SummaryReportConfig {
+  return normalizeReportConfigV2(raw)
 }
 
 export interface ResolvedTimeBounds {
   from: string
   to: string
   label: string
+}
+
+/** 本地「今天」日界限（含起止）：00:00:00 ~ 23:59:59 */
+export function localDayBounds(now: dayjs.Dayjs = dayjs()): { from: string; to: string } {
+  return {
+    from: now.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+    to: now.endOf('day').format('YYYY-MM-DDTHH:mm:ss')
+  }
 }
 
 /** 解析区块时间范围；since_last 与发送周期联动 */
@@ -285,57 +545,123 @@ export function resolveSectionTimeBounds(
   }
 }
 
+export function resolveSectionCategoryIds(
+  section: SummaryReportSectionV2,
+  summaryCategoryIds: string[]
+): string[] | undefined {
+  if (section.query.listScope.mode === 'only_list' && section.query.listScope.listId) {
+    return [section.query.listScope.listId]
+  }
+  return summaryCategoryIds.length > 0 ? summaryCategoryIds : undefined
+}
+
 export function describeReportConfig(config: SummaryReportConfig): string {
-  const enabled = config.sections.filter((s) => s.enabled)
+  const normalized = normalizeReportConfigV2(config)
+  const enabled = normalized.sections.filter((s) => s.enabled)
   if (!enabled.length) return '未配置内容'
   return enabled
-    .map((s) => `${s.title}（${SUMMARY_TASK_FILTER_LABELS[s.taskFilter]}·${SUMMARY_TIME_SCOPE_LABELS[s.timeScope]}）`)
+    .map((s) => {
+      const extras: string[] = []
+      if (s.query.dueScope === 'due_today_only') extras.push('今天到期')
+      if (s.query.listScope.mode === 'only_list') extras.push('指定清单')
+      const extra = extras.length ? `·${extras.join('·')}` : ''
+      return `${s.title}（${SUMMARY_TASK_FILTER_LABELS[s.query.status]}·${SUMMARY_TIME_SCOPE_LABELS[s.time.preset]}${extra}）`
+    })
     .join('；')
 }
 
+function compareNullableIso(a: string | null | undefined, b: string | null | undefined): number {
+  if (!a && !b) return 0
+  if (!a) return 1
+  if (!b) return -1
+  return a.localeCompare(b)
+}
+
+export function sortSectionTasks(tasks: Task[], sort: SummarySectionSort): Task[] {
+  const sorted = [...tasks]
+  sorted.sort((a, b) => {
+    let cmp = 0
+    if (sort.field === 'dueAt') cmp = compareNullableIso(a.dueAt, b.dueAt)
+    else if (sort.field === 'createdAt') cmp = compareNullableIso(a.createdAt, b.createdAt)
+    else cmp = compareNullableIso(a.completedAt, b.completedAt)
+    return sort.order === 'desc' ? -cmp : cmp
+  })
+  return sorted
+}
+
+function formatTaskLineV2(task: Task, render: SummarySectionRender): string {
+  const parts: string[] = [task.title]
+  if (render.showCompletedAt && task.completedAt) {
+    parts.push(`（完成 ${task.completedAt.slice(0, 16).replace('T', ' ')}）`)
+  } else if (render.showDueAt) {
+    if (task.dueAt) {
+      parts.push(`（截止 ${task.dueAt.slice(0, 16).replace('T', ' ')}）`)
+    } else {
+      parts.push('（无截止）')
+    }
+  }
+  return parts.join('')
+}
+
+function bulletPrefix(style: SummaryListStyle, index: number): string {
+  return style === 'numbered' ? `${index}.` : '-'
+}
+
 export function buildSectionTasksSummaryText(
-  section: SummaryReportSection,
+  section: SummaryReportSectionV2,
   tasks: Task[],
   categoryNames: Map<string, string>,
   bounds: ResolvedTimeBounds
-): string {
-  const header = `【${section.title}】${bounds.label} · ${SUMMARY_TASK_FILTER_LABELS[section.taskFilter]} · ${tasks.length} 项`
-  if (!tasks.length) {
+): string | null {
+  const sorted = sortSectionTasks(tasks, section.sort)
+  const limited =
+    section.render.limit != null && section.render.limit > 0
+      ? sorted.slice(0, section.render.limit)
+      : sorted
+
+  if (!limited.length && section.render.hideEmptySection) {
+    return null
+  }
+
+  const countPart = section.render.showCount ? ` · ${limited.length} 项` : ''
+  const header = `【${section.title}】${bounds.label} · ${SUMMARY_TASK_FILTER_LABELS[section.query.status]}${countPart}`
+  if (!limited.length) {
     return `${header}\n暂无相关任务。`
   }
 
+  const lines: string[] = [header]
+  const groupBy = section.group.by
+
+  if (groupBy === 'none') {
+    limited.forEach((task, index) => {
+      lines.push(`  ${bulletPrefix(section.render.style, index + 1)} ${formatTaskLineV2(task, section.render)}`)
+    })
+    return lines.join('\n')
+  }
+
   const byCategory = new Map<string, Task[]>()
-  for (const task of tasks) {
+  for (const task of limited) {
     const key = task.categoryId ?? '__none__'
     if (!byCategory.has(key)) byCategory.set(key, [])
     byCategory.get(key)!.push(task)
   }
 
-  const lines: string[] = [header]
   for (const [catKey, list] of byCategory) {
+    if (!list.length && section.group.emptyGroups === 'hide') continue
     const label = catKey === '__none__' ? '未分类' : categoryNames.get(catKey) ?? '未分类'
-    lines.push(`  · ${label}（${list.length}）`)
-    for (const task of list) {
-      lines.push(`    - ${formatTaskLine(task, section.taskFilter)}`)
-    }
+    const countLabel = section.render.showCount ? `（${list.length}）` : ''
+    lines.push(`  · ${label}${countLabel}`)
+    list.forEach((task, index) => {
+      lines.push(
+        `    ${bulletPrefix(section.render.style, index + 1)} ${formatTaskLineV2(task, section.render)}`
+      )
+    })
   }
   return lines.join('\n')
 }
 
-function formatTaskLine(task: Task, filter: SummaryTaskFilter): string {
-  if (filter === 'completed') {
-    const done = task.completedAt?.slice(0, 16).replace('T', ' ') ?? ''
-    return `${task.title}${done ? `（完成 ${done}）` : ''}`
-  }
-  const due = task.dueAt?.slice(0, 16).replace('T', ' ') ?? ''
-  if (filter === 'overdue') {
-    return `${task.title}${due ? `（截止 ${due}）` : ''}`
-  }
-  return `${task.title}${due ? `（截止 ${due}）` : '（无截止）'}`
-}
-
 export function buildReportSummaryText(
-  sections: Array<{ section: SummaryReportSection; bounds: ResolvedTimeBounds; tasks: Task[] }>,
+  sections: Array<{ section: SummaryReportSectionV2; bounds: ResolvedTimeBounds; tasks: Task[] }>,
   categoryNames: Map<string, string>
 ): string {
   const enabled = sections.filter((item) => item.section.enabled)
@@ -343,11 +669,18 @@ export function buildReportSummaryText(
     return '未启用任何汇总区块。'
   }
 
-  const parts = enabled.map(({ section, bounds, tasks }) =>
-    buildSectionTasksSummaryText(section, tasks, categoryNames, bounds)
-  )
+  const parts = enabled
+    .map(({ section, bounds, tasks }) =>
+      buildSectionTasksSummaryText(section, tasks, categoryNames, bounds)
+    )
+    .filter((part): part is string => part != null)
+
+  if (!parts.length) {
+    return '本周期暂无相关任务。'
+  }
+
   const hasTasks = enabled.some((item) => item.tasks.length > 0)
-  if (!hasTasks) {
+  if (!hasTasks && parts.every((p) => p.includes('暂无相关任务'))) {
     return parts.join('\n\n') + '\n\n本周期暂无相关任务。'
   }
   return parts.join('\n\n')

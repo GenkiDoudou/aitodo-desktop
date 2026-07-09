@@ -1,7 +1,7 @@
 <template>
   <section class="settings-section">
     <h2 class="settings-section__title">关于</h2>
-    <p class="settings-section__version">aiTodo 桌面版 {{ info?.version ?? '-' }}</p>
+    <p class="settings-section__version">小柒todo 桌面版 {{ info?.version ?? '-' }}</p>
     <p class="settings-section__hint">纯本地待办客户端，数据默认存储于本机 SQLite。</p>
   </section>
 </template>

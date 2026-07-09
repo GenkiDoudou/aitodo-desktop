@@ -20,7 +20,7 @@ export function createTray(mainWindow: BrowserWindow, actions: TrayActions): Tra
   }
 
   tray = new Tray(image)
-  tray.setToolTip('aiTodo')
+  tray.setToolTip('小柒todo')
 
   const contextMenu = Menu.buildFromTemplate([
     { label: '显示主窗口', click: actions.onShow },

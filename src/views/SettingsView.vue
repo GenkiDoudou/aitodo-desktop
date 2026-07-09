@@ -25,8 +25,10 @@
       <SettingsShortcutsSection v-else-if="activeSection === 'shortcuts'" />
       <SettingsLlmSection v-else-if="activeSection === 'llm'" />
       <SettingsPromptSection v-else-if="activeSection === 'prompt'" />
-      <SettingsSummarySection v-else-if="activeSection === 'summary'" />
       <SettingsImportExportSection v-else-if="activeSection === 'importExport'" />
+      <SettingsTaskActivitySection v-else-if="activeSection === 'taskActivity'" />
+      <SettingsKanbanSection v-else-if="activeSection === 'kanban'" />
+      <SettingsViewTemplatesSection v-else-if="activeSection === 'viewTemplates'" />
       <SettingsAboutSection v-else />
     </main>
   </div>
@@ -35,17 +37,29 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Coin, Cpu, Document, FolderOpened, InfoFilled, Key, List, Timer } from '@element-plus/icons-vue'
+import { Coin, Collection, Cpu, Document, FolderOpened, Grid, InfoFilled, Key, List, Timer } from '@element-plus/icons-vue'
 import SettingsDataSection from '@/components/settings/SettingsDataSection.vue'
 import SettingsSmartListSection from '@/components/settings/SettingsSmartListSection.vue'
 import SettingsShortcutsSection from '@/components/settings/SettingsShortcutsSection.vue'
 import SettingsLlmSection from '@/components/settings/SettingsLlmSection.vue'
 import SettingsPromptSection from '@/components/settings/SettingsPromptSection.vue'
-import SettingsSummarySection from '@/components/settings/SettingsSummarySection.vue'
 import SettingsImportExportSection from '@/components/settings/SettingsImportExportSection.vue'
+import SettingsTaskActivitySection from '@/components/settings/SettingsTaskActivitySection.vue'
+import SettingsKanbanSection from '@/components/settings/SettingsKanbanSection.vue'
+import SettingsViewTemplatesSection from '@/components/settings/SettingsViewTemplatesSection.vue'
 import SettingsAboutSection from '@/components/settings/SettingsAboutSection.vue'
 
-type SettingsSection = 'data' | 'smartList' | 'shortcuts' | 'llm' | 'prompt' | 'summary' | 'importExport' | 'about'
+type SettingsSection =
+  | 'data'
+  | 'smartList'
+  | 'shortcuts'
+  | 'llm'
+  | 'prompt'
+  | 'importExport'
+  | 'taskActivity'
+  | 'kanban'
+  | 'viewTemplates'
+  | 'about'
 
 const router = useRouter()
 const route = useRoute()
@@ -60,11 +74,16 @@ watch(
       section === 'shortcuts' ||
       section === 'llm' ||
       section === 'prompt' ||
-      section === 'summary' ||
       section === 'importExport' ||
+      section === 'taskActivity' ||
+      section === 'kanban' ||
+      section === 'viewTemplates' ||
       section === 'about'
     ) {
       activeSection.value = section
+    } else if (section === 'summary') {
+      // 定时汇总已迁至左侧一级菜单，旧链接回退到数据设置
+      activeSection.value = 'data'
     }
   },
   { immediate: true }
@@ -76,8 +95,10 @@ const menuItems = [
   { id: 'shortcuts' as const, label: '快捷键', icon: Key },
   { id: 'llm' as const, label: '大模型', icon: Cpu },
   { id: 'prompt' as const, label: '提示词', icon: Document },
-  { id: 'summary' as const, label: '定时汇总', icon: Timer },
   { id: 'importExport' as const, label: '导入导出', icon: FolderOpened },
+  { id: 'taskActivity' as const, label: '任务动态', icon: Timer },
+  { id: 'kanban' as const, label: '看板', icon: Grid },
+  { id: 'viewTemplates' as const, label: '视图模板', icon: Collection },
   { id: 'about' as const, label: '关于', icon: InfoFilled }
 ]
 </script>

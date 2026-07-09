@@ -1,7 +1,12 @@
 import { app, BrowserWindow, dialog, Menu } from 'electron'
 import { join } from 'path'
 import { getDatabase, closeDatabase, DatabaseNotWritableError } from './db/database'
-import { registerIpcHandlers, pushAppMessageToRenderer } from './ipc/handlers'
+import {
+  registerIpcHandlers,
+  pushAppMessageToRenderer,
+  setSummarySchedulerService,
+  setHolidayService
+} from './ipc/handlers'
 import { TaskRepository } from './db/task-repository'
 import { AppMessageRepository } from './db/app-message-repository'
 import { TaskReminderRepository } from './db/task-reminder-repository'
@@ -11,7 +16,9 @@ import { SummarySchedulerService } from './services/summary-scheduler-service'
 import { ScheduledSummaryRepository } from './db/scheduled-summary-repository'
 import { ScheduledSummaryService } from './services/scheduled-summary-service'
 import { CategoryRepository } from './db/category-repository'
+import { TaskActivityRepository } from './db/task-activity-repository'
 import { HolidayService } from './services/holiday-service'
+import { TaskActivityService } from './services/task-activity-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting } from './tray'
 import { resolveDataDir } from './data-path'
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts'
@@ -33,7 +40,7 @@ function createWindow(): BrowserWindow {
     height: 720,
     minWidth: 900,
     minHeight: 560,
-    title: 'aiTodo',
+    title: '小柒todo',
     /** 不显示系统菜单栏（File / Edit / View …） */
     autoHideMenuBar: true,
     webPreferences: {
@@ -82,6 +89,12 @@ app.whenReady().then(() => {
 
   registerAttachmentProtocol()
   registerIpcHandlers(() => mainWindow)
+  try {
+    const db = getDatabase()
+    new TaskActivityService(new TaskActivityRepository(db)).purgeByCurrentPolicy()
+  } catch {
+    /* 启动清理失败不阻塞应用 */
+  }
   mainWindow = createWindow()
   registerGlobalShortcuts(mainWindow)
 
@@ -90,6 +103,7 @@ app.whenReady().then(() => {
   const messageService = new AppMessageService(new AppMessageRepository(db))
   const reminderRepo = new TaskReminderRepository(db)
   const holidayService = new HolidayService()
+  setHolidayService(holidayService)
   reminderService = new ReminderService(
     taskRepo,
     reminderRepo,
@@ -107,6 +121,7 @@ app.whenReady().then(() => {
     messageService,
     pushAppMessageToRenderer
   )
+  setSummarySchedulerService(summarySchedulerService)
   summarySchedulerService.start()
 
   createTray(mainWindow, {

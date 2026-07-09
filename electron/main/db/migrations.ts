@@ -138,6 +138,75 @@ const MIGRATIONS: { version: number; sql: string }[] = [
     sql: `
       ALTER TABLE app_messages ADD COLUMN source TEXT;
     `
+  },
+  {
+    version: 9,
+    sql: `
+      ALTER TABLE tasks ADD COLUMN completed_occurrence_dates TEXT;
+    `
+  },
+  {
+    version: 10,
+    sql: `
+      CREATE TABLE IF NOT EXISTS task_filters (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        rule_json TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_task_filters_sort ON task_filters(sort_order);
+    `
+  },
+  {
+    version: 11,
+    sql: `
+      CREATE TABLE IF NOT EXISTS task_activities (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_task_activities_task_created
+        ON task_activities(task_id, created_at DESC);
+    `
+  },
+  {
+    version: 12,
+    sql: `
+      DROP TABLE IF EXISTS task_filters;
+      CREATE TABLE IF NOT EXISTS task_views (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        layout TEXT NOT NULL,
+        scope_key TEXT,
+        filter_rule_json TEXT,
+        group_by TEXT NOT NULL,
+        sort_by TEXT NOT NULL,
+        kanban_board_mode TEXT,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_task_views_sort ON task_views(sort_order);
+      INSERT INTO task_views (
+        id, name, layout, scope_key, filter_rule_json, group_by, sort_by,
+        kanban_board_mode, sort_order, created_at, updated_at
+      ) VALUES
+        (
+          'view-default-all', '全部任务', 'list', NULL, NULL,
+          'none', 'custom', NULL, 0,
+          datetime('now'), datetime('now')
+        ),
+        (
+          'view-default-kanban', '看板', 'kanban', NULL,
+          '{"type":"group","op":"and","children":[{"type":"cond","field":"status","op":"in","value":["TODO","IN_PROGRESS"]}]}',
+          'none', 'custom', 'status', 1,
+          datetime('now'), datetime('now')
+        );
+    `
   }
 ]
 
