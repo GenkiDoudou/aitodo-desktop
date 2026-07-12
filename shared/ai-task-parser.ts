@@ -1,12 +1,14 @@
 import dayjs from 'dayjs'
+import { resolveCreateCategoryId } from './category-keywords'
 import type { CreateTaskDto } from './types'
 import type { TaskRecurrenceRule, TaskReminderInput } from './task-reminder'
 import { buildRemindersFromOffsets, primaryRemindAt } from './task-reminder'
 
-/** 解析时可匹配的分类摘要（id + 展示名） */
+/** 解析时可匹配的分类摘要（id + 展示名 + 关键词） */
 export interface AiParseCategoryRef {
   id: string
   name: string
+  keywords?: string[]
 }
 
 /** 规则解析结果：供快捷添加 / AI Dialog 预览与创建任务 DTO 组装 */
@@ -72,12 +74,15 @@ const CN_DIGITS: Record<string, number> = {
 
 /** 时段缺省小时（滴答清单规则） */
 const PERIOD_DEFAULT_HOUR: Record<string, number> = {
+  凌晨: 6,
   早上: 7,
   上午: 9,
   中午: 12,
   下午: 13,
   傍晚: 17,
-  晚上: 20
+  晚上: 20,
+  今晚: 20,
+  夜里: 21
 }
 
 /** ISO 本地时间：yyyy-MM-ddTHH:mm:ss（与仓库 Task 字段一致） */
@@ -180,6 +185,7 @@ function resolveDayAnchor(text: string, base: dayjs.Dayjs): dayjs.Dayjs | null {
   if (/明天|明日/.test(text)) return base.add(1, 'day').startOf('day')
   if (/后天/.test(text)) return base.add(2, 'day').startOf('day')
   if (/大后天/.test(text)) return base.add(3, 'day').startOf('day')
+  if (/今晚|夜里/.test(text)) return base.startOf('day')
 
   const weekday = text.match(/(?:周|星期|礼拜)([一二三四五六日天])/)
   if (weekday) {
@@ -187,7 +193,15 @@ function resolveDayAnchor(text: string, base: dayjs.Dayjs): dayjs.Dayjs | null {
     if (dow != null) return nearestWeekday(base, dow, 9, 0).startOf('day')
   }
 
-  const md = text.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/)
+  const iso = text.match(/(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})\s*日?/)
+  if (iso) {
+    const candidate = dayjs(
+      `${iso[1]}-${String(iso[2]).padStart(2, '0')}-${String(iso[3]).padStart(2, '0')}`
+    ).startOf('day')
+    return candidate.isValid() ? candidate : null
+  }
+
+  const md = text.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*(?:日|号)/)
   if (md) {
     const month = Number(md[1])
     const dayNum = Number(md[2])
@@ -222,12 +236,21 @@ function resolveDayAnchor(text: string, base: dayjs.Dayjs): dayjs.Dayjs | null {
   return null
 }
 
-/** 从片段解析时刻 */
-function resolveClock(text: string, day: dayjs.Dayjs, base: dayjs.Dayjs): dayjs.Dayjs {
+/** 从片段解析时刻；显式日期（今天/明天/月日等）时不因已过而滚到次日 */
+function resolveClock(
+  text: string,
+  day: dayjs.Dayjs,
+  base: dayjs.Dayjs,
+  rollPastToNextDay: boolean
+): dayjs.Dayjs {
+  const finalize = (candidate: dayjs.Dayjs) => {
+    if (!rollPastToNextDay) return candidate
+    return candidate.isBefore(base) ? candidate.add(1, 'day') : candidate
+  }
+
   for (const [period, defaultHour] of Object.entries(PERIOD_DEFAULT_HOUR)) {
     if (text.includes(period) && !/\d{1,2}\s*点/.test(text) && !/\d{1,2}:\d{2}/.test(text)) {
-      const candidate = day.hour(defaultHour).minute(0).second(0)
-      return candidate.isBefore(base) ? candidate.add(1, 'day') : candidate
+      return finalize(day.hour(defaultHour).minute(0).second(0))
     }
   }
 
@@ -235,43 +258,47 @@ function resolveClock(text: string, day: dayjs.Dayjs, base: dayjs.Dayjs): dayjs.
   if (colon) {
     const hour = Number(colon[1])
     const minute = Number(colon[2])
-    const candidate = day.hour(hour).minute(minute).second(0)
-    return candidate.isBefore(base) ? candidate.add(1, 'day') : candidate
+    return finalize(day.hour(hour).minute(minute).second(0))
   }
 
   const half = text.match(
-    /(早上|上午|下午|晚上|中午|傍晚)?\s*(\d{1,2}|[一二三四五六七八九十]+)\s*点半/
+    /(凌晨|早上|上午|下午|晚上|中午|傍晚|今晚|夜里)?\s*(\d{1,2}|[一二三四五六七八九十]+)\s*点半/
   )
   if (half) {
     const hour = parseNumberToken(half[2]) ?? 9
     let h = hour
     const period = half[1]
-    if (period === '下午' || period === '晚上' || period === '傍晚') {
+    if (period === '下午' || period === '晚上' || period === '傍晚' || period === '今晚' || period === '夜里') {
       if (h < 12) h += 12
     } else if (period === '中午' && h <= 12) {
       h = h === 12 ? 12 : h + 12
+    } else if (period === '凌晨' && h === 12) {
+      h = 0
     }
-    const candidate = day.hour(h).minute(30).second(0)
-    return candidate.isBefore(base) ? candidate.add(1, 'day') : candidate
+    return finalize(day.hour(h).minute(30).second(0))
   }
 
   const full = text.match(
-    /(早上|上午|下午|晚上|中午|傍晚)?\s*(\d{1,2}|[一二三四五六七八九十]+)\s*点\s*(\d{1,2})?\s*分?/
+    /(凌晨|早上|上午|下午|晚上|中午|傍晚|今晚|夜里)?\s*(\d{1,2}|[一二三四五六七八九十]+)\s*点\s*(\d{1,2})?\s*分?/
   )
   if (full) {
     const hour = parseNumberToken(full[2]) ?? 9
     const minute = full[3] ? Number(full[3]) : 0
     let h = hour
     const period = full[1]
-    if (period === '下午' || period === '晚上' || period === '傍晚') {
+    if (period === '下午' || period === '晚上' || period === '傍晚' || period === '今晚' || period === '夜里') {
       if (h < 12) h += 12
     } else if (period === '中午') {
       h = h <= 12 ? (h === 12 ? 12 : h + 12) : h
+    } else if (period === '凌晨') {
+      if (h === 12) h = 0
     } else if (!period) {
+      if (!rollPastToNextDay) {
+        return day.hour(hour).minute(minute).second(0)
+      }
       return resolveBareHour(hour, day, base).minute(minute).second(0)
     }
-    const candidate = day.hour(h).minute(minute).second(0)
-    return candidate.isBefore(base) ? candidate.add(1, 'day') : candidate
+    return finalize(day.hour(h).minute(minute).second(0))
   }
 
   return day.hour(9).minute(0).second(0)
@@ -282,12 +309,17 @@ function extractDue(
   base: dayjs.Dayjs
 ): { dueAt: string | null; consumed: string[] } {
   const patterns = [
-    /(?:今天|今日|明天|明日|后天|大后天)(?:的)?(?:\s*(?:早上|上午|下午|晚上|中午|傍晚))?\s*(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:点半|:|点\s*\d{0,2}\s*分?|\d{1,2}:\d{2})/,
-    /(?:今天|今日|明天|明日|后天|大后天)(?:的)?(?:\s*(?:早上|上午|下午|晚上|中午|傍晚))/,
-    /(?:周|星期|礼拜)[一二三四五六日天](?:\s*(?:早上|上午|下午|晚上|中午|傍晚))?\s*(?:\d{1,2}|[一二三四五六七八九十]+)?\s*(?:点半|:|点\s*\d{0,2}\s*分?|\d{1,2}:\d{2})?/,
-    /\d{1,2}\s*月\s*\d{1,2}\s*日(?:\s*(?:早上|上午|下午|晚上|中午|傍晚))?\s*(?:\d{1,2}|[一二三四五六七八九十]+)?\s*(?:点半|:|点\s*\d{0,2}\s*分?|\d{1,2}:\d{2})?/,
+    /(?:截止|到期|ddl|DDL)\s*(?:于|为|是)?\s*(?:今天|今日|明天|明日|后天|大后天)(?:的)?(?:\s*(?:早上|上午|下午|晚上|中午|傍晚|今晚|夜里|凌晨))?\s*(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:点半|:|点\s*\d{0,2}\s*分?|\d{1,2}:\d{2})?/,
+    /(?:截止|到期|ddl|DDL)\s*(?:于|为|是)?\s*(?:周|星期|礼拜)[一二三四五六日天](?:\s*(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:点半|点|:|\d{1,2}:\d{2})?)?/,
+    /(?:截止|到期|ddl|DDL)\s*(?:于|为|是)?\s*\d{1,2}\s*月\s*\d{1,2}\s*(?:日|号)(?:\s*(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:点半|点|:|\d{1,2}:\d{2})?)?/,
+    /\d{4}[-/.年]\d{1,2}[-/.月]\d{1,2}\s*日?(?:\s*(?:\d{1,2}:\d{2}|(?:早上|上午|下午|晚上|中午|傍晚|今晚|夜里|凌晨)?\s*(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:点半|点)))?/,
+    /(?:今天|今日|明天|明日|后天|大后天|今晚)(?:的)?(?:\s*(?:早上|上午|下午|晚上|中午|傍晚|今晚|夜里|凌晨))?\s*(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:点半|:|点\s*\d{0,2}\s*分?|\d{1,2}:\d{2})/,
+    /(?:今天|今日|明天|明日|后天|大后天|今晚)(?:的)?(?:\s*(?:早上|上午|下午|晚上|中午|傍晚|今晚|夜里|凌晨))/,
+    /(?:今晚|夜里)/,
+    /(?:周|星期|礼拜)[一二三四五六日天](?:\s*(?:早上|上午|下午|晚上|中午|傍晚|今晚|夜里|凌晨))?\s*(?:\d{1,2}|[一二三四五六七八九十]+)?\s*(?:点半|:|点\s*\d{0,2}\s*分?|\d{1,2}:\d{2})?/,
+    /\d{1,2}\s*月\s*\d{1,2}\s*(?:日|号)(?:\s*(?:早上|上午|下午|晚上|中午|傍晚|今晚|夜里|凌晨))?\s*(?:\d{1,2}|[一二三四五六七八九十]+)?\s*(?:点半|:|点\s*\d{0,2}\s*分?|\d{1,2}:\d{2})?/,
     /\d{1,2}\s*月(?!\s*\d)/,
-    /(?:^|[，,\s])((?:早上|上午|下午|晚上|中午|傍晚)?\s*(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:点半|:|点\s*\d{0,2}\s*分?|\d{1,2}:\d{2}))(?:\s*提醒我)?/,
+    /(?:^|[，,\s])((?:早上|上午|下午|晚上|中午|傍晚|今晚|夜里|凌晨)?\s*(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:点半|:|点\s*\d{0,2}\s*分?|\d{1,2}:\d{2}))(?:\s*提醒我)?/,
     /(?:^|[，,\s])(\d{1,2}[/-]\d{1,2})(?:\s*(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:点半|点))?/
   ]
 
@@ -295,8 +327,10 @@ function extractDue(
     const match = text.match(pattern)
     if (!match) continue
     const fragment = match[0]
-    const day = resolveDayAnchor(fragment, base) ?? base.startOf('day')
-    const due = resolveClock(fragment, day, base)
+    const dayAnchor = resolveDayAnchor(fragment, base)
+    const day = dayAnchor ?? base.startOf('day')
+    // 写了「今天/明天/7月11日」等显式日期时，即使时刻已过也保留该日，不自动滚到次日
+    const due = resolveClock(fragment, day, base, dayAnchor == null)
     return { dueAt: toIso(due), consumed: [fragment] }
   }
 
@@ -483,49 +517,38 @@ function extractRecurrence(text: string, base: dayjs.Dayjs): RecurrenceExtract |
   return null
 }
 
-/** 提前提醒：返回相对截止的偏移分钟（含准时 0） */
+/** 提前提醒：仅返回提前量偏移，不附带准时提醒 */
 function extractEarlyReminderOffsets(text: string): { offsets: number[]; consumed: string[] } {
   const consumed: string[] = []
-  const offsets = new Set<number>()
 
   const generic = text.match(/(?:提前|提早)提醒我/)
   if (generic) {
     consumed.push(generic[0])
-    offsets.add(0)
-    offsets.add(5)
-    return { offsets: [...offsets], consumed }
+    return { offsets: [5], consumed }
   }
 
   if (/(?:提前|提早)半小时/.test(text)) {
     const m = text.match(/(?:提前|提早)半小时/)!
     consumed.push(m[0])
-    offsets.add(0)
-    offsets.add(30)
-    return { offsets: [...offsets], consumed }
+    return { offsets: [30], consumed }
   }
 
   const unitMatch = text.match(/(?:提前|提早)\s*(\d+)\s*(分钟|分|小时|天|周)/)
   if (unitMatch) {
     consumed.push(unitMatch[0])
-    offsets.add(0)
-    offsets.add(offsetUnitToMinutes(Number(unitMatch[1]), unitMatch[2]))
-    return { offsets: [...offsets], consumed }
+    return { offsets: [offsetUnitToMinutes(Number(unitMatch[1]), unitMatch[2])], consumed }
   }
 
   const hourMatch = text.match(/(?:提前|提早)\s*(\d+)\s*个?\s*小时/)
   if (hourMatch) {
     consumed.push(hourMatch[0])
-    offsets.add(0)
-    offsets.add(Number(hourMatch[1]) * 60)
-    return { offsets: [...offsets], consumed }
+    return { offsets: [Number(hourMatch[1]) * 60], consumed }
   }
 
   const minMatch = text.match(/(?:提前|提早)\s*(\d+)\s*分钟/)
   if (minMatch) {
     consumed.push(minMatch[0])
-    offsets.add(0)
-    offsets.add(Number(minMatch[1]))
-    return { offsets: [...offsets], consumed }
+    return { offsets: [Number(minMatch[1])], consumed }
   }
 
   return { offsets: [], consumed: [] }
@@ -738,14 +761,24 @@ export function parseAiTaskInput(input: string, options: AiParseOptions): AiPars
 /** 将解析结果组装为 CreateTaskDto */
 export function buildCreateTaskDtoFromParsed(
   draft: AiParsedTaskDraft,
-  overrides?: Partial<CreateTaskDto>
+  overrides?: Partial<CreateTaskDto>,
+  options?: {
+    rawInput?: string
+    parseCategories?: AiParseCategoryRef[]
+  }
 ): CreateTaskDto {
+  const categoryId = resolveCreateCategoryId(
+    options?.rawInput ?? draft.title,
+    draft.category?.id,
+    overrides?.categoryId,
+    options?.parseCategories ?? []
+  )
   const dto: CreateTaskDto = {
     ...overrides,
     title: draft.title,
     dueAt: draft.dueAt,
     recurrence: draft.recurrence,
-    categoryId: draft.category?.id ?? overrides?.categoryId ?? null
+    categoryId
   }
 
   if (draft.reminders.length > 0) {

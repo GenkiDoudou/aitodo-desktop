@@ -19,8 +19,16 @@ export default defineConfig({
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      lib: {
-        entry: resolve(__dirname, 'electron/preload/index.ts')
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'electron/preload/index.ts'),
+          widget: resolve(__dirname, 'electron/preload/widget.ts'),
+          fence: resolve(__dirname, 'electron/preload/fence.ts'),
+          capture: resolve(__dirname, 'electron/preload/capture.ts')
+        },
+        output: {
+          entryFileNames: '[name].js'
+        }
       }
     },
     resolve: {
@@ -33,7 +41,12 @@ export default defineConfig({
     root: resolve(__dirname, '.'),
     build: {
       rollupOptions: {
-        input: resolve(__dirname, 'index.html')
+        input: {
+          index: resolve(__dirname, 'index.html'),
+          widget: resolve(__dirname, 'widget.html'),
+          fence: resolve(__dirname, 'fence.html'),
+          capture: resolve(__dirname, 'capture.html')
+        }
       }
     },
     resolve: {

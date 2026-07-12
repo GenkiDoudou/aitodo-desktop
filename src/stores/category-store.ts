@@ -10,13 +10,22 @@ export const useCategoryStore = defineStore('categories', () => {
     categories.value = unwrapIpc(await window.api.categories.list())
   }
 
-  async function create(name: string, color?: string) {
-    unwrapIpc(await window.api.categories.create({ name, color }))
+  async function create(name: string, options?: { color?: string; keywords?: string[] }) {
+    unwrapIpc(
+      await window.api.categories.create({
+        name,
+        color: options?.color,
+        keywords: options?.keywords
+      })
+    )
     await load()
   }
 
-  async function update(id: string, name: string, color?: string) {
-    unwrapIpc(await window.api.categories.update(id, { name, color }))
+  async function update(
+    id: string,
+    patch: { name?: string; color?: string; keywords?: string[] }
+  ) {
+    unwrapIpc(await window.api.categories.update(id, patch))
     await load()
   }
 

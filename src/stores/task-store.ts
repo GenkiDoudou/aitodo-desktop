@@ -9,11 +9,8 @@ import {
 import { isDueSmartList } from '@shared/smart-list'
 import type { CreateTaskDto, DeleteTaskOptions, Task, TaskListFilter } from '@shared/types'
 import type { TaskPriority } from '@shared/task-priority'
-import {
-  buildCreateTaskDtoFromParsed,
-  parseAiTaskInput,
-  type AiParseCategoryRef
-} from '@shared/ai-task-parser'
+import type { AiParseCategoryRef } from '@shared/ai-task-parser'
+import { buildQuickCreateTaskDto } from '@shared/quick-create-task'
 import { cloneTaskListFilter, isMatrixListFilter } from '@shared/task-list-filter'
 import { unwrapIpc } from '@/ipc/client'
 
@@ -178,8 +175,8 @@ export const useTaskStore = defineStore('tasks', () => {
     } else if (view.kind === 'uncategorized') {
       filter.value = { hideDone, categoryId: null }
     } else {
-      /** 四象限：拉取全部任务（含子任务），顶层入象限、子任务在父任务下嵌套展示 */
-      filter.value = { hideDone }
+      /** 四象限：拉取含已完成任务，展示由象限选项控制 */
+      filter.value = { hideDone: false }
     }
     await fetchWithCurrentFilter()
   }
@@ -301,19 +298,24 @@ export const useTaskStore = defineStore('tasks', () => {
       kanbanGroupId?: string | null
       status?: TaskStatus
       parseCategories?: AiParseCategoryRef[]
+      startAt?: string | null
+      dueAt?: string | null
+      triagedAt?: string | null
     }
   ) {
     const trimmed = rawInput.trim()
     if (!trimmed) {
       throw new Error('title required')
     }
-    const parsed = parseAiTaskInput(trimmed, { categories: options?.parseCategories ?? [] })
-    const dto = buildCreateTaskDtoFromParsed(parsed, {
+    const dto = buildQuickCreateTaskDto(trimmed, options?.parseCategories ?? [], {
       categoryId: options?.categoryId ?? null,
-      priority: options?.priority,
-      kanbanGroupId: options?.kanbanGroupId,
-      status: options?.status
+      ...(options?.priority !== undefined ? { priority: options.priority } : {}),
+      ...(options?.kanbanGroupId !== undefined ? { kanbanGroupId: options.kanbanGroupId } : {}),
+      ...(options?.status !== undefined ? { status: options.status } : {}),
+      ...(options?.triagedAt !== undefined ? { triagedAt: options.triagedAt } : {})
     })
+    if (options?.startAt !== undefined) dto.startAt = options.startAt
+    if (options?.dueAt !== undefined) dto.dueAt = options.dueAt
     if (!dto.title.trim()) {
       throw new Error('title required')
     }

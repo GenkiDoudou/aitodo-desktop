@@ -1,5 +1,5 @@
 <template>
-  <div class="filter-cond">
+  <div class="filter-cond" :class="{ 'filter-cond--github': variant === 'github' }">
     <el-select :model-value="cond.field" class="filter-cond__field" size="small" @change="onField">
       <el-option v-for="f in fieldOptions" :key="f.value" :label="f.label" :value="f.value" />
     </el-select>
@@ -23,7 +23,7 @@
       collapse-tags-tooltip
       class="filter-cond__value"
       size="small"
-      placeholder="选择清单"
+      placeholder="选择任务分类"
       @change="(v: string[]) => patch({ value: v })"
     >
       <el-option label="未分类" value="__uncategorized__" />
@@ -38,13 +38,18 @@
       collapse-tags
       class="filter-cond__value"
       size="small"
-      placeholder="优先级"
+      placeholder="任务级别"
       @change="(v: number[]) => patch({ value: v })"
     >
-      <el-option v-for="p in TASK_PRIORITIES" :key="p.value" :label="p.label" :value="p.value" />
+      <el-option
+        v-for="p in TASK_PRIORITIES"
+        :key="p.value"
+        :label="`${p.code} · ${p.label}`"
+        :value="p.value"
+      />
     </el-select>
 
-    <!-- 状态 -->
+    <!-- 状态：属于 / 是 / 不是 -->
     <el-select
       v-else-if="cond.field === 'status' && cond.op === 'in'"
       :model-value="asStringArray(cond.value)"
@@ -54,6 +59,19 @@
       size="small"
       placeholder="状态"
       @change="(v: string[]) => patch({ value: v })"
+    >
+      <el-option label="待办" value="TODO" />
+      <el-option label="进行中" value="IN_PROGRESS" />
+      <el-option label="已完成" value="DONE" />
+    </el-select>
+
+    <el-select
+      v-else-if="cond.field === 'status' && (cond.op === 'eq' || cond.op === 'neq')"
+      :model-value="String(cond.value ?? 'TODO')"
+      class="filter-cond__value"
+      size="small"
+      placeholder="状态"
+      @change="(v: string) => patch({ value: v })"
     >
       <el-option label="待办" value="TODO" />
       <el-option label="进行中" value="IN_PROGRESS" />
@@ -123,9 +141,14 @@
       <el-option label="未分组" value="__ungrouped__" />
     </el-select>
 
-    <el-button size="small" text type="danger" title="删除条件" @click="emit('remove')">
+    <button
+      type="button"
+      class="filter-cond__remove"
+      title="删除条件"
+      @click="emit('remove')"
+    >
       <el-icon><Delete /></el-icon>
-    </el-button>
+    </button>
   </div>
 </template>
 
@@ -135,22 +158,30 @@ import { Delete } from '@element-plus/icons-vue'
 import type { Category } from '@shared/types'
 import { TASK_PRIORITIES } from '@shared/task-priority'
 import type { FilterField, FilterNode, FilterOp, FilterTimeRel } from '@shared/task-filter-ast'
+import { VIEW_EDITOR_FILTER_FIELD_LABELS } from '@shared/view-editor-config'
 
 type CondNode = Extract<FilterNode, { type: 'cond' }>
 
-const props = defineProps<{
-  cond: CondNode
-  categories: Category[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    cond: CondNode
+    categories: Category[]
+    /** 限制可选字段；未传则展示全部 */
+    allowedFields?: FilterField[]
+    /** github：更紧凑的单行样式，贴近 Projects 筛选条 */
+    variant?: 'default' | 'github'
+  }>(),
+  { variant: 'default' }
+)
 
 const emit = defineEmits<{
   change: [CondNode]
   remove: []
 }>()
 
-const fieldOptions: { value: FilterField; label: string }[] = [
-  { value: 'category', label: '清单' },
-  { value: 'priority', label: '优先级' },
+const allFieldOptions: { value: FilterField; label: string }[] = [
+  { value: 'category', label: '任务分类' },
+  { value: 'priority', label: '任务级别' },
   { value: 'status', label: '状态' },
   { value: 'dueAt', label: '截止时间' },
   { value: 'createdAt', label: '创建时间' },
@@ -161,10 +192,23 @@ const fieldOptions: { value: FilterField; label: string }[] = [
   { value: 'kanbanGroup', label: '看板分组' }
 ]
 
+const fieldOptions = computed(() => {
+  const allowed = props.allowedFields
+  if (!allowed?.length) {
+    return allFieldOptions
+  }
+  const labelMap = VIEW_EDITOR_FILTER_FIELD_LABELS as Partial<Record<FilterField, string>>
+  return allowed.map((value) => ({
+    value,
+    label: labelMap[value] ?? allFieldOptions.find((o) => o.value === value)?.label ?? value
+  }))
+})
+
 const timeRelOptions: { value: FilterTimeRel; label: string }[] = [
   { value: 'today', label: '今天' },
   { value: 'tomorrow', label: '明天' },
   { value: 'week', label: '本周' },
+  { value: 'month', label: '本月' },
   { value: 'overdue', label: '已逾期' },
   { value: 'noDate', label: '无日期' },
   { value: 'hasDate', label: '有日期' }
@@ -184,7 +228,13 @@ const showOpSelect = computed(() => {
 const opOptions = computed(() => {
   const f = props.cond.field
   if (f === 'category') return [{ value: 'in' as FilterOp, label: '属于' }]
-  if (f === 'priority' || f === 'status') return [{ value: 'in' as FilterOp, label: '属于' }]
+  if (f === 'priority' || f === 'status') {
+    return [
+      { value: 'in' as FilterOp, label: '属于' },
+      { value: 'eq' as FilterOp, label: '是' },
+      { value: 'neq' as FilterOp, label: '不是' }
+    ]
+  }
   if (isTimeField.value) {
     return [
       { value: 'rel' as FilterOp, label: '相对' },
@@ -236,7 +286,7 @@ function defaultForField(field: FilterField): Pick<CondNode, 'op' | 'value'> {
     case 'priority':
       return { op: 'in', value: [1] }
     case 'status':
-      return { op: 'in', value: ['TODO', 'IN_PROGRESS'] }
+      return { op: 'neq', value: 'DONE' }
     case 'dueAt':
     case 'createdAt':
     case 'completedAt':
@@ -259,6 +309,14 @@ function onField(field: FilterField) {
 }
 
 function onOp(op: FilterOp) {
+  if (props.cond.field === 'status' && (op === 'eq' || op === 'neq')) {
+    patch({ op, value: 'DONE' })
+    return
+  }
+  if (props.cond.field === 'status' && op === 'in') {
+    patch({ op, value: ['TODO', 'IN_PROGRESS'] })
+    return
+  }
   if (isTimeField.value && op === 'rel') {
     patch({ op, value: 'today' })
     return
@@ -327,5 +385,58 @@ function asNumberArray(value: unknown): number[] {
 
 .filter-cond__value--range {
   max-width: 260px;
+}
+
+.filter-cond__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--desktop-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: rgba(245, 108, 108, 0.1);
+    color: var(--el-color-danger);
+  }
+}
+
+.filter-cond--github {
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+
+  .filter-cond__field {
+    width: 108px;
+  }
+
+  .filter-cond__op {
+    width: 84px;
+  }
+
+  .filter-cond__value {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  :deep(.el-select .el-input__wrapper),
+  :deep(.el-input__wrapper) {
+    box-shadow: 0 0 0 1px var(--desktop-border) inset;
+    background: #fafbfc;
+  }
+
+  :deep(.el-select .el-input__wrapper:hover),
+  :deep(.el-input__wrapper:hover) {
+    box-shadow: 0 0 0 1px var(--el-color-primary-light-7) inset;
+  }
 }
 </style>

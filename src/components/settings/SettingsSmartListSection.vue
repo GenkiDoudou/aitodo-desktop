@@ -38,7 +38,7 @@
 
 <script setup lang="ts">
 import { onMounted, type Component } from 'vue'
-import { ArrowDown, Calendar, CircleCheck, Clock, Delete, Files, Filter, Folder, Sunny } from '@element-plus/icons-vue'
+import { ArrowDown, CircleCheck, Clock, Delete, Files, Folder } from '@element-plus/icons-vue'
 import {
   SMART_LIST_SIDEBAR_SETTING_GROUPS,
   SMART_LIST_SIDEBAR_VISIBILITY_LABELS,
@@ -52,11 +52,8 @@ const sidebarStore = useSmartListSidebarStore()
 
 const iconMap: Record<SmartListSidebarItemId, Component> = {
   all: Files,
-  today: Sunny,
-  week: Calendar,
   last7days: Clock,
   uncategorized: Folder,
-  filters: Filter,
   done: CircleCheck,
   trash: Delete
 }

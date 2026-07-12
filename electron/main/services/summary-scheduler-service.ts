@@ -7,7 +7,6 @@ import type { ScheduledSummary } from '@shared/scheduled-summary'
 import type { ScheduledSummaryRepository } from '../db/scheduled-summary-repository'
 import type { ScheduledSummaryService } from './scheduled-summary-service'
 import type { AppMessageService } from './app-message-service'
-import { showSystemNotification } from './system-notification'
 
 const SCAN_INTERVAL_MS = 60_000
 
@@ -98,7 +97,6 @@ export class SummarySchedulerService {
       source: 'scheduled_summary'
     })
     this.onInAppMessage?.(inApp)
-    showSystemNotification(summary.name, body.slice(0, 240))
     this.summaryService.markSent(summary.id, nowIso())
   }
 }

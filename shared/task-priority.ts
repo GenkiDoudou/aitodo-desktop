@@ -5,8 +5,10 @@ export const DEFAULT_TASK_PRIORITY: TaskPriority = 4
 
 export interface TaskPriorityMeta {
   value: TaskPriority
+  /** 对外级别代号：P0–P3，对应四象限 1–4 */
+  code: `P${0 | 1 | 2 | 3}`
   label: string
-  /** 详情页旗帜菜单文案（高/中/低/无） */
+  /** 详情页旗帜菜单文案 */
   flagLabel: string
   /** 象限卡片标题 */
   quadrantTitle: string
@@ -21,8 +23,9 @@ export interface TaskPriorityMeta {
 export const TASK_PRIORITIES: TaskPriorityMeta[] = [
   {
     value: 1,
+    code: 'P0',
     label: '重要且紧急',
-    flagLabel: '高优先级',
+    flagLabel: 'P0',
     quadrantTitle: '重要且紧急',
     color: '#f56c6c',
     flagColor: '#f56c6c',
@@ -31,8 +34,9 @@ export const TASK_PRIORITIES: TaskPriorityMeta[] = [
   },
   {
     value: 2,
+    code: 'P1',
     label: '重要不紧急',
-    flagLabel: '中优先级',
+    flagLabel: 'P1',
     quadrantTitle: '重要不紧急',
     color: '#e6a23c',
     flagColor: '#e6a23c',
@@ -41,8 +45,9 @@ export const TASK_PRIORITIES: TaskPriorityMeta[] = [
   },
   {
     value: 3,
+    code: 'P2',
     label: '不重要但紧急',
-    flagLabel: '低优先级',
+    flagLabel: 'P2',
     quadrantTitle: '不重要但紧急',
     color: '#409eff',
     flagColor: '#409eff',
@@ -51,8 +56,9 @@ export const TASK_PRIORITIES: TaskPriorityMeta[] = [
   },
   {
     value: 4,
+    code: 'P3',
     label: '不重要不紧急',
-    flagLabel: '无优先级',
+    flagLabel: 'P3',
     quadrantTitle: '不重要不紧急',
     color: '#67c23a',
     flagColor: '#c0c4cc',

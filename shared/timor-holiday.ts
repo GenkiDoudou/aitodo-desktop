@@ -22,6 +22,36 @@ export interface HolidayCalendarDay {
   name: string
 }
 
+/** 单年磁盘缓存元信息 */
+export interface HolidayYearMeta {
+  year: number
+  /** 缓存文件 mtime ISO；仅内存无文件时为 null */
+  updatedAt: string | null
+}
+
+/** 节假日缓存总览（设置页状态区） */
+export interface HolidayCacheStatus {
+  source: 'timor.tech'
+  sourceLabel: string
+  cachedYears: number[]
+  yearsMeta: HolidayYearMeta[]
+}
+
+export const HOLIDAY_DATA_SOURCE = 'timor.tech' as const
+export const HOLIDAY_DATA_SOURCE_LABEL = '中国法定节假日（timor.tech）'
+
+/** 合法年份：整数且 2000–2100 */
+export function normalizeHolidayYears(years: unknown): number[] {
+  if (!Array.isArray(years)) return []
+  const out: number[] = []
+  for (const y of years) {
+    if (typeof y !== 'number' || !Number.isInteger(y)) continue
+    if (y < 2000 || y > 2100) continue
+    if (!out.includes(y)) out.push(y)
+  }
+  return out.sort((a, b) => a - b)
+}
+
 const TIMOR_HOLIDAY_YEAR_URL = 'https://timor.tech/api/holiday/year'
 
 /** 年度接口 URL（文档要求整年后加斜杠） */

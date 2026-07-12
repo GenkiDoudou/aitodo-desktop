@@ -18,6 +18,7 @@ interface TaskRow {
   status: TaskStatus
   category_id: string | null
   parent_id: string | null
+  start_at: string | null
   due_at: string | null
   remind_at: string | null
   remind_fired_at: string | null
@@ -32,6 +33,7 @@ interface TaskRow {
   recurrence_rule: string | null
   remind_continuous: number
   completed_occurrence_dates: string | null
+  triaged_at: string | null
 }
 
 function mapRow(row: TaskRow, reminders: TaskReminderItem[] = []): Task {
@@ -46,6 +48,7 @@ function mapRow(row: TaskRow, reminders: TaskReminderItem[] = []): Task {
     priority: normalizeTaskPriority(row.priority),
     categoryId: row.category_id,
     parentId: row.parent_id,
+    startAt: row.start_at ?? null,
     dueAt: row.due_at,
     remindAt: legacyRemind,
     remindFiredAt: row.remind_fired_at,
@@ -59,7 +62,8 @@ function mapRow(row: TaskRow, reminders: TaskReminderItem[] = []): Task {
     reminders: syncedReminders,
     recurrence: parseRecurrenceRule(row.recurrence_rule ?? null),
     completedOccurrenceDates: parseCompletedOccurrenceDates(row.completed_occurrence_dates),
-    remindContinuous: (row.remind_continuous ?? 0) === 1
+    remindContinuous: (row.remind_continuous ?? 0) === 1,
+    triagedAt: row.triaged_at ?? null
   }
 }
 
@@ -258,14 +262,14 @@ export class TaskRepository {
       .prepare(
         `INSERT INTO tasks (
           id, title, description, status, priority, category_id, parent_id,
-          due_at, remind_at, remind_fired_at, completed_at, sort_order,
+          start_at, due_at, remind_at, remind_fired_at, completed_at, sort_order,
           created_at, updated_at, deleted_at, sync_version, kanban_group_id,
-          recurrence_rule, remind_continuous, completed_occurrence_dates
+          recurrence_rule, remind_continuous, completed_occurrence_dates, triaged_at
         ) VALUES (
           @id, @title, @description, @status, @priority, @categoryId, @parentId,
-          @dueAt, @remindAt, @remindFiredAt, @completedAt, @sortOrder,
+          @startAt, @dueAt, @remindAt, @remindFiredAt, @completedAt, @sortOrder,
           @createdAt, @updatedAt, NULL, @syncVersion, @kanbanGroupId,
-          @recurrenceRule, @remindContinuous, @completedOccurrenceDates
+          @recurrenceRule, @remindContinuous, @completedOccurrenceDates, @triagedAt
         )`
       )
       .run(
@@ -277,6 +281,7 @@ export class TaskRepository {
           priority: task.priority,
           categoryId: task.categoryId,
           parentId: task.parentId,
+          startAt: task.startAt,
           dueAt: task.dueAt,
           remindAt: task.remindAt,
           remindFiredAt: task.remindFiredAt,
@@ -288,7 +293,8 @@ export class TaskRepository {
           kanbanGroupId: task.kanbanGroupId,
           recurrenceRule: serializeRecurrenceRule(task.recurrence),
           remindContinuous: task.remindContinuous ? 1 : 0,
-          completedOccurrenceDates: serializeCompletedOccurrenceDates(task.completedOccurrenceDates)
+          completedOccurrenceDates: serializeCompletedOccurrenceDates(task.completedOccurrenceDates),
+          triagedAt: task.triagedAt
         })
       )
   }
@@ -299,11 +305,11 @@ export class TaskRepository {
         `UPDATE tasks SET
           title = @title, description = @description, status = @status,
           priority = @priority, category_id = @categoryId, parent_id = @parentId,
-          due_at = @dueAt, remind_at = @remindAt, remind_fired_at = @remindFiredAt,
+          start_at = @startAt, due_at = @dueAt, remind_at = @remindAt, remind_fired_at = @remindFiredAt,
           completed_at = @completedAt, sort_order = @sortOrder, updated_at = @updatedAt,
           kanban_group_id = @kanbanGroupId,
           recurrence_rule = @recurrenceRule, remind_continuous = @remindContinuous,
-          completed_occurrence_dates = @completedOccurrenceDates
+          completed_occurrence_dates = @completedOccurrenceDates, triaged_at = @triagedAt
          WHERE id = @id AND deleted_at IS NULL`
       )
       .run(
@@ -315,6 +321,7 @@ export class TaskRepository {
           priority: task.priority,
           categoryId: task.categoryId,
           parentId: task.parentId,
+          startAt: task.startAt,
           dueAt: task.dueAt,
           remindAt: task.remindAt,
           remindFiredAt: task.remindFiredAt,
@@ -324,7 +331,8 @@ export class TaskRepository {
           kanbanGroupId: task.kanbanGroupId,
           recurrenceRule: serializeRecurrenceRule(task.recurrence),
           remindContinuous: task.remindContinuous ? 1 : 0,
-          completedOccurrenceDates: serializeCompletedOccurrenceDates(task.completedOccurrenceDates)
+          completedOccurrenceDates: serializeCompletedOccurrenceDates(task.completedOccurrenceDates),
+          triagedAt: task.triagedAt
         })
       )
   }

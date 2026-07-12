@@ -7,8 +7,9 @@ import {
   isOccurrenceDateCompleted,
   isRecurringCalendarTask
 } from './recurrence-occurrences'
+import { endOfWeekSunday, startOfWeekMonday } from './smart-list'
 
-export type CalendarViewMode = 'month' | 'week' | 'day'
+export type CalendarViewMode = 'month' | 'week' | 'day' | 'year' | 'custom'
 
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
 
@@ -18,12 +19,15 @@ export function weekdayLabel(d: dayjs.Dayjs): string {
 
 /** 月视图标题：9月、2025年12月 */
 export function formatCalendarTitle(anchor: dayjs.Dayjs, mode: CalendarViewMode): string {
+  if (mode === 'year') {
+    return `${anchor.year()}年`
+  }
   if (mode === 'month') {
-    return anchor.format('M月')
+    return anchor.format('YYYY年M月')
   }
   if (mode === 'week') {
-    const start = anchor.startOf('week')
-    const end = anchor.endOf('week')
+    const start = startOfWeekMonday(anchor)
+    const end = endOfWeekSunday(anchor)
     if (start.year() !== end.year()) {
       return `${start.format('YYYY年M月D日')} – ${end.format('YYYY年M月D日')}`
     }
@@ -32,18 +36,24 @@ export function formatCalendarTitle(anchor: dayjs.Dayjs, mode: CalendarViewMode)
     }
     return `${start.format('M月D日')} – ${end.format('D日')}`
   }
-  return anchor.format('M月D日 dddd')
+  if (mode === 'custom') {
+    return '自定义区间'
+  }
+  return anchor.format('YYYY年M月D日 dddd')
 }
 
-/** 可见区间（含起止日） */
+/** 可见区间（含起止日；周视图按周一至周日） */
 export function calendarVisibleRange(anchor: dayjs.Dayjs, mode: CalendarViewMode) {
+  if (mode === 'year') {
+    return { start: anchor.startOf('year'), end: anchor.endOf('year') }
+  }
   if (mode === 'month') {
-    const start = anchor.startOf('month').startOf('week')
-    const end = anchor.endOf('month').endOf('week')
-    return { start, end }
+    const monthStart = anchor.startOf('month')
+    const monthEnd = anchor.endOf('month')
+    return { start: startOfWeekMonday(monthStart), end: endOfWeekSunday(monthEnd) }
   }
   if (mode === 'week') {
-    return { start: anchor.startOf('week'), end: anchor.endOf('week') }
+    return { start: startOfWeekMonday(anchor), end: endOfWeekSunday(anchor) }
   }
   return { start: anchor.startOf('day'), end: anchor.endOf('day') }
 }

@@ -37,7 +37,7 @@ describe('calendar-tasks', () => {
   const anchor = dayjs('2026-09-06')
 
   it('formats month title', () => {
-    expect(formatCalendarTitle(anchor, 'month')).toBe('9月')
+    expect(formatCalendarTitle(anchor, 'month')).toBe('2026年9月')
   })
 
   it('groups tasks by due date', () => {
@@ -103,12 +103,11 @@ describe('calendar-tasks', () => {
       dueAt: '2026-09-06T09:00:00',
       status: 'TODO',
       recurrence: { type: 'daily' },
-      completedOccurrenceDates: ['2026-09-07']
+      completedOccurrenceDates: ['2026-09-06']
     })
     const instances = expandTaskCalendarInstances(daily, start, end, 'dueAt')
     const byDate = new Map(instances.map((t) => [t.dueAt!.slice(0, 10), t.status]))
-    expect(byDate.get('2026-09-06')).toBe('TODO')
-    expect(byDate.get('2026-09-07')).toBe('DONE')
-    expect(byDate.get('2026-09-08')).toBe('TODO')
+    expect(byDate.get('2026-09-05')).toBe('TODO')
+    expect(byDate.get('2026-09-06')).toBe('DONE')
   })
 })

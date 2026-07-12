@@ -120,6 +120,8 @@
 
             </el-dropdown>
 
+            <TaskTagEditor v-model="form.tags" class="task-panel__tag-editor" />
+
           </div>
 
 
@@ -311,7 +313,9 @@ import TaskRecurrencePicker from '@/components/TaskRecurrencePicker.vue'
 import TaskBodyEditor from '@/components/TaskBodyEditor.vue'
 
 import TaskPriorityFlagMenu from '@/components/TaskPriorityFlagMenu.vue'
+import TaskTagEditor from '@/components/TaskTagEditor.vue'
 import TaskActivityList from '@/components/TaskActivityList.vue'
+import { useTagStore } from '@/stores/tag-store'
 
 
 
@@ -355,6 +359,8 @@ const categoryStore = useCategoryStore()
 
 const taskStore = useTaskStore()
 
+const tagStore = useTagStore()
+
 
 
 const isNew = computed(() => props.visible && props.taskId === null)
@@ -387,7 +393,9 @@ const form = reactive({
 
   priority: DEFAULT_TASK_PRIORITY as TaskPriority,
 
-  categoryId: null as string | null
+  categoryId: null as string | null,
+
+  tags: [] as string[]
 
 })
 
@@ -469,6 +477,8 @@ function resetForCreate() {
   form.priority = props.defaultPriority ?? DEFAULT_TASK_PRIORITY
 
   form.categoryId = props.defaultCategoryId ?? null
+
+  form.tags = []
 
   dueDate.value = null
 
@@ -555,6 +565,8 @@ watch(
     form.priority = task.priority
 
     form.categoryId = task.categoryId
+
+    form.tags = [...(task.tags ?? [])]
 
     dueDate.value = task.dueAt
 
@@ -660,6 +672,8 @@ function buildPayload() {
     priority: form.priority,
 
     categoryId: form.categoryId,
+
+    tags: form.tags,
 
     dueAt,
 
@@ -851,6 +865,9 @@ async function save() {
     }
 
     emit('saved', { task: savedTask, mode: isNew.value ? 'create' : 'update' })
+    if (form.tags.length) {
+      tagStore.remember(form.tags)
+    }
     if (!isNew.value) {
       activityListRef.value?.reload()
     }
@@ -1256,7 +1273,13 @@ async function remove() {
 }
 
 .task-panel__category-dropdown {
-  flex: 1;
+  flex: 0 1 auto;
+  min-width: 120px;
+  max-width: 45%;
+}
+
+.task-panel__tag-editor {
+  flex: 1 1 160px;
   min-width: 0;
 }
 

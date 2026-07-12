@@ -112,7 +112,7 @@ export const useViewStore = defineStore('taskViews', () => {
     refs.listViewMode.value = applied.layout
     refs.taskGroupBy.value = applied.groupBy
     refs.taskSortBy.value = applied.sortBy
-    if (applied.kanbanBoardMode) {
+    if (applied.layout === 'kanban' && applied.kanbanBoardMode) {
       refs.kanbanBoardMode.value = applied.kanbanBoardMode
     }
   }

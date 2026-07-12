@@ -15,8 +15,8 @@ export type TaskDateField = 'dueAt' | 'createdAt' | 'completedAt'
 /** 已完成页时间范围预设 */
 export type DoneTimeRange = 'all' | 'today' | 'week' | 'month' | 'custom'
 
-/** 日历页时间段预设：view=跟随当前月/周/日视图 */
-export type CalendarRangePreset = 'view' | 'week' | 'month' | 'last7days' | 'custom'
+/** 日历时间尺度：同时决定网格视图与任务筛选区间 */
+export type CalendarRangePreset = 'day' | 'week' | 'month' | 'year' | 'custom'
 
 export const TASK_DATE_FIELD_LABELS: Record<TaskDateField, string> = {
   dueAt: '到期时间',
@@ -33,10 +33,10 @@ export const DONE_TIME_RANGE_LABELS: Record<DoneTimeRange, string> = {
 }
 
 export const CALENDAR_RANGE_PRESET_LABELS: Record<CalendarRangePreset, string> = {
-  view: '当前视图',
-  week: '本周',
-  month: '本月',
-  last7days: '最近7天',
+  day: '日',
+  week: '周',
+  month: '月',
+  year: '年',
   custom: '自定义'
 }
 
@@ -116,7 +116,9 @@ export function calendarPresetBounds(
   base = dayjs(),
   custom?: { from?: string | null; to?: string | null }
 ): DateRangeBounds | null {
-  if (preset === 'view') return null
+  if (preset === 'day') {
+    return { from: startOfDayIso(base), to: endOfDayIso(base) }
+  }
   if (preset === 'week') {
     const start = startOfWeekMonday(base)
     return { from: startOfDayIso(start), to: endOfDayIso(endOfWeekSunday(base)) }
@@ -127,8 +129,11 @@ export function calendarPresetBounds(
       to: endOfDayIso(base.endOf('month'))
     }
   }
-  if (preset === 'last7days') {
-    return { from: startOfDayIso(base), to: endOfDayIso(base.add(6, 'day')) }
+  if (preset === 'year') {
+    return {
+      from: startOfDayIso(base.startOf('year')),
+      to: endOfDayIso(base.endOf('year'))
+    }
   }
   if (preset === 'custom' && custom?.from && custom?.to) {
     const fromD = dayjs(custom.from.slice(0, 10))

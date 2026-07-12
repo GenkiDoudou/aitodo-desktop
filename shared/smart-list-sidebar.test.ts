@@ -14,8 +14,8 @@ describe('smart-list-sidebar', () => {
   })
 
   it('normalizeSmartListSidebarPreferences fills missing keys', () => {
-    const merged = normalizeSmartListSidebarPreferences({ all: 'show' })
-    expect(merged.all).toBe('show')
-    expect(merged.today).toBe(DEFAULT_SMART_LIST_SIDEBAR_PREFERENCES.today)
+    const merged = normalizeSmartListSidebarPreferences({ all: 'hide' })
+    expect(merged.all).toBe('hide')
+    expect(merged.last7days).toBe(DEFAULT_SMART_LIST_SIDEBAR_PREFERENCES.last7days)
   })
 })

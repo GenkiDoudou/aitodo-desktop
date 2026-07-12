@@ -3,6 +3,8 @@ import dayjs from 'dayjs'
 import {
   andCombine,
   createEmptyAndGroup,
+  filterNodeToPersist,
+  isEmptyFilterNode,
   matchTask,
   normalizeFilterNode,
   validateFilterNode,
@@ -35,6 +37,19 @@ function task(partial: Partial<Task> & Pick<Task, 'id'>): Task {
 describe('task-filter-ast', () => {
   it('rejects empty group on validate', () => {
     expect(validateFilterNode(createEmptyAndGroup())).toBe('条件组不能为空')
+  })
+
+  it('isEmptyFilterNode and filterNodeToPersist', () => {
+    expect(isEmptyFilterNode(null)).toBe(true)
+    expect(isEmptyFilterNode(createEmptyAndGroup())).toBe(true)
+    expect(filterNodeToPersist(createEmptyAndGroup())).toBeNull()
+    const rule: FilterNode = {
+      type: 'group',
+      op: 'and',
+      children: [{ type: 'cond', field: 'status', op: 'neq', value: 'DONE' }]
+    }
+    expect(isEmptyFilterNode(rule)).toBe(false)
+    expect(filterNodeToPersist(rule)?.type).toBe('group')
   })
 
   it('validates category in requires values', () => {
@@ -113,5 +128,18 @@ describe('task-filter-ast', () => {
     expect(matchTask(series, tree, { now })).toBe(false)
     // 实例落在今天 → true
     expect(matchTask(series, tree, { now, instanceDateKey: '2026-09-07' })).toBe(true)
+  })
+
+  it('matches dueAt rel=month within current calendar month', () => {
+    const inMonth = task({ id: 'm1', dueAt: '2026-07-20T10:00:00' })
+    const outMonth = task({ id: 'm2', dueAt: '2026-08-01T10:00:00' })
+    const tree: FilterNode = {
+      type: 'group',
+      op: 'and',
+      children: [{ type: 'cond', field: 'dueAt', op: 'rel', value: 'month' }]
+    }
+    const now = dayjs('2026-07-10T12:00:00')
+    expect(matchTask(inMonth, tree, { now })).toBe(true)
+    expect(matchTask(outMonth, tree, { now })).toBe(false)
   })
 })

@@ -29,7 +29,7 @@ export function persistKanbanConfig(config: KanbanConfig): void {
 export function readKanbanBoardMode(): KanbanBoardMode {
   try {
     const raw = localStorage.getItem(CURRENT_MODE_KEY)
-    if (raw === 'group' || raw === 'status') return raw
+    if (raw === 'group' || raw === 'status' || raw === 'priority') return raw
   } catch {
     /* ignore */
   }

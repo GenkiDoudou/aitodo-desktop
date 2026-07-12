@@ -5,7 +5,7 @@
       :active-category="undefined"
       :active-view-id="viewStore.selectedViewId"
       :calendar-active="true"
-      :active-calendar-view="viewMode"
+      :active-calendar-view="sidebarCalendarView"
       :trash-count="taskStore.trashCount"
       :done-count="taskStore.doneCount"
       @select-smart="goHomeSmart"
@@ -63,6 +63,7 @@
             start-placeholder="开始"
             end-placeholder="结束"
             value-format="YYYY-MM-DD"
+            @change="onCalendarCustomRangeChange"
           />
           <el-select
             :model-value="viewStore.selectedViewId"
@@ -84,11 +85,6 @@
           <el-button text circle title="新建任务" @click="goHomeNew">
             <el-icon><Plus /></el-icon>
           </el-button>
-          <el-select v-model="viewMode" size="small" class="calendar-page__view-select">
-            <el-option label="月" value="month" />
-            <el-option label="周" value="week" />
-            <el-option label="日" value="day" />
-          </el-select>
           <div class="calendar-page__nav">
             <el-button size="small" @click="shift(-1)">&lt;</el-button>
             <el-button size="small" @click="goToday">今天</el-button>
@@ -97,50 +93,58 @@
         </div>
       </header>
 
-      <CalendarMonthView
-        v-if="viewMode === 'month'"
-        :anchor="anchor"
-        :tasks="calendarTasks"
-        :category-color-map="categoryColorMap"
-        :date-field="calendarDateField"
-        :holiday-marks="holidayMarks"
-        @select="openTask"
-        @toggle-status="onToggleStatus"
-        @select-day="onSelectDay"
-      />
-      <CalendarWeekView
-        v-else-if="viewMode === 'week'"
-        :anchor="anchor"
-        :tasks="calendarTasks"
-        :category-color-map="categoryColorMap"
-        :date-field="calendarDateField"
-        :holiday-marks="holidayMarks"
-        @select="openTask"
-        @toggle-status="onToggleStatus"
-      />
-      <CalendarDayView
-        v-else
-        :anchor="anchor"
-        :tasks="calendarTasks"
-        :category-color-map="categoryColorMap"
-        :date-field="calendarDateField"
-        :holiday-marks="holidayMarks"
-        @select="openTask"
-        @toggle-status="onToggleStatus"
-      />
-
-      <nav class="calendar-page__view-bar">
-        <button
-          v-for="m in viewModes"
-          :key="m.value"
-          type="button"
-          class="calendar-page__view-btn"
-          :class="{ 'is-active': viewMode === m.value }"
-          @click="viewMode = m.value"
-        >
-          {{ m.label }}
-        </button>
-      </nav>
+      <div class="calendar-page__body">
+        <CalendarYearView
+          v-if="effectiveViewMode === 'year'"
+          :anchor="anchor"
+          :tasks="calendarTasks"
+          :date-field="calendarDateField"
+          :holiday-marks="holidayMarks"
+          @select-month="onSelectYearMonth"
+        />
+        <CalendarMonthView
+          v-else-if="effectiveViewMode === 'month'"
+          :anchor="anchor"
+          :tasks="calendarTasks"
+          :category-color-map="categoryColorMap"
+          :date-field="calendarDateField"
+          :holiday-marks="holidayMarks"
+          @select="openTask"
+          @toggle-status="onToggleStatus"
+          @select-day="onSelectDay"
+        />
+        <CalendarWeekView
+          v-else-if="effectiveViewMode === 'week'"
+          :anchor="anchor"
+          :tasks="calendarTasks"
+          :category-color-map="categoryColorMap"
+          :date-field="calendarDateField"
+          :holiday-marks="holidayMarks"
+          @select="openTask"
+          @toggle-status="onToggleStatus"
+        />
+        <CalendarCustomRangeView
+          v-else-if="effectiveViewMode === 'custom'"
+          :from="customRangeFrom"
+          :to="customRangeTo"
+          :tasks="calendarTasks"
+          :category-color-map="categoryColorMap"
+          :date-field="calendarDateField"
+          :holiday-marks="holidayMarks"
+          @select="openTask"
+          @toggle-status="onToggleStatus"
+        />
+        <CalendarDayView
+          v-else
+          :anchor="anchor"
+          :tasks="calendarTasks"
+          :category-color-map="categoryColorMap"
+          :date-field="calendarDateField"
+          :holiday-marks="holidayMarks"
+          @select="openTask"
+          @toggle-status="onToggleStatus"
+        />
+      </div>
     </div>
 
     <div v-if="detailOpen" class="calendar-page__scrim" @click="closeDetail" />
@@ -166,6 +170,8 @@ import type { TaskSavePayload } from '@/components/TaskDetailPanel.vue'
 import CalendarMonthView from '@/components/calendar/CalendarMonthView.vue'
 import CalendarWeekView from '@/components/calendar/CalendarWeekView.vue'
 import CalendarDayView from '@/components/calendar/CalendarDayView.vue'
+import CalendarYearView from '@/components/calendar/CalendarYearView.vue'
+import CalendarCustomRangeView from '@/components/calendar/CalendarCustomRangeView.vue'
 import { useTaskStore } from '@/stores/task-store'
 import { useCategoryStore } from '@/stores/category-store'
 import { useViewStore } from '@/stores/view-store'
@@ -179,6 +185,7 @@ import {
   type CalendarRangePreset,
   type TaskDateField
 } from '@shared/date-filter'
+import { startOfWeekMonday } from '@shared/smart-list'
 import {
   calendarVisibleRange,
   expandTasksForCalendar,
@@ -189,7 +196,9 @@ import type { HolidayCalendarDay } from '@shared/timor-holiday'
 import { toggleCompletedOccurrenceDate } from '@shared/recurrence-occurrences'
 import {
   persistCalendarDateField,
+  persistCalendarCustomRange,
   persistCalendarRangePreset,
+  readCalendarCustomRange,
   readCalendarDateField,
   readCalendarRangePreset
 } from '@/utils/filter-preferences'
@@ -201,7 +210,6 @@ const categoryStore = useCategoryStore()
 const viewStore = useViewStore()
 
 const anchor = ref(dayjs())
-const viewMode = ref<CalendarViewMode>('month')
 const detailOpen = ref(false)
 const activeTaskId = ref<string | null>(null)
 /** 法定放假 / 调休上班标注；拉取失败时保持空对象，日历仍可用 */
@@ -212,18 +220,48 @@ const loadedHolidayYears = ref<Set<number>>(new Set())
 const calendarDateField = ref<TaskDateField>(readCalendarDateField())
 /** 额外时间段：view=仅当前月/周/日可见区 */
 const calendarRangePreset = ref<CalendarRangePreset>(readCalendarRangePreset())
-const calendarCustomRange = ref<[string, string] | null>(null)
+const calendarCustomRange = ref<[string, string] | null>(readCalendarCustomRange())
+
+const effectiveViewMode = computed<CalendarViewMode>(() => {
+  switch (calendarRangePreset.value) {
+    case 'day':
+      return 'day'
+    case 'week':
+      return 'week'
+    case 'month':
+      return 'month'
+    case 'year':
+      return 'year'
+    case 'custom':
+      return 'custom'
+    default:
+      return 'month'
+  }
+})
+
+const customRangeFrom = computed(() => calendarCustomRange.value?.[0] ?? dayjs().format('YYYY-MM-DD'))
+const customRangeTo = computed(() => calendarCustomRange.value?.[1] ?? dayjs().format('YYYY-MM-DD'))
+
+const sidebarCalendarView = computed<'month' | 'week' | 'day'>(() => {
+  if (effectiveViewMode.value === 'day') return 'day'
+  if (effectiveViewMode.value === 'week') return 'week'
+  return 'month'
+})
+
+const visibleRange = computed(() => {
+  if (effectiveViewMode.value === 'custom' && calendarCustomRange.value) {
+    return {
+      start: dayjs(calendarCustomRange.value[0]).startOf('day'),
+      end: dayjs(calendarCustomRange.value[1]).endOf('day')
+    }
+  }
+  return calendarVisibleRange(anchor.value, effectiveViewMode.value)
+})
 
 const dateFieldLabels = TASK_DATE_FIELD_LABELS
 const rangePresetLabels = CALENDAR_RANGE_PRESET_LABELS
 
-const viewModes = [
-  { value: 'month' as const, label: '月视图' },
-  { value: 'week' as const, label: '周视图' },
-  { value: 'day' as const, label: '日视图' }
-]
-
-const title = computed(() => formatCalendarTitle(anchor.value, viewMode.value))
+const title = computed(() => formatCalendarTitle(anchor.value, effectiveViewMode.value))
 
 const categoryColorMap = computed(() => {
   const map = new Map<string, string>()
@@ -245,7 +283,7 @@ const presetBounds = computed(() => {
 
 /** 当前视图区间内、且命中 dateField + 时间段筛选的任务（含循环展开） */
 const calendarTasks = computed(() => {
-  const { start, end } = calendarVisibleRange(anchor.value, viewMode.value)
+  const { start, end } = visibleRange.value
   const active = taskStore.tasks.filter((t) => !t.deletedAt)
   const expanded = expandTasksForCalendar(
     active,
@@ -286,17 +324,70 @@ function goHomeEditView(id: string) {
 }
 
 function shift(dir: -1 | 1) {
-  const unit = viewMode.value === 'month' ? 'month' : viewMode.value === 'week' ? 'week' : 'day'
-  anchor.value = anchor.value.add(dir, unit)
+  const preset = calendarRangePreset.value
+  if (preset === 'day') {
+    anchor.value = anchor.value.add(dir, 'day')
+    return
+  }
+  if (preset === 'week') {
+    anchor.value = anchor.value.add(dir, 'week')
+    return
+  }
+  if (preset === 'month') {
+    anchor.value = anchor.value.add(dir, 'month')
+    return
+  }
+  if (preset === 'year') {
+    anchor.value = anchor.value.add(dir, 'year')
+  }
 }
 
 function goToday() {
-  anchor.value = dayjs()
+  syncCalendarAnchorToPreset(calendarRangePreset.value)
 }
 
 function onSelectDay(dateKey: string) {
   anchor.value = dayjs(dateKey)
-  viewMode.value = 'day'
+  calendarRangePreset.value = 'day'
+  persistCalendarRangePreset('day')
+}
+
+function onSelectYearMonth(month1to12: number) {
+  anchor.value = anchor.value.month(month1to12 - 1).startOf('month')
+  calendarRangePreset.value = 'month'
+  persistCalendarRangePreset('month')
+}
+
+function onCalendarCustomRangeChange(range: [string, string] | null) {
+  calendarCustomRange.value = range
+  persistCalendarCustomRange(range)
+}
+
+function syncCalendarAnchorToPreset(preset: CalendarRangePreset) {
+  const now = dayjs()
+  switch (preset) {
+    case 'day':
+      anchor.value = now
+      break
+    case 'week':
+      anchor.value = startOfWeekMonday(now)
+      break
+    case 'month':
+      anchor.value = now.startOf('month')
+      break
+    case 'year':
+      anchor.value = now.startOf('year')
+      break
+    case 'custom':
+      if (!calendarCustomRange.value) {
+        calendarCustomRange.value = [now.format('YYYY-MM-DD'), now.add(6, 'day').format('YYYY-MM-DD')]
+        persistCalendarCustomRange(calendarCustomRange.value)
+      }
+      anchor.value = dayjs(calendarCustomRange.value[0])
+      break
+    default:
+      break
+  }
 }
 
 function onCalendarDateFieldChange(field: TaskDateField) {
@@ -305,10 +396,19 @@ function onCalendarDateFieldChange(field: TaskDateField) {
 
 function onCalendarRangePresetChange(preset: CalendarRangePreset) {
   persistCalendarRangePreset(preset)
+  syncCalendarAnchorToPreset(preset)
 }
 
 function onSidebarCalendar(mode: CalendarViewMode) {
-  viewMode.value = mode
+  const map: Partial<Record<CalendarViewMode, CalendarRangePreset>> = {
+    day: 'day',
+    week: 'week',
+    month: 'month'
+  }
+  const preset = map[mode]
+  if (!preset) return
+  calendarRangePreset.value = preset
+  onCalendarRangePresetChange(preset)
   void router.replace({ path: '/calendar', query: { view: mode } })
 }
 
@@ -385,7 +485,7 @@ function goHomeNew() {
 function syncViewFromRoute() {
   const q = route.query.view
   if (q === 'month' || q === 'week' || q === 'day') {
-    viewMode.value = q
+    onSidebarCalendar(q)
   }
 }
 
@@ -393,7 +493,7 @@ watch(() => route.query.view, syncViewFromRoute)
 
 /** 月历格子可能跨年；周/日按锚点年份，保险再取前后年 */
 function yearsNeededForView(): number[] {
-  const { start, end } = calendarVisibleRange(anchor.value, viewMode.value)
+  const { start, end } = calendarVisibleRange(anchor.value, effectiveViewMode.value)
   const years = new Set<number>([start.year(), end.year(), anchor.value.year()])
   return [...years].sort((a, b) => a - b)
 }
@@ -411,12 +511,13 @@ async function loadHolidayMarks() {
   }
 }
 
-watch([anchor, viewMode], () => {
+watch([anchor, effectiveViewMode], () => {
   void loadHolidayMarks()
 })
 
 onMounted(async () => {
   syncViewFromRoute()
+  syncCalendarAnchorToPreset(calendarRangePreset.value)
   await categoryStore.load()
   await viewStore.load()
   await taskStore.load({ smartList: 'all', hideDone: false })
@@ -481,6 +582,14 @@ onMounted(async () => {
   max-width: 260px;
 }
 
+.calendar-page__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .calendar-page__head-actions {
   display: flex;
   align-items: center;
@@ -488,17 +597,9 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.calendar-page__view-select {
-  width: 72px;
-}
-
 .calendar-page__nav {
   display: flex;
   gap: 4px;
-}
-
-.calendar-page__view-bar {
-  display: none;
 }
 
 .calendar-page__scrim {

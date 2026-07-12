@@ -3,8 +3,8 @@
     <button
       type="button"
       class="priority-flag-menu__trigger"
-      :title="currentMeta.flagLabel"
-      :aria-label="`优先级：${currentMeta.flagLabel}`"
+      :title="`${currentMeta.code} · ${currentMeta.label}`"
+      :aria-label="`任务级别：${currentMeta.code} ${currentMeta.label}`"
     >
       <TaskPriorityFlagIcon :color="currentMeta.flagColor" :outline="currentMeta.flagOutline" />
     </button>
@@ -18,7 +18,10 @@
         >
           <span class="priority-flag-menu__item">
             <TaskPriorityFlagIcon :color="p.flagColor" :outline="p.flagOutline" />
-            <span class="priority-flag-menu__label">{{ p.flagLabel }}</span>
+            <span class="priority-flag-menu__label">
+              <span class="priority-flag-menu__code">{{ p.code }}</span>
+              <span class="priority-flag-menu__desc">{{ p.label }}</span>
+            </span>
             <el-icon v-if="modelValue === p.value" class="priority-flag-menu__check">
               <Check />
             </el-icon>
@@ -72,7 +75,22 @@ function onCommand(value: TaskPriority) {
 
 .priority-flag-menu__label {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.priority-flag-menu__code {
   font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.priority-flag-menu__desc {
+  font-size: 12px;
+  color: var(--desktop-muted);
+  line-height: 1.2;
 }
 
 .priority-flag-menu__check {

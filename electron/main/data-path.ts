@@ -8,6 +8,8 @@ import type { LlmConfig } from '@shared/llm-config'
 import { mergeLlmConfig } from '@shared/llm-config'
 import type { AiPromptConfig } from '@shared/ai-prompt-config'
 import { mergeAiPromptConfig } from '@shared/ai-prompt-config'
+import type { CloseBehavior } from '@shared/close-behavior'
+import { mergeCloseBehavior } from '@shared/close-behavior'
 import type { TaskActivityRetentionPolicy } from '@shared/types'
 import { mergeTaskActivityRetention } from '@shared/task-activity-retention'
 
@@ -22,6 +24,8 @@ interface DesktopConfig {
   llm?: Partial<LlmConfig>
   /** AI 一句话解析提示词 */
   aiPrompt?: Partial<AiPromptConfig>
+  /** 关闭主窗口时的行为 */
+  closeBehavior?: CloseBehavior
   /** 任务动态全局保留策略 */
   taskActivityRetention?: Partial<TaskActivityRetentionPolicy>
 }
@@ -207,6 +211,29 @@ export function saveAiPromptConfig(config: AiPromptConfig): void {
     }
   }
   const next: DesktopConfig = { ...existing, aiPrompt: mergeAiPromptConfig(config) }
+  fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
+}
+
+/** 读取关闭主窗口行为 */
+export function readCloseBehavior(): CloseBehavior {
+  const cfg = readActiveConfig()
+  return mergeCloseBehavior(cfg.closeBehavior)
+}
+
+/** 持久化关闭主窗口行为 */
+export function saveCloseBehavior(behavior: CloseBehavior): void {
+  const defaultDir = getDefaultDataDir()
+  fs.mkdirSync(defaultDir, { recursive: true })
+  const configPath = path.join(defaultDir, CONFIG_FILE)
+  let existing: DesktopConfig = {}
+  if (fs.existsSync(configPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as DesktopConfig
+    } catch {
+      existing = {}
+    }
+  }
+  const next: DesktopConfig = { ...existing, closeBehavior: mergeCloseBehavior(behavior) }
   fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
 }
 

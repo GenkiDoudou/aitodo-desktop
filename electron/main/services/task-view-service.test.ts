@@ -51,6 +51,24 @@ describe('TaskViewService', () => {
     expect(second?.name).toBe('Kanban (2)')
   })
 
+  it('creates quadrant view with options', () => {
+    const v = service.create({
+      name: '冲刺四象限',
+      layout: 'quadrant',
+      filterRule: validRule,
+      quadrantOptions: {
+        showCompleted: false,
+        enableGrouping: true,
+        groupBy: 'status',
+        sortBy: 'time'
+      }
+    })
+    expect(v.layout).toBe('quadrant')
+    expect(v.quadrantOptions?.groupBy).toBe('status')
+    const loaded = service.get(v.id)
+    expect(loaded.layout).toBe('quadrant')
+  })
+
   it('deletes view', () => {
     const v = service.create({ name: '临时', layout: 'list' })
     const before = service.list().length

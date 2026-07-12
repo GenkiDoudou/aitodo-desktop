@@ -17,7 +17,10 @@ export type {
 
 export type { FilterNode, FilterField, FilterOp } from './task-filter-ast'
 
-export type TaskViewLayout = 'list' | 'kanban' | 'timeline'
+export type TaskViewLayout = 'list' | 'kanban' | 'timeline' | 'quadrant'
+
+/** 四象限视图布局选项（存 task_views.quadrant_options_json） */
+export type { QuadrantLayoutOptions as TaskViewQuadrantOptions } from './quadrant-layout'
 
 /** 命名任务视图（对齐 GitHub Projects View） */
 export interface TaskView {
@@ -29,6 +32,8 @@ export interface TaskView {
   groupBy: import('./task-list-layout').TaskGroupBy
   sortBy: import('./task-list-layout').TaskSortBy
   kanbanBoardMode: import('./kanban-config').KanbanBoardMode | null
+  /** layout=quadrant 时的展示选项 */
+  quadrantOptions: import('./quadrant-layout').QuadrantLayoutOptions | null
   sortOrder: number
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
@@ -42,6 +47,7 @@ export interface CreateTaskViewDto {
   groupBy?: import('./task-list-layout').TaskGroupBy
   sortBy?: import('./task-list-layout').TaskSortBy
   kanbanBoardMode?: import('./kanban-config').KanbanBoardMode | null
+  quadrantOptions?: import('./quadrant-layout').QuadrantLayoutOptions | null
   sortOrder?: number
 }
 
@@ -53,6 +59,7 @@ export interface UpdateTaskViewDto {
   groupBy?: import('./task-list-layout').TaskGroupBy
   sortBy?: import('./task-list-layout').TaskSortBy
   kanbanBoardMode?: import('./kanban-config').KanbanBoardMode | null
+  quadrantOptions?: import('./quadrant-layout').QuadrantLayoutOptions | null
   sortOrder?: number
 }
 
@@ -62,7 +69,9 @@ export type TaskActivityType =
   | 'description_updated'
   | 'priority_updated'
   | 'category_updated'
+  | 'tags_updated'
   | 'due_updated'
+  | 'start_updated'
   | 'reminders_updated'
   | 'recurrence_updated'
   | 'kanban_group_updated'
@@ -98,6 +107,8 @@ export interface Category {
   name: string
   color: string | null
   sortOrder: number
+  /** 用于任务标题自动归清单；全局不可重复 */
+  keywords: string[]
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
   deletedAt: IsoDateTime | null
@@ -112,6 +123,8 @@ export interface Task {
   priority: import('./task-priority').TaskPriority
   categoryId: string | null
   parentId: string | null
+  /** 计划开始时间（时间线条带起点）；null 表示未单独设置 */
+  startAt: IsoDateTime | null
   dueAt: IsoDateTime | null
   remindAt: IsoDateTime | null
   remindFiredAt: IsoDateTime | null
@@ -134,6 +147,10 @@ export interface Task {
   completedOccurrenceDates?: string[]
   /** 持续提醒：触发后仍按间隔重复通知直至处理 */
   remindContinuous?: boolean
+  /** 任务标签（持久化，可多选） */
+  tags?: string[]
+  /** 用户已排优（设象限）的时间；null 表示未排优，进收件箱 */
+  triagedAt: IsoDateTime | null
 }
 
 /** IPC 统一成功/失败信封 */
@@ -148,6 +165,7 @@ export interface CreateTaskDto {
   priority?: import('./task-priority').TaskPriority
   categoryId?: string | null
   parentId?: string | null
+  startAt?: IsoDateTime | null
   dueAt?: IsoDateTime | null
   remindAt?: IsoDateTime | null
   reminders?: import('./task-reminder').TaskReminderInput[]
@@ -155,6 +173,9 @@ export interface CreateTaskDto {
   remindContinuous?: boolean
   sortOrder?: number
   kanbanGroupId?: string | null
+  tags?: string[]
+  /** 显式传入时覆盖默认（快速添加不传，保持 null） */
+  triagedAt?: IsoDateTime | null
 }
 
 export interface UpdateTaskDto {
@@ -164,6 +185,7 @@ export interface UpdateTaskDto {
   priority?: import('./task-priority').TaskPriority
   categoryId?: string | null
   parentId?: string | null
+  startAt?: IsoDateTime | null
   dueAt?: IsoDateTime | null
   remindAt?: IsoDateTime | null
   reminders?: import('./task-reminder').TaskReminderInput[]
@@ -173,6 +195,7 @@ export interface UpdateTaskDto {
   remindContinuous?: boolean
   sortOrder?: number
   kanbanGroupId?: string | null
+  tags?: string[]
 }
 
 /** 看板列（按 scope 隔离） */
@@ -214,12 +237,14 @@ export interface CreateCategoryDto {
   name: string
   color?: string | null
   sortOrder?: number
+  keywords?: string[]
 }
 
 export interface UpdateCategoryDto {
   name?: string
   color?: string | null
   sortOrder?: number
+  keywords?: string[]
 }
 
 /** 任务列表筛选：智能列表与侧栏导航共用 */

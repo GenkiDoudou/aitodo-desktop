@@ -1,7 +1,7 @@
 import type { TaskStatus } from './types'
 
-/** 看板列组织方式：自定义分组 / 任务状态 */
-export type KanbanBoardMode = 'group' | 'status'
+/** 看板列组织方式：自定义分组 / 任务状态 / 任务级别 */
+export type KanbanBoardMode = 'group' | 'status' | 'priority'
 
 export interface KanbanStatusColumnLabels {
   todo: string
@@ -30,8 +30,13 @@ export const KANBAN_STATUS_COLUMNS: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE
 
 export function mergeKanbanConfig(partial?: Partial<KanbanConfig> | null): KanbanConfig {
   const labels = partial?.statusColumnLabels ?? {}
+  const mode = partial?.defaultMode
+  let defaultMode: KanbanBoardMode = 'group'
+  if (mode === 'status' || mode === 'priority') {
+    defaultMode = mode
+  }
   return {
-    defaultMode: partial?.defaultMode === 'status' ? 'status' : 'group',
+    defaultMode,
     statusColumnLabels: {
       todo: trimLabel(labels.todo, DEFAULT_KANBAN_STATUS_LABELS.todo),
       inProgress: trimLabel(labels.inProgress, DEFAULT_KANBAN_STATUS_LABELS.inProgress),

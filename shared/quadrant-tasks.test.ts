@@ -1,19 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import {
-  flattenQuadrantTaskTree,
-  groupTasksInQuadrant,
-  layoutTasksInQuadrant,
-  splitTasksByPriority
-} from './quadrant-tasks'
+import { splitTasksByPriority } from './quadrant-tasks'
 import type { Task } from './types'
 
-function task(partial: Partial<Task> & Pick<Task, 'id' | 'title'>): Task {
+function task(partial: Partial<Task> & Pick<Task, 'id'>): Task {
   return {
+    title: 't',
     description: null,
     status: 'TODO',
     priority: 4,
     categoryId: null,
     parentId: null,
+    startAt: null,
     dueAt: null,
     remindAt: null,
     remindFiredAt: null,
@@ -28,45 +25,21 @@ function task(partial: Partial<Task> & Pick<Task, 'id' | 'title'>): Task {
   }
 }
 
-describe('quadrant-tasks', () => {
-  it('splits top-level tasks by priority', () => {
+describe('splitTasksByPriority', () => {
+  it('includes orphan subtasks when parent is absent', () => {
     const buckets = splitTasksByPriority([
-      task({ id: '1', title: 'a', priority: 1 }),
-      task({ id: '2', title: 'b', priority: 2, parentId: 'x' }),
-      task({ id: '3', title: 'c', priority: 3 })
+      task({ id: 'child', parentId: 'missing', priority: 2, title: '子任务' })
+    ])
+    expect(buckets[2]).toHaveLength(1)
+    expect(buckets[2][0].title).toBe('子任务')
+  })
+
+  it('skips child when parent is in the same list', () => {
+    const buckets = splitTasksByPriority([
+      task({ id: 'parent', priority: 1 }),
+      task({ id: 'child', parentId: 'parent', priority: 3 })
     ])
     expect(buckets[1]).toHaveLength(1)
-    expect(buckets[2]).toHaveLength(0)
-    expect(buckets[3]).toHaveLength(1)
-  })
-
-  it('groups overdue and puts undated tasks in ungrouped', () => {
-    const layout = layoutTasksInQuadrant(
-      [
-        task({ id: '1', title: 'done', status: 'DONE' }),
-        task({ id: '2', title: 'late', dueAt: '2020-01-01T10:00:00' }),
-        task({ id: '3', title: 'nodate' })
-      ],
-      true
-    )
-    expect(layout.ungrouped.map((t) => t.id)).toEqual(['3'])
-    expect(layout.groups.map((g) => g.key)).toEqual(['overdue', 'completed'])
-  })
-
-  it('flattens nested subtasks under expanded parent', () => {
-    const all = [
-      task({ id: 'p', title: 'parent' }),
-      task({ id: 'c1', title: 'child1', parentId: 'p' }),
-      task({ id: 'c2', title: 'child2', parentId: 'p' })
-    ]
-    const collapsed = flattenQuadrantTaskTree([all[0]], all, new Set())
-    expect(collapsed.map((r) => r.task.id)).toEqual(['p'])
-
-    const expanded = flattenQuadrantTaskTree([all[0]], all, new Set(['p']))
-    expect(expanded.map((r) => [r.task.id, r.depth])).toEqual([
-      ['p', 0],
-      ['c1', 1],
-      ['c2', 1]
-    ])
+    expect(buckets[3]).toHaveLength(0)
   })
 })

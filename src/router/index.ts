@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import CalendarView from '@/views/CalendarView.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import DesktopOrganizeView from '@/views/DesktopOrganizeView.vue'
 
 /** Hash 路由避免 file:// 协议下 history 模式问题 */
 export default createRouter({
@@ -9,6 +10,7 @@ export default createRouter({
   routes: [
     { path: '/', name: 'home', component: HomeView },
     { path: '/calendar', name: 'calendar', component: CalendarView },
-    { path: '/settings', name: 'settings', component: SettingsView }
+    { path: '/settings', name: 'settings', component: SettingsView },
+    { path: '/desktop-organize', name: 'desktop-organize', component: DesktopOrganizeView }
   ]
 })

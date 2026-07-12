@@ -17,8 +17,10 @@ import type {
 import { AppError } from '@shared/types'
 import type { TaskRepository } from '../db/task-repository'
 import type { TaskReminderRepository } from '../db/task-reminder-repository'
+import type { TagRepository } from '../db/tag-repository'
 import type { TaskActivityService } from './task-activity-service'
 import type { TaskActivityRecorder } from './task-activity-recorder'
+import { normalizeTagNames } from '@shared/task-tags'
 
 const VALID_STATUS: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE']
 
@@ -30,12 +32,14 @@ export class TaskService {
   constructor(
     private readonly repo: TaskRepository,
     private readonly reminderRepo: TaskReminderRepository,
+    private readonly tagRepo: TagRepository,
     private readonly activityService?: TaskActivityService,
     private readonly activityRecorder?: TaskActivityRecorder
   ) {}
 
   list(filter?: TaskListFilter): Task[] {
-    return this.repo.list(filter ?? {})
+    const tasks = this.repo.list(filter ?? {})
+    return this.attachTags(tasks)
   }
 
   get(id: string): Task {
@@ -70,11 +74,24 @@ export class TaskService {
 
   private enrichTask(task: Task): Task {
     const reminders = this.reminderRepo.listByTaskId(task.id)
+    const tags = this.tagRepo.getTagsForTask(task.id)
     return {
       ...task,
+      tags,
       reminders,
       remindAt: primaryRemindAt(reminders) ?? task.remindAt
     }
+  }
+
+  private attachTags(tasks: Task[]): Task[] {
+    if (!tasks.length) {
+      return tasks
+    }
+    const tagMap = this.tagRepo.getTagsByTaskIds(tasks.map((t) => t.id))
+    return tasks.map((task) => ({
+      ...task,
+      tags: tagMap.get(task.id) ?? []
+    }))
   }
 
   private normalizeReminderInputs(dto: CreateTaskDto | UpdateTaskDto, dueAt: string | null): TaskReminderInput[] {
@@ -128,6 +145,7 @@ export class TaskService {
       priority: coerceTaskPriority(dto.priority, DEFAULT_TASK_PRIORITY),
       categoryId,
       parentId: dto.parentId ?? null,
+      startAt: dto.startAt ?? null,
       dueAt,
       remindAt: primaryRemindAt(reminderInputs as import('@shared/task-reminder').TaskReminderItem[]),
       remindFiredAt: null,
@@ -140,10 +158,15 @@ export class TaskService {
       kanbanGroupId: dto.kanbanGroupId ?? null,
       recurrence,
       completedOccurrenceDates: [],
-      remindContinuous: dto.remindContinuous ?? false
+      remindContinuous: dto.remindContinuous ?? false,
+      tags: dto.tags ? normalizeTagNames(dto.tags) : [],
+      triagedAt: dto.triagedAt !== undefined ? (dto.triagedAt ?? null) : null
     }
 
     this.repo.insert(task)
+    if (task.tags.length) {
+      this.tagRepo.setTaskTags(task.id, task.tags, ts)
+    }
     if (reminderInputs.length) {
       this.reminderRepo.replaceForTask(task.id, reminderInputs, ts)
     }
@@ -177,6 +200,7 @@ export class TaskService {
     }
 
     const dueAt = dto.dueAt !== undefined ? (dto.dueAt ?? null) : existing.dueAt
+    const startAt = dto.startAt !== undefined ? (dto.startAt ?? null) : existing.startAt
     const remindersTouched = dto.reminders !== undefined || dto.remindAt !== undefined
     let reminderInputs: TaskReminderInput[] | undefined
     if (dto.reminders !== undefined) {
@@ -211,14 +235,24 @@ export class TaskService {
       remindFiredAt = null
     }
 
+    const nextPriority = coerceTaskPriority(
+      dto.priority ?? existing.priority,
+      existing.priority
+    )
+    let triagedAt = existing.triagedAt ?? null
+    if (dto.priority !== undefined && nextPriority !== existing.priority) {
+      triagedAt = ts
+    }
+
     const updated: Task = {
       ...existing,
       title: dto.title?.trim() ?? existing.title,
       description: dto.description !== undefined ? (dto.description ?? null) : existing.description,
       status: nextStatus,
-      priority: coerceTaskPriority(dto.priority ?? existing.priority, existing.priority),
+      priority: nextPriority,
       categoryId: dto.categoryId !== undefined ? (dto.categoryId ?? null) : existing.categoryId,
       parentId: dto.parentId !== undefined ? (dto.parentId ?? null) : existing.parentId,
+      startAt,
       dueAt,
       remindAt:
         reminderInputs !== undefined
@@ -233,6 +267,7 @@ export class TaskService {
       completedOccurrenceDates: nextCompletedOccurrences,
       remindContinuous:
         dto.remindContinuous !== undefined ? dto.remindContinuous : existing.remindContinuous,
+      triagedAt,
       updatedAt: ts
     }
 
@@ -240,7 +275,16 @@ export class TaskService {
       throw new AppError('VALIDATION_ERROR', '任务标题不能为空')
     }
 
+    let nextTags = existing.tags ?? []
+    if (dto.tags !== undefined) {
+      nextTags = normalizeTagNames(dto.tags)
+    }
+    updated.tags = nextTags
+
     this.repo.update(updated)
+    if (dto.tags !== undefined) {
+      this.tagRepo.setTaskTags(id, nextTags, ts)
+    }
     if (reminderInputs !== undefined) {
       this.reminderRepo.replaceForTask(id, reminderInputs, ts)
     } else if (dto.dueAt !== undefined && dueAt && existing.reminders?.length) {

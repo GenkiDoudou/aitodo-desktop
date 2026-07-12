@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import dayjs from 'dayjs'
 import {
+  calendarPresetBounds,
   doneTimeRangeBounds,
   smartListDateBounds,
   taskMatchesSmartListDate
@@ -84,5 +85,11 @@ describe('date-filter', () => {
     const b = doneTimeRangeBounds('month', base)
     expect(b?.from).toBe('2026-07-01T00:00:00')
     expect(b?.to).toBe('2026-07-31T23:59:59')
+  })
+
+  it('calendarPresetBounds day is single day', () => {
+    const b = calendarPresetBounds('day', base)
+    expect(b?.from).toBe('2026-07-03T00:00:00')
+    expect(b?.to).toBe('2026-07-03T23:59:59')
   })
 })

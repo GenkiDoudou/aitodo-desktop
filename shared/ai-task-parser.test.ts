@@ -17,7 +17,8 @@ describe('parseAiTaskInput', () => {
     )
     expect(draft.title).toBe('开会')
     expect(draft.dueAt).toBe('2026-07-04T15:00:00')
-    expect(draft.reminders).toHaveLength(2)
+    expect(draft.reminders).toHaveLength(1)
+    expect(draft.reminders[0]?.offsetMinutes).toBe(30)
     expect(draft.remindAt).toBe('2026-07-04T14:30:00')
     expect(draft.category?.id).toBe('c-work')
   })
@@ -39,6 +40,22 @@ describe('parseAiTaskInput', () => {
     const draft = parseAiTaskInput('今天下午4点半健身', { categories, now: fixedNow })
     expect(draft.dueAt).toBe('2026-07-03T16:30:00')
     expect(draft.title).toBe('健身')
+  })
+
+  it('keeps explicit 今天 even when the clock time has already passed', () => {
+    const morning = dayjs('2026-07-11T10:00:00')
+    const draft = parseAiTaskInput('今天早上9点半叫我起床吃早饭', {
+      categories,
+      now: morning
+    })
+    expect(draft.dueAt).toBe('2026-07-11T09:30:00')
+    expect(draft.title).toContain('起床吃早饭')
+  })
+
+  it('rolls bare clock time to next day when already past and no day word', () => {
+    const morning = dayjs('2026-07-11T10:00:00')
+    const draft = parseAiTaskInput('9点半开会', { categories, now: morning })
+    expect(draft.dueAt).toBe('2026-07-12T09:30:00')
   })
 
   it('resolves bare hour to nearest valid evening when afternoon', () => {
@@ -72,15 +89,32 @@ describe('parseAiTaskInput', () => {
     expect(workdays.recurrence?.type).toBe('workdays')
   })
 
-  it('parses early remind with on-time and offset', () => {
+  it('parses early remind offset only', () => {
     const draft = parseAiTaskInput('今天下午3点，提前3分钟提醒我', { categories, now: fixedNow })
-    expect(draft.dueAt).toBe('2026-07-04T15:00:00')
-    expect(draft.reminders.map((r) => r.offsetMinutes)).toEqual(expect.arrayContaining([0, 3]))
+    expect(draft.dueAt).toBe('2026-07-03T15:00:00')
+    expect(draft.reminders.map((r) => r.offsetMinutes)).toEqual([3])
   })
 
   it('defaults early remind to 5 minutes', () => {
     const draft = parseAiTaskInput('今天下午3点，提前提醒我', { categories, now: fixedNow })
-    expect(draft.reminders.map((r) => r.offsetMinutes)).toEqual(expect.arrayContaining([0, 5]))
+    expect(draft.reminders.map((r) => r.offsetMinutes)).toEqual([5])
+  })
+
+  it('only creates early remind when saying 提前10分钟, without on-time', () => {
+    const draft = parseAiTaskInput('今天早上9点半叫我起床吃早饭，提前10分钟提醒我', {
+      categories,
+      now: dayjs('2026-07-11T08:00:00')
+    })
+    expect(draft.dueAt).toBe('2026-07-11T09:30:00')
+    expect(draft.reminders).toHaveLength(1)
+    expect(draft.reminders[0]?.offsetMinutes).toBe(10)
+    expect(draft.remindAt).toBe('2026-07-11T09:20:00')
+  })
+
+  it('creates on-time remind only when saying 提醒我 without 提前', () => {
+    const draft = parseAiTaskInput('明天下午3点开会提醒我', { categories, now: fixedNow })
+    expect(draft.reminders).toHaveLength(1)
+    expect(draft.reminders[0]?.offsetMinutes).toBe(0)
   })
 
   it('parses relative after duration', () => {
@@ -91,6 +125,26 @@ describe('parseAiTaskInput', () => {
     const compound = parseAiTaskInput('1小时30分钟后开会', { categories, now: fixedNow })
     expect(compound.dueAt).toBe('2026-07-03T17:30:00')
   })
+
+  it('parses tonight and deadline phrases', () => {
+    const tonight = parseAiTaskInput('今晚写总结', { categories, now: fixedNow })
+    expect(tonight.dueAt).toBe('2026-07-03T20:00:00')
+    expect(tonight.title).toBe('写总结')
+
+    const deadline = parseAiTaskInput('截止明天下午3点交报告', { categories, now: fixedNow })
+    expect(deadline.dueAt).toBe('2026-07-04T15:00:00')
+    expect(deadline.title).toBe('交报告')
+  })
+
+  it('parses iso date and 号 suffix', () => {
+    const iso = parseAiTaskInput('2026-07-10 团队复盘', { categories, now: fixedNow })
+    expect(iso.dueAt).toBe('2026-07-10T09:00:00')
+    expect(iso.title).toBe('团队复盘')
+
+    const cn = parseAiTaskInput('7月10号提交', { categories, now: fixedNow })
+    expect(cn.dueAt).toBe('2026-07-10T09:00:00')
+    expect(cn.title).toBe('提交')
+  })
 })
 
 describe('buildCreateTaskDtoFromParsed', () => {
@@ -100,6 +154,19 @@ describe('buildCreateTaskDtoFromParsed', () => {
     expect(dto.recurrence?.type).toBe('daily')
     expect(dto.dueAt).toBeTruthy()
     expect(dto.title).toBe('复盘')
+  })
+
+  it('falls back to keyword match when no parsed category or nav default', () => {
+    const draft = parseAiTaskInput('下午周例会讨论', { categories, now: fixedNow })
+    const dto = buildCreateTaskDtoFromParsed(
+      draft,
+      { categoryId: null },
+      {
+        rawInput: '下午周例会讨论',
+        parseCategories: [{ id: 'c-work', name: '工作', keywords: ['周例会'] }]
+      }
+    )
+    expect(dto.categoryId).toBe('c-work')
   })
 })
 

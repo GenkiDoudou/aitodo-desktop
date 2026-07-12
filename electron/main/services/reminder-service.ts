@@ -5,12 +5,11 @@ import type { TaskRepository } from '../db/task-repository'
 import type { TaskReminderRepository } from '../db/task-reminder-repository'
 import type { AppMessageService } from './app-message-service'
 import type { HolidayService } from './holiday-service'
-import { showSystemNotification } from './system-notification'
 
 const SCAN_INTERVAL_MS = 60_000
 
 /**
- * 主进程定时扫描 task_reminders，触发系统通知与应用内消息。
+ * 主进程定时扫描 task_reminders，触发应用内消息（系统通知由 pushAppMessageToRenderer 统一弹出）。
  * 支持持续提醒与循环（触发后推进 dueAt 并重算相对提醒）。
  * 法定节假日循环依赖 HolidayService（timor.tech API + 本地缓存）。
  */
@@ -63,9 +62,6 @@ export class ReminderService {
           id: task.id
         } as import('@shared/types').Task)
         this.onInAppMessage?.(inApp)
-
-        // 先弹系统通知，避免后续循环/DB 更新异常导致无 Toast
-        showSystemNotification('任务提醒', task.title)
 
         const continuous = task.remindContinuous
         const recurrence = task.recurrence

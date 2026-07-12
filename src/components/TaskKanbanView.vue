@@ -1,24 +1,6 @@
 <template>
   <div class="task-kanban" v-loading="loading">
     <header class="task-kanban__toolbar">
-      <div class="task-kanban__mode">
-        <button
-          type="button"
-          class="task-kanban__mode-btn"
-          :class="{ 'is-active': boardMode === 'group' }"
-          @click="setBoardMode('group')"
-        >
-          分组
-        </button>
-        <button
-          type="button"
-          class="task-kanban__mode-btn"
-          :class="{ 'is-active': boardMode === 'status' }"
-          @click="setBoardMode('status')"
-        >
-          状态
-        </button>
-      </div>
       <div v-if="draggingTaskId" class="task-kanban__drag-indicator" title="正在拖动任务">
         正在拖动…
       </div>
@@ -29,17 +11,18 @@
     </header>
 
     <div
-      v-if="!loading && rootTasks.length === 0 && (boardMode === 'status' || customGroups.length === 0)"
+      v-if="!loading && rootTasks.length === 0 && (boardMode === 'status' || boardMode === 'priority' || customGroups.length === 0)"
       class="task-kanban__empty"
     >
       暂无任务，点击列头 + 或「新分组」开始
     </div>
 
-    <div v-else class="task-kanban__board" :style="boardStyle">
+    <div v-else class="task-kanban__board">
       <section
         v-for="col in displayColumns"
         :key="col.id"
         class="task-kanban__col"
+        :data-column-id="col.id"
         :class="{
           'is-column-selected': selectedColumnId === col.id,
           'is-drop-target': draggingTaskId && dropTargetColumnId === col.id,
@@ -60,9 +43,13 @@
                 ? selectedColumnId === col.id
                   ? '再次点击取消选中'
                   : '选中后，顶栏添加的任务将进入此状态列'
-                : selectedColumnId === col.id
-                  ? '再次点击取消选中'
-                  : '选中后，顶栏添加的任务将进入此分组'
+                : boardMode === 'priority'
+                  ? selectedColumnId === col.id
+                    ? '再次点击取消选中'
+                    : '选中后，顶栏添加的任务将使用此级别'
+                  : selectedColumnId === col.id
+                    ? '再次点击取消选中'
+                    : '选中后，顶栏添加的任务将进入此分组'
             "
             @click="toggleColumnSelection(col.id)"
             @keydown.enter.prevent="toggleColumnSelection(col.id)"
@@ -99,7 +86,7 @@
               </template>
             </el-dropdown>
           </div>
-          <div v-else-if="boardMode === 'status'" class="task-kanban__col-actions">
+          <div v-else-if="boardMode === 'status' || boardMode === 'priority'" class="task-kanban__col-actions">
             <button
               type="button"
               class="task-kanban__icon-btn"
@@ -123,41 +110,91 @@
               @escape="cancelQuickAdd"
               @blur="onQuickAddBlur"
             />
+            <TaskPriorityFlagMenu
+              v-if="boardMode !== 'priority'"
+              v-model="quickAddPriority"
+              class="task-kanban__quick-add-priority"
+            />
           </div>
 
           <div
-            v-if="!loading && tasksInColumn(col.id).length === 0"
+            v-if="!loading && columnRows(col.id).length === 0"
             class="task-kanban__drop-empty"
           >
             <span>拖到这里</span>
           </div>
 
           <article
-            v-for="task in tasksInColumn(col.id)"
-            :key="task.id"
+            v-for="row in columnRows(col.id)"
+            :key="row.task.id"
             class="task-kanban__card"
             :class="{
-              'is-selected': selectedId === task.id,
-              'is-dragging': draggingTaskId === task.id,
-              'task-kanban__card--done': task.status === 'DONE'
+              'is-selected': selectedId === row.task.id,
+              'is-dragging': draggingTaskId === row.task.id,
+              'task-kanban__card--done': row.task.status === 'DONE',
+              'task-kanban__card--child': row.depth > 0
             }"
-            :draggable="isCardDraggable(col.id, task)"
-            @dragstart="onDragStart(task.id, $event)"
+            :style="row.depth > 0 ? { marginLeft: `${row.depth * 14}px` } : undefined"
+            :draggable="row.isRoot && isCardDraggable(col.id, row.task)"
+            @dragstart="onDragStart(row.task.id, $event)"
             @dragend="onDragEnd"
-            @click="emit('select', task.id)"
+            @click="emit('select', row.task.id)"
           >
             <div class="task-kanban__card-top">
+              <button
+                v-if="childCount(row.task.id) > 0"
+                type="button"
+                class="task-kanban__expand"
+                :aria-expanded="isExpanded(row.task.id)"
+                :aria-label="isExpanded(row.task.id) ? '折叠子任务' : '展开子任务'"
+                :title="isExpanded(row.task.id) ? '折叠子任务' : '展开子任务'"
+                @click.stop="toggleExpand(row.task.id)"
+              >
+                <el-icon>
+                  <ArrowDown v-if="isExpanded(row.task.id)" />
+                  <ArrowRight v-else />
+                </el-icon>
+              </button>
+              <span v-else class="task-kanban__expand-placeholder" aria-hidden="true" />
               <el-checkbox
-                :model-value="task.status === 'DONE'"
+                :model-value="row.task.status === 'DONE'"
                 @click.stop
-                @change="() => emit('toggle-status', task)"
+                @change="() => emit('toggle-status', row.task)"
               />
-              <span class="task-kanban__card-title">{{ task.title }}</span>
+              <span class="task-kanban__card-title">{{ row.task.title }}</span>
+              <span
+                v-if="childCount(row.task.id) > 0 && !isExpanded(row.task.id)"
+                class="task-kanban__child-count"
+              >
+                {{ childCount(row.task.id) }}
+              </span>
             </div>
-            <p v-if="descriptionPreview(task)" class="task-kanban__card-desc">
-              {{ descriptionPreview(task) }}
+            <p v-if="descriptionPreview(row.task)" class="task-kanban__card-desc">
+              {{ descriptionPreview(row.task) }}
             </p>
-            <div v-if="dueLabel(task)" class="task-kanban__card-due">{{ dueLabel(task) }}</div>
+            <div v-if="hasCardMeta(row.task)" class="task-kanban__card-meta">
+              <span v-if="categoryLabel(row.task)" class="task-kanban__meta-item" title="清单">
+                {{ categoryLabel(row.task) }}
+              </span>
+              <span v-if="groupLabel(row.task)" class="task-kanban__meta-item" title="分组">
+                {{ groupLabel(row.task) }}
+              </span>
+              <span
+                v-if="createdLabel(row.task)"
+                class="task-kanban__meta-item"
+                title="创建时间"
+              >
+                创建 {{ createdLabel(row.task) }}
+              </span>
+              <span
+                v-if="dueMetaLabel(row.task)"
+                class="task-kanban__meta-item"
+                :class="{ 'is-overdue': isOverdue(row.task) }"
+                title="截止时间"
+              >
+                截止 {{ dueMetaLabel(row.task) }}
+              </span>
+            </div>
           </article>
         </div>
 
@@ -168,24 +205,35 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { MoreFilled, Plus } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, MoreFilled, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import type { KanbanGroup, Task, TaskStatus } from '@shared/types'
 import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
 import type { KanbanBoardMode } from '@shared/kanban-config'
 import { KANBAN_STATUS_COLUMNS, statusLabelFor } from '@shared/kanban-config'
+import { TASK_PRIORITIES, DEFAULT_TASK_PRIORITY, isValidTaskPriority, type TaskPriority } from '@shared/task-priority'
 import { KANBAN_DONE_COLUMN_ID, KANBAN_UNGROUPED_ID } from '@shared/kanban-scope'
-import { persistKanbanConfig, readKanbanConfig } from '@/utils/kanban-preferences'
+import { readKanbanConfig } from '@/utils/kanban-preferences'
 import { taskDescriptionPreview } from '@shared/task-description'
-import { buildCreateTaskDtoFromParsed, parseAiTaskInput } from '@shared/ai-task-parser'
+import { buildQuickCreateTaskDto } from '@shared/quick-create-task'
+import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
+import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
 import QuickAddInput from '@/components/QuickAddInput.vue'
-import { formatTaskListTime } from '@/utils/format-task-time'
+import TaskPriorityFlagMenu from '@/components/TaskPriorityFlagMenu.vue'
+import { compareTasks } from '@shared/task-list-layout'
+import type { TaskSortBy } from '@shared/task-list-layout'
 import { unwrapIpc } from '@/ipc/client'
 
 interface DisplayColumn {
   id: string
   name: string
+}
+
+interface KanbanCardRow {
+  task: Task
+  depth: number
+  isRoot: boolean
 }
 
 const DONE_COLUMN_ID = KANBAN_DONE_COLUMN_ID
@@ -197,10 +245,13 @@ const props = defineProps<{
   selectedId?: string | null
   hideDone?: boolean
   metaVisibility?: TaskListMetaVisibility
+  sortBy?: TaskSortBy
+  /** 看板列分组方式（由视图配置决定，不在看板内切换） */
+  boardMode?: KanbanBoardMode
   /** 快捷添加任务默认清单 */
   defaultCategoryId?: string | null
   /** 用于快捷识别中的分类名匹配 */
-  parseCategories?: { id: string; name: string }[]
+  parseCategories?: { id: string; name: string; keywords?: string[] }[]
 }>()
 
 const parseCategories = computed(() => props.parseCategories ?? [])
@@ -213,7 +264,9 @@ const emit = defineEmits<{
 
 /** 当前选中的看板列：顶栏快捷添加会写入此列 */
 const selectedColumnId = defineModel<string | null>('selectedColumnId', { default: null })
-const boardMode = defineModel<KanbanBoardMode>('boardMode', { default: 'group' })
+
+const boardMode = computed(() => props.boardMode ?? 'group')
+const sortBy = computed(() => props.sortBy ?? 'custom')
 
 const kanbanConfigTick = ref(0)
 const kanbanConfig = computed(() => {
@@ -227,9 +280,26 @@ const draggingTaskId = ref<string | null>(null)
 const dropTargetColumnId = ref<string | null>(null)
 const quickAddColumn = ref<string | null>(null)
 const quickAddText = ref('')
+const quickAddPriority = ref<TaskPriority>(DEFAULT_TASK_PRIORITY)
 const quickAddInputRef = ref<InstanceType<typeof QuickAddInput> | InstanceType<typeof QuickAddInput>[] | null>(null)
+/** 已展开的父任务 id；默认全部折叠 */
+const expandedIds = ref<Set<string>>(new Set())
 
 const rootTasks = computed(() => props.tasks.filter((t) => !t.parentId))
+
+const childrenByParent = computed(() => {
+  const map = new Map<string, Task[]>()
+  for (const t of props.tasks) {
+    if (!t.parentId) continue
+    if (!map.has(t.parentId)) map.set(t.parentId, [])
+    map.get(t.parentId)!.push(t)
+  }
+  return map
+})
+
+function sortTaskList(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => compareTasks(a, b, sortBy.value))
+}
 
 const displayColumns = computed<DisplayColumn[]>(() => {
   if (boardMode.value === 'status') {
@@ -237,6 +307,12 @@ const displayColumns = computed<DisplayColumn[]>(() => {
     return KANBAN_STATUS_COLUMNS.map((status) => ({
       id: status,
       name: statusLabelFor(status, labels)
+    }))
+  }
+  if (boardMode.value === 'priority') {
+    return TASK_PRIORITIES.map((p) => ({
+      id: String(p.value),
+      name: `${p.code} · ${p.label}`
     }))
   }
   const cols: DisplayColumn[] = [{ id: KANBAN_UNGROUPED_ID, name: ungroupedName.value }]
@@ -249,30 +325,40 @@ const displayColumns = computed<DisplayColumn[]>(() => {
   return cols
 })
 
-const boardStyle = computed(() => {
-  const count = Math.max(displayColumns.value.length, 1)
-  const min = 200
-  const max = 320
-  const gap = 12
-  const ideal = `calc((100% - ${(count - 1) * gap}px) / ${count})`
-  return {
-    '--kanban-col-min': `${min}px`,
-    '--kanban-col-max': `${max}px`,
-    '--kanban-col-ideal': ideal
-  }
-})
-
-function setBoardMode(mode: KanbanBoardMode) {
-  if (boardMode.value === mode) return
-  boardMode.value = mode
-  selectedColumnId.value = null
-  quickAddColumn.value = null
-}
-
 const groupIdSet = computed(() => new Set(customGroups.value.map((g) => g.id)))
 
 function columnTaskCount(columnId: string): number {
   return tasksInColumn(columnId).length
+}
+
+function childCount(taskId: string): number {
+  return childrenByParent.value.get(taskId)?.length ?? 0
+}
+
+function isExpanded(taskId: string): boolean {
+  return expandedIds.value.has(taskId)
+}
+
+function toggleExpand(taskId: string) {
+  const next = new Set(expandedIds.value)
+  if (next.has(taskId)) next.delete(taskId)
+  else next.add(taskId)
+  expandedIds.value = next
+}
+
+function expandAncestors(taskId: string) {
+  const byId = new Map(props.tasks.map((t) => [t.id, t]))
+  const next = new Set(expandedIds.value)
+  let changed = false
+  let current = byId.get(taskId)
+  while (current?.parentId) {
+    if (!next.has(current.parentId)) {
+      next.add(current.parentId)
+      changed = true
+    }
+    current = byId.get(current.parentId)
+  }
+  if (changed) expandedIds.value = next
 }
 
 function resolveColumnId(task: Task): string {
@@ -290,9 +376,17 @@ function doneTasks() {
   return rootTasks.value.filter((t) => t.status === 'DONE')
 }
 
-function tasksInColumn(columnId: string) {
+function tasksInColumn(columnId: string): Task[] {
   if (boardMode.value === 'status') {
     return rootTasks.value.filter((t) => t.status === columnId)
+  }
+  if (boardMode.value === 'priority') {
+    const priority = Number(columnId)
+    if (!isValidTaskPriority(priority)) return []
+    return rootTasks.value.filter((t) => {
+      const p = typeof t.priority === 'number' ? t.priority : Number(t.priority)
+      return (Number.isFinite(p) ? p : 4) === priority
+    })
   }
   if (columnId === DONE_COLUMN_ID) {
     return doneTasks()
@@ -300,8 +394,26 @@ function tasksInColumn(columnId: string) {
   return activeInColumn(columnId)
 }
 
+function columnRows(columnId: string): KanbanCardRow[] {
+  const rows: KanbanCardRow[] = []
+
+  function walk(task: Task, depth: number) {
+    rows.push({ task, depth, isRoot: depth === 0 })
+    if (!isExpanded(task.id)) return
+    const children = sortTaskList(childrenByParent.value.get(task.id) ?? [])
+    for (const child of children) {
+      walk(child, depth + 1)
+    }
+  }
+
+  for (const root of sortTaskList(tasksInColumn(columnId))) {
+    walk(root, 0)
+  }
+  return rows
+}
+
 function isCardDraggable(columnId: string, task: Task): boolean {
-  if (boardMode.value === 'status') return true
+  if (boardMode.value === 'status' || boardMode.value === 'priority') return true
   return columnId !== DONE_COLUMN_ID && task.status !== 'DONE'
 }
 
@@ -313,11 +425,50 @@ function descriptionPreview(task: Task) {
   return taskDescriptionPreview(task.description, 48)
 }
 
-function dueLabel(task: Task): string {
-  if (props.metaVisibility?.dueAt === false || !task.dueAt) return ''
-  const d = dayjs(task.dueAt)
-  if (!d.isValid()) return ''
-  return d.format('YYYY/M/D, H:mm')
+function metaVis() {
+  return props.metaVisibility ?? DEFAULT_TASK_LIST_META_VISIBILITY
+}
+
+function categoryName(categoryId: string | null | undefined): string {
+  if (!categoryId) return ''
+  return parseCategories.value.find((c) => c.id === categoryId)?.name ?? ''
+}
+
+/** 清单（分类） */
+function categoryLabel(task: Task): string {
+  const name = categoryName(task.categoryId)
+  if (name) return name
+  if (task.categoryId === null) return '未分类'
+  return ''
+}
+
+/** 看板自定义分组名（仅有分组时显示） */
+function groupLabel(task: Task): string {
+  if (task.kanbanGroupId && groupIdSet.value.has(task.kanbanGroupId)) {
+    return customGroups.value.find((g) => g.id === task.kanbanGroupId)?.name ?? ''
+  }
+  return ''
+}
+
+function createdLabel(task: Task): string {
+  if (!metaVis().createdAt || !task.createdAt) return ''
+  return formatTaskCreatedAt(task.createdAt)
+}
+
+function dueMetaLabel(task: Task): string {
+  if (!metaVis().dueAt || !task.dueAt) return ''
+  return formatTaskListTime(task.dueAt)
+}
+
+function isOverdue(task: Task): boolean {
+  if (task.status === 'DONE' || !task.dueAt) return false
+  return dayjs(task.dueAt).isBefore(dayjs(), 'minute')
+}
+
+function hasCardMeta(task: Task): boolean {
+  return Boolean(
+    categoryLabel(task) || groupLabel(task) || createdLabel(task) || dueMetaLabel(task)
+  )
 }
 
 async function loadGroups() {
@@ -335,6 +486,25 @@ watch(() => props.scopeKey, () => {
   selectedColumnId.value = null
   void loadGroups()
 }, { immediate: true })
+
+watch(selectedColumnId, (columnId) => {
+  if (!columnId) return
+  void nextTick(() => {
+    const el = document.querySelector(
+      `.task-kanban__col[data-column-id="${CSS.escape(columnId)}"]`
+    ) as HTMLElement | null
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+  })
+})
+
+watch(
+  () => props.selectedId,
+  (id) => {
+    if (!id) return
+    expandAncestors(id)
+  },
+  { immediate: true }
+)
 
 function toggleColumnSelection(columnId: string) {
   selectedColumnId.value = selectedColumnId.value === columnId ? null : columnId
@@ -402,6 +572,18 @@ async function onDrop(columnId: string, e: DragEvent) {
     if (!isStatusColumn(columnId) || task.status === columnId) return
     try {
       unwrapIpc(await window.api.tasks.update(taskId, { status: columnId }))
+      emit('changed')
+    } catch {
+      /* unwrapIpc 已提示 */
+    }
+    return
+  }
+
+  if (boardMode.value === 'priority') {
+    const priority = Number(columnId)
+    if (!isValidTaskPriority(priority) || task.priority === priority) return
+    try {
+      unwrapIpc(await window.api.tasks.update(taskId, { priority: priority as TaskPriority }))
       emit('changed')
     } catch {
       /* unwrapIpc 已提示 */
@@ -520,6 +702,7 @@ async function onColumnCommand(command: string, col: DisplayColumn) {
 function startQuickAdd(columnId: string) {
   quickAddColumn.value = columnId
   quickAddText.value = ''
+  quickAddPriority.value = DEFAULT_TASK_PRIORITY
   void nextTick(() => {
     const el = quickAddInputRef.value
     const input = Array.isArray(el) ? el[0] : el
@@ -530,6 +713,7 @@ function startQuickAdd(columnId: string) {
 function cancelQuickAdd() {
   quickAddColumn.value = null
   quickAddText.value = ''
+  quickAddPriority.value = DEFAULT_TASK_PRIORITY
 }
 
 function onQuickAddBlur() {
@@ -545,18 +729,25 @@ async function submitQuickAdd(columnId: string) {
     return
   }
   try {
-    const parsed = parseAiTaskInput(title, { categories: props.parseCategories ?? [] })
     if (boardMode.value === 'status' && isStatusColumn(columnId)) {
-      const dto = buildCreateTaskDtoFromParsed(parsed, {
-        categoryId: parsed.category?.id ?? props.defaultCategoryId ?? null,
-        status: columnId
+      const dto = buildQuickCreateTaskDto(title, props.parseCategories ?? [], {
+        categoryId: props.defaultCategoryId ?? null,
+        status: columnId,
+        priority: quickAddPriority.value
+      })
+      unwrapIpc(await window.api.tasks.create(dto))
+    } else if (boardMode.value === 'priority' && isValidTaskPriority(Number(columnId))) {
+      const dto = buildQuickCreateTaskDto(title, props.parseCategories ?? [], {
+        categoryId: props.defaultCategoryId ?? null,
+        priority: Number(columnId) as TaskPriority
       })
       unwrapIpc(await window.api.tasks.create(dto))
     } else {
       const kanbanGroupId = columnId === KANBAN_UNGROUPED_ID ? null : columnId
-      const dto = buildCreateTaskDtoFromParsed(parsed, {
-        categoryId: parsed.category?.id ?? props.defaultCategoryId ?? null,
-        kanbanGroupId
+      const dto = buildQuickCreateTaskDto(title, props.parseCategories ?? [], {
+        categoryId: props.defaultCategoryId ?? null,
+        kanbanGroupId,
+        priority: quickAddPriority.value
       })
       unwrapIpc(await window.api.tasks.create(dto))
     }
@@ -649,28 +840,38 @@ async function submitQuickAdd(columnId: string) {
 }
 
 .task-kanban__board {
+  --kanban-col-min: 260px;
+  /* 紧凑卡片约 7～8 条可见；两行列在默认窗口高度下都能露出来 */
+  --kanban-col-body-height: 260px;
   display: flex;
-  gap: 12px;
-  align-items: stretch;
-  overflow-x: auto;
-  overflow-y: hidden;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  gap: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
   flex: 1;
   min-height: 0;
   min-width: 0;
-  padding: 12px 16px 16px;
-  scrollbar-gutter: stable;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px 14px;
 }
 
 .task-kanban__col {
-  flex: 1 0 var(--kanban-col-min, 220px);
-  width: clamp(var(--kanban-col-min, 220px), var(--kanban-col-ideal, 260px), var(--kanban-col-max, 320px));
-  min-width: var(--kanban-col-min, 220px);
-  max-width: var(--kanban-col-max, 320px);
-  max-height: 100%;
+  /* 放不下时换到下一行，不横向滚动 */
+  flex: 1 1 var(--kanban-col-min);
+  min-width: var(--kanban-col-min);
+  max-width: 100%;
+  width: auto;
+  height: calc(34px + var(--kanban-col-body-height));
+  max-height: calc(34px + var(--kanban-col-body-height));
   display: flex;
   flex-direction: column;
-  background: transparent;
+  background: #eef0f3;
   border-radius: 10px;
+  padding: 6px 6px 8px;
+  box-sizing: border-box;
   transition: background 0.15s ease, box-shadow 0.15s ease;
 
   &.is-column-selected {
@@ -721,7 +922,7 @@ async function submitQuickAdd(columnId: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 4px 10px;
+  padding: 2px 2px 6px;
   flex-shrink: 0;
 }
 
@@ -818,19 +1019,22 @@ async function submitQuickAdd(columnId: string) {
 .task-kanban__cards {
   flex: 1;
   min-height: 0;
+  height: var(--kanban-col-body-height);
+  max-height: var(--kanban-col-body-height);
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-bottom: 8px;
+  gap: 4px;
+  padding: 0 1px 2px;
 }
 
 .task-kanban__drop-empty {
   border: 1px dashed rgba(64, 158, 255, 0.55);
   background: rgba(64, 158, 255, 0.06);
-  border-radius: 10px;
-  min-height: 120px;
-  flex: 1 1 auto;
+  border-radius: 8px;
+  min-height: 72px;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -843,19 +1047,32 @@ async function submitQuickAdd(columnId: string) {
   border: 1px solid var(--el-color-primary);
   border-radius: 10px;
   padding: 8px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+
+  :deep(.quick-add-input) {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.task-kanban__quick-add-priority {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .task-kanban__card {
   background: #fff;
   border: 1px solid #e8eaed;
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: 8px;
+  padding: 6px 8px;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.03);
   transition: box-shadow 0.15s ease;
 
   &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   }
 
   &.is-selected {
@@ -875,18 +1092,66 @@ async function submitQuickAdd(columnId: string) {
   &--done {
     opacity: 0.72;
   }
+
+  &--child {
+    border-style: dashed;
+    box-shadow: none;
+  }
 }
 
 .task-kanban__card-top {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 4px;
+}
+
+.task-kanban__expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--desktop-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 11px;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--desktop-text);
+  }
+}
+
+.task-kanban__expand-placeholder {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.task-kanban__child-count {
+  flex-shrink: 0;
+  margin-top: 1px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--desktop-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
 }
 
 .task-kanban__card-title {
   flex: 1;
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.35;
   word-break: break-word;
   color: var(--desktop-text);
 
@@ -897,25 +1162,35 @@ async function submitQuickAdd(columnId: string) {
 }
 
 .task-kanban__card-desc {
-  margin: 6px 0 0 28px;
-  font-size: 12px;
+  margin: 3px 0 0 40px;
+  font-size: 11px;
   color: var(--desktop-muted);
-  line-height: 1.4;
+  line-height: 1.3;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.task-kanban__card-due {
-  margin: 6px 0 0 28px;
-  font-size: 12px;
-  color: #e03e3e;
-  font-weight: 500;
+.task-kanban__card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin: 4px 0 0 40px;
+}
 
-  &.is-muted {
-    color: var(--desktop-muted);
-    font-weight: 400;
+.task-kanban__meta-item {
+  font-size: 11px;
+  color: var(--desktop-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &.is-overdue {
+    color: #e03e3e;
+    font-weight: 500;
   }
 }
 

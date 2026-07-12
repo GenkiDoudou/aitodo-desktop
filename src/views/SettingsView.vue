@@ -10,8 +10,8 @@
           v-for="item in menuItems"
           :key="item.id"
           class="settings-layout__menu-item"
-          :class="{ 'is-active': activeSection === item.id }"
-          @click="activeSection = item.id"
+          :class="{ 'is-active': !item.route && activeSection === item.id }"
+          @click="onMenuClick(item)"
         >
           <el-icon><component :is="item.icon" /></el-icon>
           <span>{{ item.label }}</span>
@@ -27,8 +27,9 @@
       <SettingsPromptSection v-else-if="activeSection === 'prompt'" />
       <SettingsImportExportSection v-else-if="activeSection === 'importExport'" />
       <SettingsTaskActivitySection v-else-if="activeSection === 'taskActivity'" />
-      <SettingsKanbanSection v-else-if="activeSection === 'kanban'" />
-      <SettingsViewTemplatesSection v-else-if="activeSection === 'viewTemplates'" />
+      <SettingsCloseBehaviorSection v-else-if="activeSection === 'closeBehavior'" />
+      <SettingsWorkdaySection v-else-if="activeSection === 'workday'" />
+      <SettingsWidgetSection v-else-if="activeSection === 'widget'" />
       <SettingsAboutSection v-else />
     </main>
   </div>
@@ -37,7 +38,21 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Coin, Collection, Cpu, Document, FolderOpened, Grid, InfoFilled, Key, List, Timer } from '@element-plus/icons-vue'
+import {
+  Coin,
+  Calendar,
+  Cpu,
+  Document,
+  Folder,
+  FolderOpened,
+  InfoFilled,
+  Key,
+  List,
+  Monitor,
+  SwitchButton,
+  Timer
+} from '@element-plus/icons-vue'
+import type { Component } from 'vue'
 import SettingsDataSection from '@/components/settings/SettingsDataSection.vue'
 import SettingsSmartListSection from '@/components/settings/SettingsSmartListSection.vue'
 import SettingsShortcutsSection from '@/components/settings/SettingsShortcutsSection.vue'
@@ -45,8 +60,9 @@ import SettingsLlmSection from '@/components/settings/SettingsLlmSection.vue'
 import SettingsPromptSection from '@/components/settings/SettingsPromptSection.vue'
 import SettingsImportExportSection from '@/components/settings/SettingsImportExportSection.vue'
 import SettingsTaskActivitySection from '@/components/settings/SettingsTaskActivitySection.vue'
-import SettingsKanbanSection from '@/components/settings/SettingsKanbanSection.vue'
-import SettingsViewTemplatesSection from '@/components/settings/SettingsViewTemplatesSection.vue'
+import SettingsCloseBehaviorSection from '@/components/settings/SettingsCloseBehaviorSection.vue'
+import SettingsWorkdaySection from '@/components/settings/SettingsWorkdaySection.vue'
+import SettingsWidgetSection from '@/components/settings/SettingsWidgetSection.vue'
 import SettingsAboutSection from '@/components/settings/SettingsAboutSection.vue'
 
 type SettingsSection =
@@ -57,8 +73,9 @@ type SettingsSection =
   | 'prompt'
   | 'importExport'
   | 'taskActivity'
-  | 'kanban'
-  | 'viewTemplates'
+  | 'closeBehavior'
+  | 'workday'
+  | 'widget'
   | 'about'
 
 const router = useRouter()
@@ -76,31 +93,49 @@ watch(
       section === 'prompt' ||
       section === 'importExport' ||
       section === 'taskActivity' ||
-      section === 'kanban' ||
-      section === 'viewTemplates' ||
+      section === 'closeBehavior' ||
+      section === 'workday' ||
+      section === 'widget' ||
       section === 'about'
     ) {
       activeSection.value = section
-    } else if (section === 'summary') {
-      // 定时汇总已迁至左侧一级菜单，旧链接回退到数据设置
+    } else if (section === 'summary' || section === 'kanban' || section === 'viewTemplates') {
+      // 定时汇总已迁至左侧一级菜单；看板/视图模板设置已移除
       activeSection.value = 'data'
     }
   },
   { immediate: true }
 )
 
-const menuItems = [
-  { id: 'data' as const, label: '数据存储', icon: Coin },
-  { id: 'smartList' as const, label: '智能清单', icon: List },
-  { id: 'shortcuts' as const, label: '快捷键', icon: Key },
-  { id: 'llm' as const, label: '大模型', icon: Cpu },
-  { id: 'prompt' as const, label: '提示词', icon: Document },
-  { id: 'importExport' as const, label: '导入导出', icon: FolderOpened },
-  { id: 'taskActivity' as const, label: '任务动态', icon: Timer },
-  { id: 'kanban' as const, label: '看板', icon: Grid },
-  { id: 'viewTemplates' as const, label: '视图模板', icon: Collection },
-  { id: 'about' as const, label: '关于', icon: InfoFilled }
+type MenuItem = {
+  id: SettingsSection | 'desktopOrganize'
+  label: string
+  icon: Component
+  route?: string
+}
+
+const menuItems: MenuItem[] = [
+  { id: 'data', label: '数据存储', icon: Coin },
+  { id: 'smartList', label: '智能清单', icon: List },
+  { id: 'shortcuts', label: '快捷键', icon: Key },
+  { id: 'llm', label: '大模型', icon: Cpu },
+  { id: 'prompt', label: '提示词', icon: Document },
+  { id: 'importExport', label: '导入导出', icon: FolderOpened },
+  { id: 'taskActivity', label: '任务动态', icon: Timer },
+  { id: 'closeBehavior', label: '关闭行为', icon: SwitchButton },
+  { id: 'workday', label: '工作日', icon: Calendar },
+  { id: 'widget', label: '桌面挂件', icon: Monitor },
+  { id: 'desktopOrganize', label: '桌面整理', icon: Folder, route: '/desktop-organize' },
+  { id: 'about', label: '关于', icon: InfoFilled }
 ]
+
+function onMenuClick(item: MenuItem) {
+  if (item.route) {
+    void router.push(item.route)
+    return
+  }
+  activeSection.value = item.id as SettingsSection
+}
 </script>
 
 <style scoped lang="scss">

@@ -17,6 +17,7 @@ import type {
 } from '@shared/types'
 import type { FilterNode } from '@shared/task-filter-ast'
 import type { ViewTemplateId } from '@shared/view-templates'
+import type { ConfirmClosePayload } from '@shared/close-behavior'
 
 /**
  * 白名单 IPC 封装：渲染进程仅可调用此处暴露的方法。
@@ -66,7 +67,9 @@ const api: DesktopApi = {
     runNow: (id: string) => ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_RUN_NOW, id)
   },
   holidays: {
-    calendarMarks: (years: number[]) => ipcRenderer.invoke(IPC.HOLIDAYS_CALENDAR_MARKS, years)
+    calendarMarks: (years: number[]) => ipcRenderer.invoke(IPC.HOLIDAYS_CALENDAR_MARKS, years),
+    status: () => ipcRenderer.invoke(IPC.HOLIDAYS_STATUS),
+    refresh: (years: number[]) => ipcRenderer.invoke(IPC.HOLIDAYS_REFRESH, years)
   },
   taskViews: {
     list: () => ipcRenderer.invoke(IPC.TASK_VIEWS_LIST),
@@ -96,6 +99,96 @@ const api: DesktopApi = {
       ipcRenderer.invoke(IPC.CATEGORIES_UPDATE, id, dto),
     delete: (id: string) => ipcRenderer.invoke(IPC.CATEGORIES_DELETE, id)
   },
+  tags: {
+    list: () => ipcRenderer.invoke(IPC.TAGS_LIST)
+  },
+  desktopOrganize: {
+    scan: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_SCAN),
+    preview: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_PREVIEW),
+    execute: (plan?: import('@shared/desktop-organize-types').DesktopOrganizePlan) =>
+      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_EXECUTE, plan),
+    undo: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_UNDO),
+    canUndo: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CAN_UNDO),
+    getSettings: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_SETTINGS_GET),
+    updateSettings: (dto: import('@shared/desktop-organize-types').UpdateDesktopOrganizeSettingsDto) =>
+      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_SETTINGS_SET, dto),
+    listCategories: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_LIST),
+    createCategory: (dto: import('@shared/desktop-organize-types').CreateDesktopCategoryDto) =>
+      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_CREATE, dto),
+    updateCategory: (
+      id: string,
+      dto: import('@shared/desktop-organize-types').UpdateDesktopCategoryDto
+    ) => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_UPDATE, id, dto),
+    deleteCategory: (id: string) => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_DELETE, id),
+    reorderCategories: (orderedIds: string[]) =>
+      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_REORDER, orderedIds),
+    setManualAssignment: (itemPath: string, categoryId: string) =>
+      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_MANUAL_SET, itemPath, categoryId),
+    removeManualAssignment: (itemPath: string) =>
+      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_MANUAL_REMOVE, itemPath),
+    getDesktopPath: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_GET_DESKTOP_PATH),
+    openDesktop: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_OPEN_DESKTOP),
+    listCustomRules: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_LIST),
+    createCustomRule: (dto: import('@shared/desktop-organize-types').CreateDesktopCustomRuleDto) =>
+      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_CREATE, dto),
+    updateCustomRule: (id: string, dto: import('@shared/desktop-organize-types').UpdateDesktopCustomRuleDto) =>
+      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_UPDATE, id, dto),
+    deleteCustomRule: (id: string) => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_DELETE, id),
+    listDefaultRules: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_DEFAULT_RULES_LIST),
+    setDefaultRuleEnabled: (categoryId: string, enabled: boolean) =>
+      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_DEFAULT_RULES_SET_ENABLED, categoryId, enabled)
+  },
+  widget: {
+    toggle: () => ipcRenderer.invoke(IPC.WIDGET_TOGGLE),
+    show: () => ipcRenderer.invoke(IPC.WIDGET_SHOW),
+    getSettings: () => ipcRenderer.invoke(IPC.WIDGET_GET_SETTINGS),
+    updateSettings: (dto: import('@shared/widget-notes').UpdateWidgetSettingsDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_UPDATE_SETTINGS, dto)
+  },
+  widgetInstances: {
+    list: () => ipcRenderer.invoke(IPC.WIDGET_INSTANCES_LIST),
+    get: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCES_GET, id),
+    create: (dto: import('@shared/widget-notes').CreateWidgetInstanceDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_INSTANCES_CREATE, dto),
+    update: (id: string, dto: import('@shared/widget-notes').UpdateWidgetInstanceDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_INSTANCES_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCES_DELETE, id),
+    show: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCE_SHOW, id),
+    hide: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCE_HIDE, id),
+    toggle: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCE_TOGGLE, id)
+  },
+  capture: {
+    toggle: () => ipcRenderer.invoke(IPC.CAPTURE_TOGGLE),
+    show: () => ipcRenderer.invoke(IPC.CAPTURE_SHOW),
+    hide: () => ipcRenderer.invoke(IPC.CAPTURE_HIDE)
+  },
+  widgetNotes: {
+    list: () => ipcRenderer.invoke(IPC.WIDGET_NOTES_LIST),
+    create: (dto?: import('@shared/widget-notes').CreateWidgetNoteDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_NOTES_CREATE, dto),
+    update: (id: string, dto: import('@shared/widget-notes').UpdateWidgetNoteDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_NOTES_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.WIDGET_NOTES_DELETE, id),
+    convertToTask: (id: string, dto: import('@shared/widget-notes').ConvertWidgetNoteToTaskDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_NOTES_CONVERT_TO_TASK, id, dto)
+  },
+  fence: {
+    getSettings: () => ipcRenderer.invoke(IPC.FENCE_GET_SETTINGS),
+    updateSettings: (dto: import('@shared/fence-types').UpdateDesktopFenceSettingsDto) =>
+      ipcRenderer.invoke(IPC.FENCE_UPDATE_SETTINGS, dto),
+    showAll: () => ipcRenderer.invoke(IPC.FENCE_SHOW_ALL),
+    hideAll: () => ipcRenderer.invoke(IPC.FENCE_HIDE_ALL),
+    listLayouts: () => ipcRenderer.invoke(IPC.FENCE_LIST_LAYOUTS),
+    updateLayout: (categoryId: string, dto: import('@shared/fence-types').UpdateDesktopFenceLayoutDto) =>
+      ipcRenderer.invoke(IPC.FENCE_UPDATE_LAYOUT, categoryId, dto),
+    recoverDesktopIcons: () => ipcRenderer.invoke(IPC.FENCE_RECOVER_DESKTOP_ICONS),
+    getWallpaper: () => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_GET),
+    pickWallpaper: () => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_PICK),
+    applyWallpaper: (sourcePath: string) => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_APPLY, sourcePath),
+    restoreWallpaper: () => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_RESTORE),
+    listWallpaperPresets: () => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_LIST_PRESETS),
+    applyWallpaperPreset: (presetId: string) => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_APPLY_PRESET, presetId)
+  },
   app: {
     getDataPath: () => ipcRenderer.invoke(IPC.APP_GET_DATA_PATH),
     setDataPath: (path: string) => ipcRenderer.invoke(IPC.APP_SET_DATA_PATH, path),
@@ -111,7 +204,12 @@ const api: DesktopApi = {
     setLlmConfig: (config) => ipcRenderer.invoke(IPC.APP_SET_LLM_CONFIG, config),
     getAiPrompt: () => ipcRenderer.invoke(IPC.APP_GET_AI_PROMPT),
     setAiPrompt: (config) => ipcRenderer.invoke(IPC.APP_SET_AI_PROMPT, config),
+    getCloseBehavior: () => ipcRenderer.invoke(IPC.APP_GET_CLOSE_BEHAVIOR),
+    setCloseBehavior: (behavior) => ipcRenderer.invoke(IPC.APP_SET_CLOSE_BEHAVIOR, behavior),
+    confirmClose: (payload: ConfirmClosePayload) =>
+      ipcRenderer.invoke(IPC.APP_CONFIRM_CLOSE, payload),
     showWindow: () => ipcRenderer.invoke(IPC.APP_SHOW_WINDOW),
+    openMain: (route?: string) => ipcRenderer.invoke(IPC.APP_OPEN_MAIN, route),
     pickAttachment: () => ipcRenderer.invoke(IPC.APP_PICK_ATTACHMENT),
     saveAttachment: (dto) => ipcRenderer.invoke(IPC.APP_SAVE_ATTACHMENT, dto),
     resolveAttachmentUrl: (uri) => ipcRenderer.invoke(IPC.APP_RESOLVE_ATTACHMENT_URL, uri),
@@ -130,12 +228,24 @@ const api: DesktopApi = {
       ipcRenderer.on(IPC.APP_ACTION, listener)
       return () => ipcRenderer.removeListener(IPC.APP_ACTION, listener)
     },
+    onCloseRequest: (callback) => {
+      const listener = () => callback()
+      ipcRenderer.on(IPC.APP_CLOSE_REQUEST, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_CLOSE_REQUEST, listener)
+    },
     onMessagePush: (callback) => {
       const listener = (_event: Electron.IpcRendererEvent, message: import('@shared/types').AppMessage) => {
         callback(message)
       }
       ipcRenderer.on(IPC.APP_MESSAGE_PUSH, listener)
       return () => ipcRenderer.removeListener(IPC.APP_MESSAGE_PUSH, listener)
+    },
+    onNavigate: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, route: string) => {
+        callback(route)
+      }
+      ipcRenderer.on(IPC.APP_NAVIGATE, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_NAVIGATE, listener)
     }
   }
 }

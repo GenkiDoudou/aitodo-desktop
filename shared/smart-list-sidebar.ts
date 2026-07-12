@@ -5,12 +5,10 @@
 
 /** 可在设置中配置显示策略的侧栏项 id */
 export type SmartListSidebarItemId =
+  | 'inbox'
   | 'all'
-  | 'today'
-  | 'week'
   | 'last7days'
   | 'uncategorized'
-  | 'filters'
   | 'done'
   | 'trash'
 
@@ -30,25 +28,21 @@ export const SMART_LIST_SIDEBAR_VISIBILITY_LABELS: Record<SmartListSidebarVisibi
 
 export type SmartListSidebarPreferences = Record<SmartListSidebarItemId, SmartListSidebarVisibility>
 
-/** 默认策略：与常见 TickTick 习惯接近（全部默认隐藏，常用项显示） */
+/** 默认策略：全部始终展示（下属自定义视图），常用项显示 */
 export const DEFAULT_SMART_LIST_SIDEBAR_PREFERENCES: SmartListSidebarPreferences = {
-  all: 'hide',
-  today: 'show',
-  week: 'show',
+  inbox: 'when_nonempty',
+  all: 'show',
   last7days: 'show',
   uncategorized: 'show',
-  filters: 'show',
   done: 'show',
   trash: 'show'
 }
 
 export const SMART_LIST_SIDEBAR_ITEM_IDS: SmartListSidebarItemId[] = [
+  'inbox',
   'all',
-  'today',
-  'week',
   'last7days',
   'uncategorized',
-  'filters',
   'done',
   'trash'
 ]
@@ -59,17 +53,13 @@ export const SMART_LIST_SIDEBAR_SETTING_GROUPS: {
 }[] = [
   {
     items: [
+      { id: 'inbox', label: '收件箱' },
       { id: 'all', label: '全部' },
-      { id: 'today', label: '今天' },
-      { id: 'week', label: '本周' },
       { id: 'last7days', label: '最近7天' }
     ]
   },
   {
-    items: [
-      { id: 'uncategorized', label: '未分类' },
-      { id: 'filters', label: '过滤器' }
-    ]
+    items: [{ id: 'uncategorized', label: '未分类' }]
   },
   {
     items: [

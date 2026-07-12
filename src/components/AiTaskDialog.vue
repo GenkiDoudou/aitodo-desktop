@@ -96,7 +96,8 @@ import { ref, watch } from 'vue'
 import { MagicStick } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { Category, Task } from '@shared/types'
-import { parseAiTaskInput, buildCreateTaskDtoFromParsed, type AiParsedTaskDraft } from '@shared/ai-task-parser'
+import { parseAiTaskInput, type AiParsedTaskDraft } from '@shared/ai-task-parser'
+import { buildQuickCreateTaskDto, toParseCategories } from '@shared/quick-create-task'
 import { recurrenceLabel } from '@shared/task-reminder'
 import { unwrapIpc } from '@/ipc/client'
 
@@ -127,6 +128,10 @@ function recurrenceText(draft: AiParsedTaskDraft): string {
   return recurrenceLabel(draft.recurrence, draft.dueAt)
 }
 
+function parseCategoriesRef() {
+  return toParseCategories(props.categories)
+}
+
 function runParse() {
   const text = inputText.value.trim()
   if (!text) {
@@ -134,7 +139,7 @@ function runParse() {
     return
   }
   draft.value = parseAiTaskInput(text, {
-    categories: props.categories.map((c) => ({ id: c.id, name: c.name }))
+    categories: parseCategoriesRef()
   })
 }
 
@@ -155,7 +160,7 @@ async function submit() {
 
   runParse()
   const parsed = draft.value ?? parseAiTaskInput(text, {
-    categories: props.categories.map((c) => ({ id: c.id, name: c.name }))
+    categories: parseCategoriesRef()
   })
 
   const title = parsed.title.trim() || text.split(/[，,。]/)[0]?.trim() || text
@@ -166,7 +171,7 @@ async function submit() {
 
   saving.value = true
   try {
-    const dto = buildCreateTaskDtoFromParsed(parsed)
+    const dto = buildQuickCreateTaskDto(text, props.categories)
     const task = unwrapIpc(await window.api.tasks.create(dto))
     emit('created', task)
     emit('update:modelValue', false)

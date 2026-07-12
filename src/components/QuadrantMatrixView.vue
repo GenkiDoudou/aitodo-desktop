@@ -68,6 +68,7 @@
               />
               <div class="quadrant-matrix__task-body">
                 <div class="quadrant-matrix__title-row">
+                  <TaskPriorityBadge :priority="task.priority ?? 4" />
                   <span class="quadrant-matrix__task-title" :class="{ 'is-done': task.status === 'DONE' }">
                     {{ task.title }}
                   </span>
@@ -78,10 +79,26 @@
                     {{ childCount(task.id) }}
                   </span>
                 </div>
-                <div v-if="depth === 0" class="quadrant-matrix__task-meta">
+                <div v-if="depth === 0 && hasTaskMeta(task)" class="quadrant-matrix__task-meta">
                   <span v-if="categoryName(task)" class="quadrant-matrix__category">
                     <span class="quadrant-matrix__folder" aria-hidden="true">📁</span>
                     {{ categoryName(task) }}
+                  </span>
+                  <span v-if="showCompletedAt(task)" class="quadrant-matrix__meta-item quadrant-matrix__meta-item--completed">
+                    完成 {{ formatTaskListTime(task.completedAt!) }}
+                  </span>
+                  <span v-if="showCreatedAt(task)" class="quadrant-matrix__meta-item">
+                    创建 {{ formatTaskCreatedAt(task.createdAt) }}
+                  </span>
+                  <span
+                    v-if="showDueAt(task)"
+                    class="quadrant-matrix__meta-item"
+                    :class="{ 'is-overdue': isOverdue(task) }"
+                  >
+                    截止 {{ formatTaskListTime(task.dueAt!) }}
+                  </span>
+                  <span v-if="showRemindAt(task)" class="quadrant-matrix__meta-item">
+                    提醒 {{ formatTaskListTime(task.remindAt!) }}
                   </span>
                 </div>
               </div>
@@ -138,6 +155,7 @@
                 />
                 <div class="quadrant-matrix__task-body">
                   <div class="quadrant-matrix__title-row">
+                    <TaskPriorityBadge :priority="task.priority ?? 4" />
                     <span class="quadrant-matrix__task-title" :class="{ 'is-done': task.status === 'DONE' }">
                       {{ task.title }}
                     </span>
@@ -148,17 +166,26 @@
                       {{ childCount(task.id) }}
                     </span>
                   </div>
-                  <div v-if="depth === 0" class="quadrant-matrix__task-meta">
+                  <div v-if="depth === 0 && hasTaskMeta(task)" class="quadrant-matrix__task-meta">
                     <span v-if="categoryName(task)" class="quadrant-matrix__category">
                       <span class="quadrant-matrix__folder" aria-hidden="true">📁</span>
                       {{ categoryName(task) }}
                     </span>
+                    <span v-if="showCompletedAt(task)" class="quadrant-matrix__meta-item quadrant-matrix__meta-item--completed">
+                      完成 {{ formatTaskListTime(task.completedAt!) }}
+                    </span>
+                    <span v-if="showCreatedAt(task)" class="quadrant-matrix__meta-item">
+                      创建 {{ formatTaskCreatedAt(task.createdAt) }}
+                    </span>
                     <span
-                      v-if="task.dueAt"
-                      class="quadrant-matrix__due"
+                      v-if="showDueAt(task)"
+                      class="quadrant-matrix__meta-item"
                       :class="{ 'is-overdue': isOverdue(task) }"
                     >
-                      {{ formatDue(task.dueAt) }}
+                      截止 {{ formatTaskListTime(task.dueAt!) }}
+                    </span>
+                    <span v-if="showRemindAt(task)" class="quadrant-matrix__meta-item">
+                      提醒 {{ formatTaskListTime(task.remindAt!) }}
                     </span>
                   </div>
                 </div>
@@ -183,8 +210,12 @@ import {
   flattenQuadrantTaskTree,
   layoutTasksInQuadrant,
   splitTasksByPriority,
-  type QuadrantTaskGroupKey
+  type QuadrantLayoutOptions
 } from '@shared/quadrant-tasks'
+import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
+import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
+import TaskPriorityBadge from '@/components/TaskPriorityBadge.vue'
+import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
 
 const DRAG_MIME = 'application/x-aitodo-task'
 
@@ -192,7 +223,8 @@ const props = defineProps<{
   tasks: Task[]
   categories: Category[]
   loading: boolean
-  showCompleted: boolean
+  layoutOptions: QuadrantLayoutOptions
+  metaVisibility?: TaskListMetaVisibility
 }>()
 
 const emit = defineEmits<{
@@ -212,22 +244,22 @@ const dropTargetPriority = ref<TaskPriority | null>(null)
 /** 区分拖拽结束后的 click，避免误开详情 */
 let suppressClickUntil = 0
 
-function groupKey(priority: TaskPriority, group: QuadrantTaskGroupKey) {
+function groupKey(priority: TaskPriority, group: string) {
   return `${priority}-${group}`
 }
 
-function isGroupOpen(priority: TaskPriority, group: QuadrantTaskGroupKey) {
+function isGroupOpen(priority: TaskPriority, group: string) {
   const key = groupKey(priority, group)
   return groupOpen[key] !== false
 }
 
-function toggleGroup(priority: TaskPriority, group: QuadrantTaskGroupKey) {
+function toggleGroup(priority: TaskPriority, group: string) {
   const key = groupKey(priority, group)
   groupOpen[key] = !isGroupOpen(priority, group)
 }
 
 function layoutFor(priority: TaskPriority) {
-  return layoutTasksInQuadrant(buckets.value[priority], props.showCompleted)
+  return layoutTasksInQuadrant(buckets.value[priority], props.layoutOptions)
 }
 
 function hasTasks(priority: TaskPriority) {
@@ -275,8 +307,34 @@ function categoryName(task: Task) {
   return categoryMap.value.get(task.categoryId) ?? ''
 }
 
-function formatDue(iso: string) {
-  return dayjs(iso).format('YYYY/M/D, HH:mm')
+function metaVis() {
+  return props.metaVisibility ?? DEFAULT_TASK_LIST_META_VISIBILITY
+}
+
+function showCreatedAt(task: Task) {
+  return metaVis().createdAt && Boolean(task.createdAt)
+}
+
+function showDueAt(task: Task) {
+  return metaVis().dueAt && Boolean(task.dueAt)
+}
+
+function showRemindAt(task: Task) {
+  return metaVis().remindAt && Boolean(task.remindAt)
+}
+
+function showCompletedAt(task: Task) {
+  return metaVis().completedAt && Boolean(task.completedAt)
+}
+
+function hasTaskMeta(task: Task) {
+  return (
+    Boolean(categoryName(task)) ||
+    showCreatedAt(task) ||
+    showDueAt(task) ||
+    showRemindAt(task) ||
+    showCompletedAt(task)
+  )
 }
 
 function isOverdue(task: Task) {
@@ -583,6 +641,17 @@ function onTaskClick(taskId: string) {
   margin-top: 4px;
   font-size: 12px;
   color: var(--desktop-muted);
+}
+
+.quadrant-matrix__meta-item {
+  &.is-overdue {
+    color: var(--el-color-danger);
+    font-weight: 600;
+  }
+
+  &--completed {
+    color: #67c23a;
+  }
 }
 
 .quadrant-matrix__category {

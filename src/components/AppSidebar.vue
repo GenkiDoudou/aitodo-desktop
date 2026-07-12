@@ -51,8 +51,75 @@
     <!-- 二级：右侧子菜单（仅任务模块展示） -->
     <div v-if="activePrimary === 'tasks'" class="sidebar__panel">
       <div class="sidebar__panel-scroll">
+          <div class="sidebar__all-block">
+            <div class="sidebar__all-head">
+              <button
+                type="button"
+                class="sidebar__row"
+                :class="{ 'is-active': isAllActive() }"
+                @click="selectSmart('all')"
+              >
+                <el-icon class="sidebar__row-icon"><Files /></el-icon>
+                <span class="sidebar__row-label">全部</span>
+                <span v-if="taskCounts?.all != null" class="sidebar__row-count">{{ taskCounts.all }}</span>
+              </button>
+              <button type="button" class="sidebar__section-add" title="新建视图" @click="emit('create-view')">
+                <el-icon><Plus /></el-icon>
+              </button>
+            </div>
+            <nav class="sidebar__view-list">
+              <p v-if="sidebarViews.length === 0" class="sidebar__filter-hint sidebar__filter-hint--nested">
+                保存布局、筛选与分组，点击 + 新建
+              </p>
+              <el-dropdown
+                v-for="v in sidebarViews"
+                :key="v.id"
+                trigger="contextmenu"
+                @command="(cmd: string) => onViewCommand(cmd, v.id, v.name)"
+              >
+                <button
+                  type="button"
+                  class="sidebar__row sidebar__row--nested"
+                  :class="{ 'is-active': isViewActive(v.id) }"
+                  @click="selectView(v.id)"
+                >
+                  <el-icon class="sidebar__row-icon"><Grid /></el-icon>
+                  <span class="sidebar__row-label">{{ v.name }}</span>
+                </button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="rename">重命名</el-dropdown-item>
+                    <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                    <el-dropdown-item command="save-as">另存为</el-dropdown-item>
+                    <el-dropdown-item
+                      v-if="!isSystemView(v.id)"
+                      command="delete"
+                      divided
+                    >
+                      删除
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </nav>
+          </div>
+
           <button
-            v-for="item in visibleSmartItems"
+            v-if="showInbox"
+            type="button"
+            class="sidebar__row"
+            :class="{ 'is-active': isInboxActive() }"
+            @click="selectInbox"
+          >
+            <el-icon class="sidebar__row-icon"><MessageBox /></el-icon>
+            <span class="sidebar__row-label">收件箱</span>
+            <span v-if="taskCounts?.inbox != null && taskCounts.inbox > 0" class="sidebar__row-count">
+              {{ taskCounts.inbox }}
+            </span>
+          </button>
+
+          <button
+            v-for="item in visibleOtherSmartItems"
             :key="item.key"
             type="button"
             class="sidebar__row"
@@ -86,7 +153,7 @@
               <span v-if="uncategorizedCount != null" class="sidebar__row-count">{{ uncategorizedCount }}</span>
             </button>
             <el-dropdown
-              v-for="cat in categoryStore.categories"
+              v-for="{ cat, keywordDisplay } in sidebarCategories"
               :key="cat.id"
               trigger="contextmenu"
               @command="(cmd: string) => onCategoryCommand(cmd, cat.id, cat.name)"
@@ -94,52 +161,36 @@
               <button
                 type="button"
                 class="sidebar__row"
-                :class="{ 'is-active': isCategoryActive(cat.id) }"
+                :class="{ 'is-active': isCategoryActive(cat.id), 'has-keywords': cat.keywords?.length }"
                 @click="selectCategory(cat.id)"
               >
                 <span class="sidebar__row-dot" :style="{ background: cat.color ?? '#909399' }" />
-                <span class="sidebar__row-label">{{ cat.name }}</span>
+                <span class="sidebar__row-body">
+                  <span class="sidebar__row-label">{{ cat.name }}</span>
+                  <el-tooltip
+                    v-if="cat.keywords?.length"
+                    :content="categoryKeywordsTitle(cat.keywords)"
+                    placement="right"
+                    :show-after="280"
+                  >
+                    <span class="sidebar__row-tags">
+                      <span
+                        v-for="kw in keywordDisplay.visible"
+                        :key="kw"
+                        class="sidebar__keyword-tag"
+                      >{{ kw }}</span>
+                      <span v-if="keywordDisplay.overflow > 0" class="sidebar__keyword-tag is-more">
+                        +{{ keywordDisplay.overflow }}
+                      </span>
+                    </span>
+                  </el-tooltip>
+                </span>
                 <span v-if="categoryCounts?.[cat.id] != null" class="sidebar__row-count">
                   {{ categoryCounts[cat.id] }}
                 </span>
               </button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
-                  <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </nav>
-
-          <div v-if="showViews" class="sidebar__section-head sidebar__section-head--filter">
-            <span class="sidebar__section-title">视图</span>
-            <button type="button" class="sidebar__section-add" title="新建视图" @click="emit('create-view')">
-              <el-icon><Plus /></el-icon>
-            </button>
-          </div>
-          <nav v-if="showViews" class="sidebar__list">
-            <p v-if="viewStore.items.length === 0" class="sidebar__filter-hint">
-              保存布局、筛选与分组，点击 + 新建
-            </p>
-            <el-dropdown
-              v-for="v in viewStore.items"
-              :key="v.id"
-              trigger="contextmenu"
-              @command="(cmd: string) => onViewCommand(cmd, v.id, v.name)"
-            >
-              <button
-                type="button"
-                class="sidebar__row"
-                :class="{ 'is-active': isViewActive(v.id) }"
-                @click="selectView(v.id)"
-              >
-                <el-icon class="sidebar__row-icon"><Grid /></el-icon>
-                <span class="sidebar__row-label">{{ v.name }}</span>
-              </button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="rename">重命名</el-dropdown-item>
                   <el-dropdown-item command="edit">编辑</el-dropdown-item>
                   <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
                 </el-dropdown-menu>
@@ -188,6 +239,10 @@
         </button>
       </div>
     </div>
+    <CategoryEditDialog
+      v-model="categoryEditOpen"
+      :category="editingCategory"
+    />
   </aside>
 </template>
 
@@ -204,7 +259,7 @@ import {
   Grid,
   Plus,
   Setting,
-  Sunny,
+  MessageBox,
   Finished,
   Clock,
   Timer,
@@ -216,19 +271,25 @@ import { useCategoryStore } from '@/stores/category-store'
 import { useViewStore } from '@/stores/view-store'
 import { useSmartListSidebarStore } from '@/stores/smart-list-sidebar-store'
 import { useMessageStore } from '@/stores/message-store'
+import {
+  DEFAULT_TASK_VIEW_ALL_ID,
+  DEFAULT_TASK_VIEW_KANBAN_ID
+} from '@shared/apply-task-view'
+import type { Category } from '@shared/types'
 import AppMessagePanel from '@/components/AppMessagePanel.vue'
+import CategoryEditDialog from '@/components/CategoryEditDialog.vue'
 
 type PrimaryKey = 'tasks' | 'calendar' | 'matrix' | 'summary'
 type SummarySectionKey = 'config' | 'results'
 
 const props = withDefaults(
   defineProps<{
-    activeSmart?: 'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash' | null
+    activeSmart?: 'inbox' | 'all' | 'last7days' | 'matrix' | 'done' | 'trash' | null
     activeCategory?: string | null | undefined
     activeViewId?: string | null
     summaryActive?: boolean
     activeSummarySection?: SummarySectionKey | null
-    taskCounts?: { all: number; today: number; week: number; last7days: number }
+    taskCounts?: { all: number; last7days: number; inbox?: number }
     categoryCounts?: Record<string, number>
     uncategorizedCount?: number
     trashCount?: number
@@ -247,7 +308,8 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  'select-smart': ['all' | 'today' | 'week' | 'last7days']
+  'select-smart': ['all' | 'last7days']
+  'select-inbox': []
   'select-matrix': []
   'select-summary': [SummarySectionKey]
   'select-done': []
@@ -257,6 +319,7 @@ const emit = defineEmits<{
   'select-view': [string]
   'create-view': []
   'edit-view': [string]
+  'save-as-view': [string]
   'select-tasks': []
   'open-settings': []
   'open-task': [string]
@@ -268,6 +331,17 @@ let unsubscribeMessagePush: (() => void) | null = null
 
 const categoryStore = useCategoryStore()
 const viewStore = useViewStore()
+const categoryEditOpen = ref(false)
+const editingCategory = ref<Category | null>(null)
+
+/** 「全部」已由顶部入口承担，侧栏不再重复展示默认「全部任务」视图 */
+const sidebarViews = computed(() =>
+  viewStore.items.filter((v) => v.id !== DEFAULT_TASK_VIEW_ALL_ID)
+)
+
+function isSystemView(id: string) {
+  return id === DEFAULT_TASK_VIEW_ALL_ID || id === DEFAULT_TASK_VIEW_KANBAN_ID
+}
 
 /** 当前一级导航：日历页 / 四象限 / 默认任务 */
 const activePrimary = computed<PrimaryKey>(() => {
@@ -289,31 +363,24 @@ const summaryItems: { key: SummarySectionKey; label: string; icon: Component }[]
   { key: 'results', label: '汇总结果', icon: Document }
 ]
 
-const smartItems: {
-  key: 'all' | 'today' | 'week' | 'last7days'
-  label: string
-  icon: Component
-}[] = [
-  { key: 'all', label: '全部', icon: Files },
-  { key: 'today', label: '今天', icon: Sunny },
-  { key: 'week', label: '本周', icon: Calendar },
+const otherSmartItems: { key: 'last7days'; label: string; icon: Component }[] = [
   { key: 'last7days', label: '最近7天', icon: Clock }
 ]
 
 const sidebarVisStore = useSmartListSidebarStore()
 
-const visibleSmartItems = computed(() =>
-  smartItems.filter((item) =>
+const visibleOtherSmartItems = computed(() =>
+  otherSmartItems.filter((item) =>
     sidebarVisStore.isVisible(item.key, props.taskCounts?.[item.key] ?? 0)
   )
 )
 
-const showUncategorized = computed(() =>
-  sidebarVisStore.isVisible('uncategorized', props.uncategorizedCount ?? 0)
+const showInbox = computed(() =>
+  sidebarVisStore.isVisible('inbox', props.taskCounts?.inbox ?? 0)
 )
 
-const showViews = computed(() =>
-  sidebarVisStore.isVisible('filters', viewStore.items.length)
+const showUncategorized = computed(() =>
+  sidebarVisStore.isVisible('uncategorized', props.uncategorizedCount ?? 0)
 )
 
 const showDone = computed(() => sidebarVisStore.isVisible('done', props.doneCount ?? 0))
@@ -342,6 +409,14 @@ function selectSummarySection(key: SummarySectionKey) {
   emit('select-summary', key)
 }
 
+function isInboxActive() {
+  return props.activeSmart === 'inbox' && !props.activeViewId && props.activeCategory === undefined
+}
+
+function selectInbox() {
+  emit('select-inbox')
+}
+
 function isDoneActive() {
   return props.activeSmart === 'done'
 }
@@ -358,8 +433,20 @@ function selectTrash() {
   emit('select-trash')
 }
 
-function isSmartActive(key: 'all' | 'today' | 'week' | 'last7days') {
-  return props.activeSmart === key
+function isAllActive() {
+  return (
+    props.activeSmart === 'all' &&
+    !props.activeViewId &&
+    props.activeCategory === undefined
+  )
+}
+
+function isSmartActive(key: 'last7days') {
+  return (
+    props.activeSmart === key &&
+    !props.activeViewId &&
+    props.activeCategory === undefined
+  )
 }
 
 function isUncategorizedActive() {
@@ -374,11 +461,34 @@ function isCategoryActive(id: string) {
   return props.activeCategory === id && !props.activeViewId
 }
 
+const CATEGORY_KEYWORD_VISIBLE_MAX = 2
+
+function categoryKeywordDisplay(keywords: string[]) {
+  if (keywords.length <= CATEGORY_KEYWORD_VISIBLE_MAX) {
+    return { visible: keywords, overflow: 0 }
+  }
+  return {
+    visible: keywords.slice(0, CATEGORY_KEYWORD_VISIBLE_MAX),
+    overflow: keywords.length - CATEGORY_KEYWORD_VISIBLE_MAX
+  }
+}
+
+function categoryKeywordsTitle(keywords: string[]) {
+  return keywords.join(' · ')
+}
+
+const sidebarCategories = computed(() =>
+  categoryStore.categories.map((cat) => ({
+    cat,
+    keywordDisplay: categoryKeywordDisplay(cat.keywords ?? [])
+  }))
+)
+
 function isViewActive(id: string) {
   return props.activeViewId === id
 }
 
-function selectSmart(key: 'all' | 'today' | 'week' | 'last7days') {
+function selectSmart(key: 'all' | 'last7days') {
   emit('select-smart', key)
 }
 
@@ -406,36 +516,36 @@ async function onViewCommand(command: string, id: string, name: string) {
     emit('edit-view', id)
     return
   }
+  if (command === 'save-as') {
+    emit('save-as-view', id)
+    return
+  }
   if (command === 'delete') {
+    if (isSystemView(id)) return
     await ElMessageBox.confirm(`确定删除视图「${name}」？`, '删除视图', {
       type: 'warning',
       confirmButtonText: '删除',
       cancelButtonText: '取消'
     })
+    const wasActive = props.activeViewId === id
     await viewStore.remove(id)
+    if (wasActive) {
+      emit('select-smart', 'all')
+    }
   }
 }
 
 async function promptCategory() {
-  const { value } = await ElMessageBox.prompt('清单名称', '新建清单', {
-    confirmButtonText: '创建',
-    cancelButtonText: '取消'
-  })
-  if (value?.trim()) {
-    await categoryStore.create(value.trim())
-  }
+  editingCategory.value = null
+  categoryEditOpen.value = true
 }
 
 async function onCategoryCommand(command: string, id: string, name: string) {
   if (command === 'edit') {
-    const { value } = await ElMessageBox.prompt('清单名称', '编辑清单', {
-      confirmButtonText: '保存',
-      cancelButtonText: '取消',
-      inputValue: name
-    })
-    if (value?.trim() && value.trim() !== name) {
-      await categoryStore.update(id, value.trim())
-    }
+    const cat = categoryStore.categories.find((c) => c.id === id)
+    if (!cat) return
+    editingCategory.value = cat
+    categoryEditOpen.value = true
   } else if (command === 'delete') {
     await ElMessageBox.confirm(`确定删除清单「${name}」？其下任务将变为未分类。`, '删除清单', {
       type: 'warning',
@@ -615,6 +725,14 @@ onUnmounted(() => {
     background: var(--desktop-sidebar-item-active);
     font-weight: 600;
   }
+
+  &.has-keywords {
+    align-items: flex-start;
+
+    .sidebar__row-count {
+      margin-top: 2px;
+    }
+  }
 }
 
 .sidebar__row-icon {
@@ -633,6 +751,19 @@ onUnmounted(() => {
   border-radius: 50%;
   flex-shrink: 0;
   margin-left: 4px;
+  margin-top: 5px;
+
+  .sidebar__row:not(.has-keywords) & {
+    margin-top: 0;
+  }
+}
+
+.sidebar__row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sidebar__row-label {
@@ -641,6 +772,53 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sidebar__row-tags {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.sidebar__keyword-tag {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 72px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--desktop-muted);
+  background: var(--desktop-bg);
+  border: 1px solid var(--desktop-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.is-more {
+    flex-shrink: 0;
+    max-width: none;
+    padding-inline: 5px;
+    color: var(--desktop-muted);
+    background: color-mix(in srgb, var(--desktop-muted) 10%, var(--desktop-bg));
+  }
+
+  .is-active & {
+    color: #6b7280;
+    background: color-mix(in srgb, var(--desktop-sidebar-item-active) 60%, var(--desktop-bg));
+    border-color: color-mix(in srgb, var(--desktop-border) 80%, transparent);
+
+    &.is-more {
+      background: color-mix(in srgb, var(--desktop-muted) 14%, var(--desktop-sidebar-item-active));
+    }
+  }
 }
 
 .sidebar__row-count {
@@ -700,6 +878,36 @@ onUnmounted(() => {
   }
 }
 
+.sidebar__all-block {
+  margin-bottom: 2px;
+}
+
+.sidebar__all-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
+  .sidebar__row {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+}
+
+.sidebar__view-list {
+  display: flex;
+  flex-direction: column;
+
+  :deep(.el-dropdown) {
+    display: block;
+  }
+}
+
+.sidebar__row--nested {
+  padding-left: 30px;
+  font-size: 12px;
+}
+
 .sidebar__filter-hint {
   margin: 0 10px 8px;
   padding: 8px 10px;
@@ -708,5 +916,10 @@ onUnmounted(() => {
   font-size: 11px;
   line-height: 1.45;
   color: var(--desktop-muted);
+
+  &--nested {
+    margin: 0 10px 6px 30px;
+    padding: 6px 8px;
+  }
 }
 </style>

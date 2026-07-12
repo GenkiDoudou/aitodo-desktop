@@ -12,6 +12,15 @@ import type {
 import type { CategoryRepository } from '../db/category-repository'
 import type { KanbanGroupRepository } from '../db/kanban-group-repository'
 
+function sameTagList(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) {
+    return false
+  }
+  const sortedA = [...a].sort()
+  const sortedB = [...b].sort()
+  return sortedA.every((v, i) => v === sortedB[i])
+}
+
 export interface TaskActivityRecordInput {
   taskId: string
   type: TaskActivityType
@@ -86,11 +95,29 @@ export class TaskActivityRecorder {
       })
     }
 
+    if (dto.tags !== undefined && !sameTagList(existing.tags ?? [], updated.tags ?? [])) {
+      events.push({
+        taskId: updated.id,
+        type: 'tags_updated',
+        summary: this.tagsSummary(updated.tags ?? []),
+        createdAt: ts
+      })
+    }
+
     if (dto.dueAt !== undefined && (dto.dueAt ?? null) !== existing.dueAt) {
       events.push({
         taskId: updated.id,
         type: 'due_updated',
         summary: updated.dueAt ? '设置了截止时间' : '清除了截止时间',
+        createdAt: ts
+      })
+    }
+
+    if (dto.startAt !== undefined && (dto.startAt ?? null) !== existing.startAt) {
+      events.push({
+        taskId: updated.id,
+        type: 'start_updated',
+        summary: updated.startAt ? '设置了开始时间' : '清除了开始时间',
         createdAt: ts
       })
     }
@@ -279,6 +306,13 @@ export class TaskActivityRecorder {
     }
     const category = this.categoryRepo.findById(categoryId)
     return category ? `移至清单「${category.name}」` : '更改了清单'
+  }
+
+  private tagsSummary(tags: string[]): string {
+    if (!tags.length) {
+      return '清除了标签'
+    }
+    return `设置标签为 ${tags.map((t) => `#${t}`).join(' ')}`
   }
 
   private kanbanGroupSummary(kanbanGroupId: string | null): string {

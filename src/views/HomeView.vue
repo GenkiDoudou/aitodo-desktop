@@ -17,6 +17,7 @@
       :summary-active="isSummaryView"
       :active-summary-section="navSummarySection"
       @select-smart="onSmart"
+      @select-inbox="onInbox"
       @select-matrix="onMatrix"
       @select-summary="onSummary"
       @select-done="onDone"
@@ -27,7 +28,7 @@
       @select-view="onView"
       @create-view="openCreateView"
       @edit-view="openEditView"
-
+      @save-as-view="openSaveAsView"
       @open-settings="router.push('/settings')"
       @open-task="openTask"
 
@@ -52,33 +53,6 @@
             <h1 class="home__view-title">{{ viewTitle }}</h1>
 
             <span v-if="!isSpecialListView" class="home__view-count">{{ listDisplayCount }} 项</span>
-
-            <el-button
-              v-if="!isSpecialListView && !isMatrixView && viewStore.selectedView"
-              size="small"
-              text
-              type="primary"
-              @click="openEditView(viewStore.selectedView!.id)"
-            >
-              编辑视图
-            </el-button>
-            <el-button
-              v-if="!isSpecialListView && !isMatrixView && viewStore.selectedView"
-              size="small"
-              text
-              @click="openSaveAsView"
-            >
-              另存为
-            </el-button>
-            <el-button
-              v-if="!isSpecialListView && !isMatrixView && viewStore.selectedView"
-              size="small"
-              text
-              type="danger"
-              @click="confirmDeleteView"
-            >
-              删除
-            </el-button>
 
             <el-select
               v-if="showSmartDateFieldFilter"
@@ -142,21 +116,19 @@
           </div>
 
           <div class="home__list-actions">
-
-            <TaskListGroupSortPopover
-              v-if="showTaskListGroupSort"
+            <QuadrantMatrixMenu
+              v-if="isMatrixView || isQuadrantViewLayout"
+              v-model:meta-visibility="taskListMetaVisibility"
+              @change="onQuadrantPrefsChange"
+            />
+            <TaskListViewMenu
+              v-else-if="showListViewSettingsMenu"
+              v-model:hide-done="listHideDone"
+              v-model:detail-style="taskDetailStyle"
+              v-model:meta-visibility="taskListMetaVisibility"
               v-model:group-by="taskGroupBy"
               v-model:sort-by="taskSortBy"
             />
-
-            <TaskListViewMenu
-              v-if="showListViewMenu"
-              v-model:view-mode="listViewMode"
-              v-model:hide-done="hideDoneModel"
-              v-model:detail-style="taskDetailStyle"
-              v-model:meta-visibility="taskListMetaVisibility"
-            />
-
             <el-button
               v-if="isTrashView"
               text
@@ -166,14 +138,13 @@
             >
               <el-icon><Delete /></el-icon>
             </el-button>
-
           </div>
 
         </header>
 
 
 
-        <div v-if="!isSpecialListView && !isMatrixView" class="home__quick-add">
+        <div v-if="!isSpecialListView && !isMatrixView && !isInboxView && !isQuadrantViewLayout" class="home__quick-add">
 
           <el-icon class="home__quick-add-icon"><Plus /></el-icon>
 
@@ -185,10 +156,15 @@
 
             :placeholder="quickAddPlaceholder"
 
-            :categories="categoryStore.categories.map((c) => ({ id: c.id, name: c.name }))"
+            :categories="parseCategoriesForMatch"
 
             @enter="onQuickAdd"
 
+          />
+
+          <TaskPriorityFlagMenu
+            v-model="quickAddPriority"
+            class="home__quick-add-priority"
           />
 
         </div>
@@ -217,12 +193,23 @@
           @toggle-status="onToggleStatus"
         />
 
+        <InboxView
+          v-else-if="isInboxView"
+          :notes="widgetNotes"
+          :tasks="inboxTasks"
+          @convert-note="openInboxConvertNote"
+          @delete-note="onInboxDeleteNote"
+          @select-task="openTask"
+          @triage-task="onInboxTriageTask"
+        />
+
         <QuadrantMatrixView
-          v-else-if="isMatrixView"
+          v-else-if="isMatrixView || isQuadrantViewLayout"
           :tasks="matrixDisplayTasks"
           :categories="categoryStore.categories"
           :loading="taskStore.loading"
-          :show-completed="!taskStore.filter.hideDone"
+          :layout-options="quadrantLayoutOptions"
+          :meta-visibility="taskListMetaVisibility"
           @select="openTask"
           @toggle-status="onToggleStatus"
           @create="onQuadrantQuickCreate"
@@ -238,15 +225,16 @@
         <TaskKanbanView
           v-else-if="listViewMode === 'kanban'"
           v-model:selected-column-id="kanbanSelectedColumnId"
-          v-model:board-mode="kanbanBoardMode"
+          :board-mode="kanbanBoardMode"
+          :sort-by="taskSortBy"
           :scope-key="kanbanScopeKeyValue"
-          :tasks="listDisplayTasks"
+          :tasks="kanbanDisplayTasks"
           :loading="taskStore.loading"
           :selected-id="activeTaskId"
           :hide-done="taskStore.filter.hideDone"
           :meta-visibility="taskListMetaVisibility"
           :default-category-id="kanbanDefaultCategoryId"
-          :parse-categories="categoryStore.categories.map((c) => ({ id: c.id, name: c.name }))"
+          :parse-categories="parseCategoriesForMatch"
           @select="openTask"
           @toggle-status="onToggleStatus"
           @changed="onKanbanChanged"
@@ -257,7 +245,13 @@
           :tasks="listDisplayTasks"
           :loading="taskStore.loading"
           :selected-id="activeTaskId"
+          :categories="parseCategoriesForMatch"
+          :range-preset="timelineRangePreset"
+          :range-between="timelineRangeBetween"
           @select="openTask"
+          @schedule="onTimelineSchedule"
+          @create-on-day="onTimelineCreateOnDay"
+          @update-span="onTimelineUpdateSpan"
         />
 
         <TaskList
@@ -266,6 +260,8 @@
           :loading="taskStore.loading"
           :selected-id="activeTaskId"
           :meta-visibility="taskListMetaVisibility"
+          :show-category="showTaskListCategory"
+          :categories="parseCategoriesForMatch"
           @select="openTask"
           @toggle-status="onToggleStatus"
         />
@@ -311,7 +307,7 @@
           :task-id="activeTaskId"
           :default-category-id="defaultCategoryForCreate"
           :default-priority="defaultPriorityForCreate"
-          :emphasize-category="isMatrixView"
+          :emphasize-category="isMatrixView || isQuadrantViewLayout"
           @close="closeDetail"
           @saved="onTaskSaved"
         />
@@ -326,7 +322,11 @@
         :initial-group-by="viewEditorGroupBy"
         :initial-sort-by="viewEditorSortBy"
         :initial-kanban-board-mode="viewEditorKanbanMode"
+        :initial-quadrant-options="viewEditorQuadrantOptions"
         :initial-rule="viewEditorRule"
+        :initial-hide-done="viewEditorHideDone"
+        :initial-detail-style="viewEditorDetailStyle"
+        :initial-meta-visibility="viewEditorMetaVisibility"
         :categories="categoryStore.categories"
         @saved="onViewEditorSaved"
       />
@@ -353,8 +353,7 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import TaskViewEditor from '@/components/TaskViewEditor.vue'
 
 import TaskList from '@/components/TaskList.vue'
-import TaskListGroupSortPopover from '@/components/TaskListGroupSortPopover.vue'
-import TaskListViewMenu from '@/components/TaskListViewMenu.vue'
+import TaskPriorityFlagMenu from '@/components/TaskPriorityFlagMenu.vue'
 import TaskKanbanView from '@/components/TaskKanbanView.vue'
 import QuickAddInput from '@/components/QuickAddInput.vue'
 import TaskTimelineView from '@/components/TaskTimelineView.vue'
@@ -363,7 +362,10 @@ import CompletedTaskList from '@/components/CompletedTaskList.vue'
 
 import TrashTaskList from '@/components/TrashTaskList.vue'
 
+import InboxView from '@/components/InboxView.vue'
 import QuadrantMatrixView from '@/components/QuadrantMatrixView.vue'
+import QuadrantMatrixMenu from '@/components/QuadrantMatrixMenu.vue'
+import TaskListViewMenu from '@/components/TaskListViewMenu.vue'
 import SummaryResultsView from '@/components/SummaryResultsView.vue'
 import SettingsSummarySection from '@/components/settings/SettingsSummarySection.vue'
 
@@ -378,6 +380,12 @@ import { useViewStore } from '@/stores/view-store'
 
 import type { Task, TaskStatus, TaskViewLayout } from '@shared/types'
 import { matchTask, type FilterNode } from '@shared/task-filter-ast'
+import { toParseCategories } from '@shared/quick-create-task'
+import {
+  inferTimelineBetweenRange,
+  inferTimelineCalendarPreset,
+  type TimelineCalendarPreset
+} from '@shared/timeline-range'
 import { deriveAppliedViewState, isFilterRuleActive } from '@shared/apply-task-view'
 import type { KanbanBoardMode } from '@shared/kanban-config'
 
@@ -411,6 +419,13 @@ import {
   persistTaskSortBy
 } from '@/utils/filter-preferences'
 import {
+  readQuadrantViewPreferences,
+  type QuadrantViewPreferences
+} from '@/utils/quadrant-preferences'
+import { inboxBadgeCount, isUntriagedInboxTask } from '@shared/inbox-tasks'
+import type { WidgetNote } from '@shared/widget-notes'
+import { nowIso } from '@shared/datetime'
+import {
   readTaskDetailStyle,
   readTaskListMetaVisibility,
   readTaskListViewMode,
@@ -419,6 +434,10 @@ import {
   persistTaskListViewMode
 } from '@/utils/list-view-preferences'
 import { readKanbanBoardMode, persistKanbanBoardMode } from '@/utils/kanban-preferences'
+import {
+  defaultViewDisplayPreferences,
+  readViewDisplayPreferences
+} from '@/utils/view-display-preferences'
 import type { CalendarViewMode } from '@shared/calendar-tasks'
 
 
@@ -434,6 +453,9 @@ const viewStore = useViewStore()
 
 
 const quickAddText = ref('')
+const quickAddPriority = ref<TaskPriority>(DEFAULT_TASK_PRIORITY)
+/** 时间线双击空白：下一次快捷添加带上该日 dueAt */
+const pendingTimelineDateKey = ref<string | null>(null)
 
 const quickAddInputRef = ref<InstanceType<typeof QuickAddInput>>()
 
@@ -451,8 +473,9 @@ const navCategoryId = ref<string | null | undefined>(undefined)
 /** 视图导航：选中则与 smart/清单互斥 */
 const navViewId = ref<string | null>(null)
 
-const navSmart = ref<'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash'>('all')
+const navSmart = ref<'inbox' | 'all' | 'last7days' | 'matrix' | 'done' | 'trash'>('all')
 const navSummaryActive = ref(false)
+const widgetNotes = ref<WidgetNote[]>([])
 type SummarySection = 'config' | 'results'
 const navSummarySection = ref<SummarySection>('config')
 
@@ -474,6 +497,7 @@ const viewEditorLayout = ref<TaskViewLayout>('list')
 const viewEditorGroupBy = ref<TaskGroupBy>('none')
 const viewEditorSortBy = ref<TaskSortBy>('custom')
 const viewEditorKanbanMode = ref<KanbanBoardMode>('group')
+const viewEditorQuadrantOptions = ref<import('@shared/quadrant-layout').QuadrantLayoutOptions | null>(null)
 const viewEditorRule = ref<FilterNode | null>(null)
 
 const dateFieldLabels = TASK_DATE_FIELD_LABELS
@@ -483,14 +507,34 @@ const showSmartDateFieldFilter = computed(
   () =>
     !navViewId.value &&
     navCategoryId.value === undefined &&
-    (navSmart.value === 'today' || navSmart.value === 'week' || navSmart.value === 'last7days')
+    navSmart.value === 'last7days'
 )
 
-/** 普通任务列表顶栏：分组/排序、三点菜单（已完成/垃圾桶/四象限不展示） */
-const showTaskListGroupSort = computed(
-  () => !isSpecialListView.value && !isMatrixView.value && !isSummaryView.value
+/** 全部 / 视图 / 智能列表等跨清单场景显示清单名；进入具体清单时不显示 */
+const showTaskListCategory = computed(
+  () =>
+    navCategoryId.value === undefined &&
+    !isSpecialListView.value &&
+    !isMatrixView.value &&
+    !isInboxView.value &&
+    !isQuadrantViewLayout.value &&
+    !isSummaryView.value
 )
-const showListViewMenu = showTaskListGroupSort
+
+const showListViewSettingsMenu = computed(
+  () =>
+    !isSpecialListView.value &&
+    !isMatrixView.value &&
+    !isInboxView.value &&
+    !isQuadrantViewLayout.value
+)
+
+const listHideDone = computed({
+  get: () => taskStore.filter.hideDone,
+  set: (value: boolean) => {
+    void taskStore.setHideDone(value)
+  }
+})
 
 const listViewMode = ref<TaskListViewMode>(readTaskListViewMode())
 const taskDetailStyle = ref<TaskDetailStyle>(readTaskDetailStyle())
@@ -500,16 +544,26 @@ watch(listViewMode, (v) => persistTaskListViewMode(v))
 watch(taskDetailStyle, (v) => persistTaskDetailStyle(v))
 watch(taskListMetaVisibility, (v) => persistTaskListMetaVisibility(v), { deep: true })
 
-/** 与 store hideDone 同步：true=隐藏已完成 */
-const hideDoneModel = computed({
-  get: () => taskStore.filter.hideDone,
-  set: (v: boolean) => {
-    void taskStore.setHideDone(v)
+const taskGroupBy = ref<TaskGroupBy>(readTaskGroupBy())
+const taskSortBy = ref<TaskSortBy>(readTaskSortBy())
+const quadrantPrefs = ref<QuadrantViewPreferences>(readQuadrantViewPreferences())
+
+const quadrantLayoutOptions = computed(() => {
+  const fromView = activeNavView.value?.quadrantOptions
+  if (isQuadrantViewLayout.value && fromView) {
+    return fromView
+  }
+  return {
+    showCompleted: quadrantPrefs.value.showCompleted,
+    enableGrouping: quadrantPrefs.value.enableGrouping,
+    groupBy: quadrantPrefs.value.groupBy,
+    sortBy: quadrantPrefs.value.sortBy
   }
 })
 
-const taskGroupBy = ref<TaskGroupBy>(readTaskGroupBy())
-const taskSortBy = ref<TaskSortBy>(readTaskSortBy())
+function onQuadrantPrefsChange(prefs: QuadrantViewPreferences) {
+  quadrantPrefs.value = prefs
+}
 
 watch(taskGroupBy, (v) => persistTaskGroupBy(v))
 watch(taskSortBy, (v) => persistTaskSortBy(v))
@@ -547,6 +601,14 @@ watch(kanbanBoardMode, (mode) => {
   kanbanSelectedColumnId.value = null
 })
 
+watch(kanbanSelectedColumnId, (colId) => {
+  if (listViewMode.value !== 'kanban' || kanbanBoardMode.value !== 'priority') return
+  const n = colId != null ? Number(colId) : NaN
+  if (n === 1 || n === 2 || n === 3 || n === 4) {
+    quickAddPriority.value = n
+  }
+})
+
 watch(kanbanScopeKeyValue, () => {
   kanbanSelectedColumnId.value = null
 })
@@ -568,13 +630,23 @@ function kanbanStatusForQuickAdd(): import('@shared/types').TaskStatus | undefin
   return 'TODO'
 }
 
+/** 看板级别列选中时，顶栏快捷添加使用该级别；否则用快捷栏选择的级别 */
+function priorityForQuickAdd(): TaskPriority {
+  if (listViewMode.value === 'kanban' && kanbanBoardMode.value === 'priority') {
+    const sel = kanbanSelectedColumnId.value
+    const n = sel != null ? Number(sel) : NaN
+    if (n === 1 || n === 2 || n === 3 || n === 4) return n
+  }
+  return quickAddPriority.value
+}
+
 async function onKanbanChanged() {
   await taskStore.load()
 }
 
 
 
-const sidebarActiveSmart = computed<'all' | 'today' | 'week' | 'last7days' | 'matrix' | 'done' | 'trash' | null>(() => {
+const sidebarActiveSmart = computed<'inbox' | 'all' | 'last7days' | 'matrix' | 'done' | 'trash' | null>(() => {
   if (isSummaryView.value) return null
   if (navViewId.value) return null
   return navCategoryId.value !== undefined ? null : navSmart.value
@@ -595,7 +667,15 @@ const isTrashView = computed(
 )
 
 const isSpecialListView = computed(
-  () => isDoneView.value || isTrashView.value || isSummaryView.value
+  () => isDoneView.value || isTrashView.value || isSummaryView.value || isInboxView.value
+)
+
+const isInboxView = computed(
+  () =>
+    !navSummaryActive.value &&
+    navSmart.value === 'inbox' &&
+    navCategoryId.value === undefined &&
+    !navViewId.value
 )
 
 const isMatrixView = computed(
@@ -606,7 +686,29 @@ const isMatrixView = computed(
     !navViewId.value
 )
 
+const isQuadrantViewLayout = computed(
+  () => isViewNav.value && activeNavView.value?.layout === 'quadrant'
+)
+
 const isViewNav = computed(() => Boolean(navViewId.value) && !navSummaryActive.value)
+
+const activeNavView = computed(() =>
+  navViewId.value ? viewStore.items.find((v) => v.id === navViewId.value) ?? null : null
+)
+
+/** 时间线日历：按视图筛选的本周/本月（或 between）对齐，避免本周/本月共用滚动窗 */
+const timelineRangePreset = computed<TimelineCalendarPreset>(() => {
+  return inferTimelineCalendarPreset(activeNavView.value?.filterRule ?? null) ?? 'rolling'
+})
+
+const timelineRangeBetween = computed(() => {
+  const between = inferTimelineBetweenRange(activeNavView.value?.filterRule ?? null)
+  if (!between) return null
+  return {
+    start: between.start.format('YYYY-MM-DD'),
+    end: between.end.format('YYYY-MM-DD')
+  }
+})
 
 const completedCategoryFilter = computed(() => {
   if (doneListCategory.value === 'all') return undefined
@@ -628,6 +730,8 @@ const defaultCategoryForCreate = computed(() => {
 
 })
 
+const parseCategoriesForMatch = computed(() => toParseCategories(categoryStore.categories))
+
 
 
 const viewTitle = computed(() => {
@@ -638,11 +742,9 @@ const viewTitle = computed(() => {
     return viewStore.items.find((v) => v.id === navViewId.value)?.name ?? '视图'
   }
 
-  if (!isSpecialListView.value && viewStore.selectedView) {
-    return viewStore.selectedView.name
-  }
-
   if (navCategoryId.value === undefined) {
+
+    if (navSmart.value === 'inbox') return '收件箱'
 
     if (navSmart.value === 'matrix') return '四象限'
 
@@ -650,11 +752,9 @@ const viewTitle = computed(() => {
 
     if (navSmart.value === 'trash') return '垃圾桶'
 
-    if (navSmart.value === 'week') return '本周'
-
     if (navSmart.value === 'last7days') return '最近7天'
 
-    return navSmart.value === 'today' ? '今天' : '全部'
+    return '全部'
 
   }
 
@@ -681,15 +781,17 @@ const quickAddPlaceholder = computed(
 /** 侧栏展示用任务计数（仅顶层、与智能列表筛选规则一致） */
 const taskCounts = computed(() => {
   const roots = taskStore.tasks.filter((t) => !t.parentId)
-  const countSmart = (smart: 'today' | 'week' | 'last7days') =>
-    roots.filter((t) => taskMatchesSmartListDate(t, smart, listDateField.value)).length
+  const last7days = roots.filter((t) =>
+    taskMatchesSmartListDate(t, 'last7days', listDateField.value)
+  ).length
   return {
     all: roots.length,
-    today: countSmart('today'),
-    week: countSmart('week'),
-    last7days: countSmart('last7days')
+    last7days,
+    inbox: inboxBadgeCount(widgetNotes.value, taskStore.tasks)
   }
 })
+
+const inboxTasks = computed(() => taskStore.tasks.filter(isUntriagedInboxTask))
 
 /** 侧栏清单计数（基于当前列表数据，与智能列表计数同源） */
 const sidebarListCounts = computed(() => {
@@ -715,23 +817,38 @@ function buildHasSubtasksMap(tasks: Task[]): Map<string, boolean> {
   return map
 }
 
-/** 在当前任务集上套用选中视图的 filterRule */
+/** 在当前任务集上套用当前导航视图的 filterRule */
 const listDisplayTasks = computed(() => {
   const all = taskStore.tasks
   if (isSpecialListView.value) return all
-  const rule = viewStore.selectedView?.filterRule ?? null
+  const rule = activeNavView.value?.filterRule ?? null
   if (!isFilterRuleActive(rule)) return all
   const hasSubtasksById = buildHasSubtasksMap(all)
   return all.filter((t) => matchTask(t, rule!, { hasSubtasksById }))
 })
 
-/** 四象限：过滤后仍传入全量子任务图 */
+/** 看板：在筛选结果上补齐已展示根任务的子任务 */
+const kanbanDisplayTasks = computed(() => {
+  const base = listDisplayTasks.value
+  const rootIds = new Set(base.filter((t) => !t.parentId).map((t) => t.id))
+  if (rootIds.size === 0) return base
+  const idSet = new Set(base.map((t) => t.id))
+  const extras = taskStore.tasks.filter(
+    (t) => t.parentId && rootIds.has(t.parentId) && !idSet.has(t.id) && !t.deletedAt
+  )
+  return extras.length ? [...base, ...extras] : base
+})
+
+/** 四象限：与列表一致，仅在命名视图导航时应用 filterRule */
 const matrixDisplayTasks = computed(() => {
-  const rule = viewStore.selectedView?.filterRule ?? null
-  if (!isFilterRuleActive(rule)) {
+  if (!isMatrixView.value && !isQuadrantViewLayout.value) {
     return taskStore.tasks
   }
   const all = taskStore.tasks
+  const rule = activeNavView.value?.filterRule ?? null
+  if (!isFilterRuleActive(rule)) {
+    return all
+  }
   const hasSubtasksById = buildHasSubtasksMap(all)
   const matchedIds = new Set(
     all.filter((t) => !t.parentId && matchTask(t, rule!, { hasSubtasksById })).map((t) => t.id)
@@ -813,8 +930,11 @@ const listDisplayCount = computed(() => {
   if (isTrashView.value) {
     return taskStore.tasks.length
   }
-  if (isMatrixView.value) {
+  if (isMatrixView.value || isQuadrantViewLayout.value) {
     return matrixDisplayTasks.value.filter((t) => !t.parentId).length
+  }
+  if (isInboxView.value) {
+    return inboxBadgeCount(widgetNotes.value, taskStore.tasks)
   }
   return visibleTasks.value.filter(({ depth }) => depth === 0).length
 })
@@ -887,17 +1007,37 @@ function smartListToNav(smart?: SmartList): 'all' | 'today' | 'week' | 'last7day
 
 
 
+function restoreListPrefsFromStorage() {
+  listViewMode.value = readTaskListViewMode()
+  taskGroupBy.value = readTaskGroupBy()
+  taskSortBy.value = readTaskSortBy()
+  kanbanBoardMode.value = readKanbanBoardMode()
+}
+
 function applySelectedViewToUi() {
   const view = viewStore.selectedView
   if (!view) return
-  viewStore.applyViewToRefs({ listViewMode, taskGroupBy, taskSortBy, kanbanBoardMode })
-  const applied = deriveAppliedViewState(view)
-  persistTaskListViewMode(applied.layout)
-  persistTaskGroupBy(applied.groupBy)
-  persistTaskSortBy(applied.sortBy)
-  if (applied.kanbanBoardMode) {
-    persistKanbanBoardMode(applied.kanbanBoardMode)
+  if (view.layout === 'quadrant') {
+    const opts = view.quadrantOptions ?? readQuadrantViewPreferences()
+    quadrantPrefs.value = { ...opts }
+    persistQuadrantViewPreferences(quadrantPrefs.value)
+  } else {
+    viewStore.applyViewToRefs({ listViewMode, taskGroupBy, taskSortBy, kanbanBoardMode })
+    const applied = deriveAppliedViewState(view)
+    persistTaskListViewMode(applied.layout)
+    persistTaskGroupBy(applied.groupBy)
+    persistTaskSortBy(applied.sortBy)
+    if (applied.kanbanBoardMode) {
+      persistKanbanBoardMode(applied.kanbanBoardMode)
+    }
   }
+
+  const applied = deriveAppliedViewState(view)
+  const kanbanMode = view.layout === 'kanban' ? view.kanbanBoardMode ?? 'group' : null
+  const display = readViewDisplayPreferences(view.id, kanbanMode)
+  taskDetailStyle.value = display.detailStyle
+  taskListMetaVisibility.value = { ...display.metaVisibility }
+  void taskStore.setHideDone(display.hideDone)
 }
 
 async function onView(id: string) {
@@ -916,13 +1056,27 @@ async function onView(id: string) {
   void router.replace({ path: '/', query: { viewId: id } })
 }
 
+const viewEditorHideDone = ref(true)
+const viewEditorDetailStyle = ref<TaskDetailStyle>('sidebar')
+const viewEditorMetaVisibility = ref<TaskListMetaVisibility>({
+  ...DEFAULT_TASK_LIST_META_VISIBILITY
+})
+
 function seedViewEditorFrom(view = viewStore.selectedView) {
   viewEditorName.value = view?.name ?? ''
   viewEditorLayout.value = view?.layout ?? 'list'
   viewEditorGroupBy.value = view?.groupBy ?? 'none'
   viewEditorSortBy.value = view?.sortBy ?? 'custom'
   viewEditorKanbanMode.value = view?.kanbanBoardMode ?? 'group'
+  viewEditorQuadrantOptions.value = view?.quadrantOptions ?? null
   viewEditorRule.value = view?.filterRule ?? null
+  const mode = view?.layout === 'kanban' ? view.kanbanBoardMode ?? 'group' : null
+  const display = view?.id
+    ? readViewDisplayPreferences(view.id, mode)
+    : defaultViewDisplayPreferences(mode)
+  viewEditorHideDone.value = display.hideDone
+  viewEditorDetailStyle.value = display.detailStyle
+  viewEditorMetaVisibility.value = { ...display.metaVisibility }
 }
 
 function openCreateView() {
@@ -933,7 +1087,12 @@ function openCreateView() {
   viewEditorGroupBy.value = 'none'
   viewEditorSortBy.value = 'custom'
   viewEditorKanbanMode.value = 'group'
+  viewEditorQuadrantOptions.value = null
   viewEditorRule.value = null
+  const display = defaultViewDisplayPreferences(null)
+  viewEditorHideDone.value = display.hideDone
+  viewEditorDetailStyle.value = taskDetailStyle.value
+  viewEditorMetaVisibility.value = { ...taskListMetaVisibility.value }
   viewEditorVisible.value = true
 }
 
@@ -947,30 +1106,14 @@ function openEditView(id?: string) {
   viewEditorVisible.value = true
 }
 
-function openSaveAsView() {
+function openSaveAsView(id?: string) {
+  const targetId = id ?? viewStore.selectedViewId
+  const item = viewStore.items.find((v) => v.id === targetId) ?? viewStore.selectedView
   viewEditorMode.value = 'save-as'
   viewEditorId.value = null
-  seedViewEditorFrom()
-  viewEditorName.value = `${viewStore.selectedView?.name ?? '视图'} 副本`
+  seedViewEditorFrom(item)
+  viewEditorName.value = `${item?.name ?? '视图'} 副本`
   viewEditorVisible.value = true
-}
-
-async function confirmDeleteView() {
-  const view = viewStore.selectedView
-  if (!view) return
-  try {
-    await ElMessageBox.confirm(`确定删除视图「${view.name}」？`, '删除视图', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消'
-    })
-    await viewStore.remove(view.id)
-    navViewId.value = viewStore.selectedViewId
-    applySelectedViewToUi()
-    ElMessage.success('视图已删除')
-  } catch {
-    /* 取消 */
-  }
 }
 
 async function onViewEditorSaved(savedId?: string) {
@@ -979,14 +1122,23 @@ async function onViewEditorSaved(savedId?: string) {
     navViewId.value = savedId
     viewStore.selectView(savedId)
     applySelectedViewToUi()
+    await taskStore.load({ smartList: 'all', hideDone: taskStore.filter.hideDone })
   }
 }
 
-async function onSmart(smart: 'all' | 'today' | 'week' | 'last7days') {
+async function onSmart(smart: 'all' | 'last7days') {
+  const wasOnView = Boolean(navViewId.value)
   navSummaryActive.value = false
   navViewId.value = null
   navSmart.value = smart
   navCategoryId.value = undefined
+  if (wasOnView || smart === 'all') {
+    restoreListPrefsFromStorage()
+  }
+  if (smart === 'all') {
+    taskSortBy.value = 'createdAt'
+    persistTaskSortBy('createdAt')
+  }
   await taskStore.navigate({
     kind: 'smart',
     smart,
@@ -1000,10 +1152,56 @@ async function onSmart(smart: 'all' | 'today' | 'week' | 'last7days') {
 
 
 
+async function onInbox() {
+  navSummaryActive.value = false
+  navViewId.value = null
+  navSmart.value = 'inbox'
+  navCategoryId.value = undefined
+  detailOpen.value = false
+  await loadWidgetNotes()
+  await taskStore.load({ smartList: 'all', hideDone: false })
+  void router.replace({ path: '/', query: { view: 'inbox' } })
+}
+
+async function loadWidgetNotes() {
+  const res = await window.api.widgetNotes.list()
+  if (res.ok) {
+    widgetNotes.value = res.data
+  }
+}
+
+async function openInboxConvertNote(note: WidgetNote) {
+  const res = await window.api.widgetNotes.convertToTask(note.id, { deleteNote: true })
+  if (!res.ok) {
+    ElMessage.error(res.error.message)
+    return
+  }
+  ElMessage.success(`已加入收件箱：${res.data.title}`)
+  await loadWidgetNotes()
+  await taskStore.load()
+}
+
+async function onInboxDeleteNote(noteId: string) {
+  const res = await window.api.widgetNotes.delete(noteId)
+  if (!res.ok) {
+    ElMessage.error(res.error.message)
+    return
+  }
+  await loadWidgetNotes()
+}
+
+async function onInboxTriageTask(taskId: string, priority: TaskPriority) {
+  try {
+    await taskStore.update(taskId, { priority })
+    ElMessage.success(`已设为 ${getTaskPriorityMeta(priority).code}`)
+  } catch {
+    /* store 已 Toast */
+  }
+}
+
 async function onMatrix() {
   navSummaryActive.value = false
   navViewId.value = null
-  // 四象限沿用当前选中视图的 filterRule
   navSmart.value = 'matrix'
   navCategoryId.value = undefined
   await taskStore.navigate({ kind: 'matrix' })
@@ -1243,20 +1441,38 @@ async function onQuickAdd() {
 
     const kanbanGid = kanbanGroupIdForQuickAdd()
     const kanbanStatus = kanbanStatusForQuickAdd()
+    const timelineDay = pendingTimelineDateKey.value
 
-    await taskStore.quickCreate(title, {
-
+    const quickOpts: Parameters<typeof taskStore.quickCreate>[1] = {
       categoryId: defaultCategoryForCreate.value ?? null,
-
       kanbanGroupId: kanbanGid !== undefined ? kanbanGid : undefined,
-
       status: kanbanStatus,
+      parseCategories: parseCategoriesForMatch.value,
+      ...(timelineDay ? { dueAt: `${timelineDay}T18:00:00` } : {})
+    }
 
-      parseCategories: categoryStore.categories.map((c) => ({ id: c.id, name: c.name }))
+    if (listViewMode.value === 'kanban' && kanbanBoardMode.value === 'priority') {
+      const sel = kanbanSelectedColumnId.value
+      const n = sel != null ? Number(sel) : NaN
+      if (n === 1 || n === 2 || n === 3 || n === 4) {
+        quickOpts.priority = n as TaskPriority
+        quickOpts.triagedAt = nowIso()
+      }
+    }
 
-    })
+    const created = await taskStore.quickCreate(title, quickOpts)
+
+    pendingTimelineDateKey.value = null
 
     quickAddText.value = ''
+
+    // 级别看板：选中目标列，方便确认任务落在哪一列
+    if (listViewMode.value === 'kanban' && kanbanBoardMode.value === 'priority' && created?.priority) {
+      kanbanSelectedColumnId.value = String(created.priority)
+      quickAddPriority.value = created.priority
+    } else {
+      quickAddPriority.value = DEFAULT_TASK_PRIORITY
+    }
 
     ElMessage.success('任务已添加')
 
@@ -1266,6 +1482,33 @@ async function onQuickAdd() {
 
   }
 
+}
+
+async function onTimelineSchedule(taskId: string, dateKey: string) {
+  try {
+    await taskStore.update(taskId, {
+      dueAt: `${dateKey}T18:00:00`
+    })
+  } catch {
+    /* store 已 Toast */
+  }
+}
+
+function onTimelineCreateOnDay(dateKey: string) {
+  pendingTimelineDateKey.value = dateKey
+  void nextTick(() => quickAddInputRef.value?.focus())
+  ElMessage.info(`将创建到 ${dateKey}，请输入标题后回车`)
+}
+
+async function onTimelineUpdateSpan(
+  taskId: string,
+  span: { createdAt: string; dueAt: string | null }
+) {
+  try {
+    await taskStore.update(taskId, { createdAt: span.createdAt, dueAt: span.dueAt })
+  } catch {
+    /* store 已 Toast；时间线组件会在下次 props 刷新时回滚预览 */
+  }
 }
 
 
@@ -1325,6 +1568,7 @@ async function onTaskSaved({ task, mode }: TaskSavePayload) {
 function openNewTask() {
 
   defaultPriorityForCreate.value = DEFAULT_TASK_PRIORITY
+  quickAddPriority.value = DEFAULT_TASK_PRIORITY
 
   void nextTick(() => quickAddInputRef.value?.focus())
 
@@ -1354,7 +1598,7 @@ async function onQuadrantQuickCreate(priority: TaskPriority) {
 
     if (!title) return
 
-    await taskStore.quickCreate(title, { priority })
+    await taskStore.quickCreate(title, { priority, parseCategories: parseCategoriesForMatch.value })
 
     ElMessage.success('任务已添加')
 
@@ -1441,6 +1685,7 @@ function hasHomeRouteDestination(): boolean {
   const listView = route.query.listView
   return (
     view === 'matrix' ||
+    view === 'inbox' ||
     view === 'summary' ||
     view === 'done' ||
     view === 'trash' ||
@@ -1459,16 +1704,16 @@ function hasHomeRouteDestination(): boolean {
 onMounted(async () => {
   await categoryStore.load()
   await viewStore.load()
-  navViewId.value = viewStore.selectedViewId
-  applySelectedViewToUi()
   // 有路由目标时先按路由恢复，避免先落到「全部」再跳四象限
   if (hasHomeRouteDestination()) {
     await syncHomeFromRoute()
   } else {
+    navViewId.value = null
     await taskStore.load()
     syncNavFromFilter()
   }
   await taskStore.refreshSidebarCounts()
+  await loadWidgetNotes()
   window.addEventListener('desktop:new-task', openNewTask)
   window.addEventListener('desktop:focus-search', onFocusQuickAdd)
 })
@@ -1478,6 +1723,7 @@ onMounted(async () => {
  * 覆盖 matrix / summary / done / trash / smart / category。
  */
 async function syncHomeFromRoute() {
+  try {
   const view = route.query.view
   const smart = route.query.smart
   const category = route.query.category
@@ -1491,7 +1737,7 @@ async function syncHomeFromRoute() {
       listViewMode.value = listView
       persistTaskListViewMode(listView)
     }
-    if (listView === 'kanban') {
+    if (listView === 'kanban' && (typeof viewId !== 'string' || !viewId)) {
       kanbanBoardMode.value = readKanbanBoardMode()
     }
   }
@@ -1513,6 +1759,12 @@ async function syncHomeFromRoute() {
     return
   }
 
+  if (view === 'inbox') {
+    if (navSmart.value !== 'inbox' || navSummaryActive.value) {
+      await onInbox()
+    }
+    return
+  }
   if (view === 'matrix') {
     if (!(navSmart.value === 'matrix' && !navSummaryActive.value && navCategoryId.value === undefined)) {
       await onMatrix()
@@ -1538,7 +1790,12 @@ async function syncHomeFromRoute() {
     }
     return
   }
-  if (smart === 'today' || smart === 'week' || smart === 'last7days' || smart === 'all') {
+  if (smart === 'today' || smart === 'week') {
+    await onSmart('all')
+    void router.replace({ path: '/', query: {} })
+    return
+  }
+  if (smart === 'last7days' || smart === 'all') {
     if (navSmart.value !== smart || navSummaryActive.value || navCategoryId.value !== undefined) {
       await onSmart(smart)
     }
@@ -1550,6 +1807,12 @@ async function syncHomeFromRoute() {
       await onCategory(id)
     }
   }
+  } finally {
+    const taskId = route.query.taskId
+    if (typeof taskId === 'string' && taskId.trim() && route.query.createView !== '1') {
+      openTask(taskId.trim())
+    }
+  }
 }
 
 watch(
@@ -1559,7 +1822,8 @@ watch(
     route.query.smart,
     route.query.category,
     route.query.viewId,
-    route.query.listView
+    route.query.listView,
+    route.query.taskId
   ],
   () => {
     void syncHomeFromRoute()
@@ -1915,6 +2179,10 @@ onUnmounted(() => {
 
 }
 
+.home__quick-add-priority {
+  flex-shrink: 0;
+  align-self: center;
+}
 </style>
 
 

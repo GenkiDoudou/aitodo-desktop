@@ -33,6 +33,7 @@ export type FilterTimeRel =
   | 'today'
   | 'tomorrow'
   | 'week'
+  | 'month'
   | 'overdue'
   | 'noDate'
   | 'hasDate'
@@ -67,6 +68,25 @@ const TIME_FIELDS: FilterField[] = ['dueAt', 'createdAt', 'completedAt']
 
 export function createEmptyAndGroup(): FilterNode {
   return { type: 'group', op: 'and', children: [] }
+}
+
+/** 是否表示「无筛选」（null 或空 AND/OR 组） */
+export function isEmptyFilterNode(node: FilterNode | null | undefined): boolean {
+  if (!node) return true
+  const n = normalizeFilterNode(node)
+  return n.type === 'group' && n.children.length === 0
+}
+
+/** 持久化用：空组 → null */
+export function filterNodeToPersist(node: FilterNode | null | undefined): FilterNode | null {
+  if (isEmptyFilterNode(node)) return null
+  return normalizeFilterNode(node!)
+}
+
+/** 编辑态初始化：null → 空组 */
+export function filterNodeForEditor(node: FilterNode | null | undefined): FilterNode {
+  if (isEmptyFilterNode(node)) return createEmptyAndGroup()
+  return normalizeFilterNode(node!)
 }
 
 export function normalizeFilterNode(node: FilterNode | null | undefined): FilterNode {
@@ -127,9 +147,9 @@ function validateCond(cond: Extract<FilterNode, { type: 'cond' }>): string | nul
     if (op === 'eq' && (typeof value !== 'number' || value < 1 || value > 4)) return '优先级无效'
     return null
   }
-  if (field === 'status' && (op === 'in' || op === 'eq')) {
+  if (field === 'status' && (op === 'in' || op === 'eq' || op === 'neq')) {
     if (op === 'in' && (!Array.isArray(value) || value.length === 0)) return '请选择状态'
-    if (op === 'eq' && typeof value !== 'string') return '状态无效'
+    if ((op === 'eq' || op === 'neq') && typeof value !== 'string') return '状态无效'
     return null
   }
   if (TIME_FIELDS.includes(field)) {
@@ -358,6 +378,11 @@ function matchTimeRel(d: Dayjs, rel: FilterTimeRel, now: Dayjs): boolean {
     case 'week': {
       const start = today.startOf('week')
       const end = today.endOf('week')
+      return !day.isBefore(start, 'day') && !day.isAfter(end, 'day')
+    }
+    case 'month': {
+      const start = today.startOf('month')
+      const end = today.endOf('month')
       return !day.isBefore(start, 'day') && !day.isAfter(end, 'day')
     }
     case 'overdue':

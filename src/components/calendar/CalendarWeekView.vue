@@ -58,6 +58,7 @@ import type { Task } from '@shared/types'
 import type { TaskDateField } from '@shared/date-filter'
 import type { HolidayCalendarDay } from '@shared/timor-holiday'
 import { calendarTaskRowKey, groupTasksByDateField, taskMinutesOnField, weekdayLabel } from '@shared/calendar-tasks'
+import { startOfWeekMonday } from '@shared/smart-list'
 import CalendarTaskChip from '@/components/calendar/CalendarTaskChip.vue'
 
 const props = defineProps<{
@@ -78,7 +79,7 @@ const hours = Array.from({ length: 24 }, (_, i) => i)
 const SLOT_H = 48
 
 const weekDays = computed(() => {
-  const start = props.anchor.startOf('week')
+  const start = startOfWeekMonday(props.anchor)
   return Array.from({ length: 7 }, (_, i) => start.add(i, 'day'))
 })
 

@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { endOfWeekSunday, startOfWeekMonday } from '@shared/smart-list'
 
 /** 生成 00:00–23:30 每 30 分钟一档，避免滚轮时间选择误触 */
 export function buildTimeSlots(stepMinutes = 30): string[] {
@@ -17,10 +18,10 @@ export function normalizeHm(value: string): string {
   return `${parts[0]?.padStart(2, '0') ?? '00'}:${parts[1]?.padStart(2, '0') ?? '00'}`
 }
 
-/** 日历网格：从周日开始对齐的 5–6 周日期 */
+/** 日历网格：从周一对齐的 5–6 周日期 */
 export function buildCalendarDays(month: dayjs.Dayjs): dayjs.Dayjs[] {
-  const start = month.startOf('month').startOf('week')
-  const end = month.endOf('month').endOf('week')
+  const start = startOfWeekMonday(month.startOf('month'))
+  const end = endOfWeekSunday(month.endOf('month'))
   const days: dayjs.Dayjs[] = []
   let cursor = start
   while (cursor.isBefore(end) || cursor.isSame(end, 'day')) {

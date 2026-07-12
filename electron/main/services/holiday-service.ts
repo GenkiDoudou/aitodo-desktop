@@ -3,15 +3,21 @@ import path from 'path'
 import {
   buildHolidayCalendarMap,
   findNextLegalHolidayDueAfter,
+  HOLIDAY_DATA_SOURCE,
+  HOLIDAY_DATA_SOURCE_LABEL,
   legalHolidayMapFromCalendar,
+  normalizeHolidayYears,
   timorHolidayYearUrl,
+  type HolidayCacheStatus,
   type HolidayCalendarDay,
+  type HolidayYearMeta,
   type TimorHolidayEntry,
   type TimorYearHolidayResponse
 } from '@shared/timor-holiday'
 import { resolveDataDir } from '../data-path'
 
 const CACHE_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000
+const CACHE_FILE_SUFFIX = '-calendar-v2.json'
 
 /**
  * 从 [timor.tech 免费节假日 API](http://timor.tech/api/holiday/) 拉取并缓存节假日数据。
@@ -40,9 +46,10 @@ export class HolidayService {
 
   /** 返回多年日历标注（YYYY-MM-DD → day）供月历展示 */
   async getCalendarMarks(years: number[]): Promise<Record<string, HolidayCalendarDay>> {
-    await this.ensureYearsLoaded(years)
+    const list = normalizeHolidayYears(years)
+    await this.ensureYearsLoaded(list)
     const out: Record<string, HolidayCalendarDay> = {}
-    for (const year of [...new Set(years)]) {
+    for (const year of list) {
       const map = this.calendarMemory.get(year)
       if (!map) continue
       for (const [date, day] of map) {
@@ -50,6 +57,63 @@ export class HolidayService {
       }
     }
     return out
+  }
+
+  /** 扫描磁盘 v2 缓存，汇总设置页状态 */
+  getStatus(): HolidayCacheStatus {
+    const yearsMeta: HolidayYearMeta[] = []
+    try {
+      if (fs.existsSync(this.cacheDir)) {
+        for (const name of fs.readdirSync(this.cacheDir)) {
+          if (!name.endsWith(CACHE_FILE_SUFFIX)) continue
+          const yearStr = name.slice(0, -CACHE_FILE_SUFFIX.length)
+          const year = Number(yearStr)
+          if (!Number.isInteger(year) || year < 2000 || year > 2100) continue
+          const filePath = path.join(this.cacheDir, name)
+          let updatedAt: string | null = null
+          try {
+            updatedAt = new Date(fs.statSync(filePath).mtimeMs).toISOString()
+          } catch {
+            updatedAt = null
+          }
+          yearsMeta.push({ year, updatedAt })
+        }
+      }
+    } catch {
+      /* 目录不可读则视为无缓存 */
+    }
+    yearsMeta.sort((a, b) => a.year - b.year)
+    return {
+      source: HOLIDAY_DATA_SOURCE,
+      sourceLabel: HOLIDAY_DATA_SOURCE_LABEL,
+      cachedYears: yearsMeta.map((m) => m.year),
+      yearsMeta
+    }
+  }
+
+  /**
+   * 强制刷新：清内存与磁盘缓存后重新拉取。
+   * 返回合并后的 marks 与最新 status。
+   */
+  async refreshYears(
+    years: number[]
+  ): Promise<{ marks: Record<string, HolidayCalendarDay>; status: HolidayCacheStatus }> {
+    const list = normalizeHolidayYears(years)
+    for (const year of list) {
+      this.calendarMemory.delete(year)
+      const filePath = this.cacheFilePath(year)
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+      } catch {
+        /* 删失败仍尝试重拉 */
+      }
+    }
+    const marks = await this.getCalendarMarks(list)
+    return { marks, status: this.getStatus() }
+  }
+
+  private cacheFilePath(year: number): string {
+    return path.join(this.cacheDir, `${year}${CACHE_FILE_SUFFIX}`)
   }
 
   private async ensureYearsLoaded(years: number[]): Promise<void> {
@@ -62,7 +126,7 @@ export class HolidayService {
       return this.calendarMemory.get(year)!
     }
     // v2 缓存含补班日；旧版仅法定假的缓存文件不再复用
-    const filePath = path.join(this.cacheDir, `${year}-calendar-v2.json`)
+    const filePath = this.cacheFilePath(year)
     try {
       if (fs.existsSync(filePath)) {
         const stat = fs.statSync(filePath)
@@ -108,6 +172,12 @@ export class HolidayService {
       })
     }
     this.calendarMemory.set(year, calendar)
+  }
+
+  /** 测试用：写入磁盘缓存（不经 API） */
+  writeCacheFileForTest(year: number, marks: Record<string, HolidayCalendarDay>): void {
+    fs.mkdirSync(this.cacheDir, { recursive: true })
+    fs.writeFileSync(this.cacheFilePath(year), JSON.stringify(marks), 'utf8')
   }
 
   clearMemory(): void {

@@ -5,8 +5,12 @@ import {
   registerIpcHandlers,
   pushAppMessageToRenderer,
   setSummarySchedulerService,
-  setHolidayService
+  setHolidayService,
+  restoreDesktopFencesIfEnabled,
+  restoreNativeDesktopIconsIfNeeded,
+  recoverDesktopIconsFromMarkerIfNeeded
 } from './ipc/handlers'
+import { stopDesktopOrganizeWatcher } from './services/desktop-organize-watcher'
 import { TaskRepository } from './db/task-repository'
 import { AppMessageRepository } from './db/app-message-repository'
 import { TaskReminderRepository } from './db/task-reminder-repository'
@@ -21,7 +25,10 @@ import { HolidayService } from './services/holiday-service'
 import { TaskActivityService } from './services/task-activity-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting } from './tray'
 import { resolveDataDir } from './data-path'
-import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts'
+import { registerGlobalShortcuts, unregisterGlobalShortcuts, createDefaultShortcutHandlers } from './shortcuts'
+import { getWidgetWindowManager } from './widget-window-manager'
+import { getQuickCaptureWindowManager } from './quick-capture-window-manager'
+import { getFenceWindowManager } from './fence-window-manager'
 import {
   registerAttachmentProtocol,
   registerAttachmentSchemePrivilege
@@ -96,7 +103,14 @@ app.whenReady().then(() => {
     /* 启动清理失败不阻塞应用 */
   }
   mainWindow = createWindow()
-  registerGlobalShortcuts(mainWindow)
+  registerGlobalShortcuts(mainWindow, createDefaultShortcutHandlers(() => mainWindow))
+
+  try {
+    const fence = getFenceWindowManager()
+    void recoverDesktopIconsFromMarkerIfNeeded(fence.getSettings().fencesEnabled)
+  } catch {
+    /* 异常退出后恢复桌面图标，失败不阻塞启动 */
+  }
 
   const db = getDatabase()
   const taskRepo = new TaskRepository(db)
@@ -129,12 +143,26 @@ app.whenReady().then(() => {
       mainWindow?.show()
       mainWindow?.focus()
     },
+    onToggleWidget: () => {
+      getWidgetWindowManager().toggle()
+    },
     onNewTask: () => {},
     onQuit: () => {
       markQuitting()
       app.quit()
     }
+  }).catch((err) => {
+    console.error('[aiTodo] 创建托盘失败', err)
   })
+
+  try {
+    getWidgetWindowManager().restoreOnStartup()
+  } catch {
+    /* 挂件设置读取失败不阻塞启动 */
+  }
+
+  // 恢复桌面 Fence（若用户曾开启）
+  setTimeout(() => restoreDesktopFencesIfEnabled(), 800)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -147,7 +175,12 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   markQuitting()
+  stopDesktopOrganizeWatcher()
   unregisterGlobalShortcuts()
+  restoreNativeDesktopIconsIfNeeded()
+  getWidgetWindowManager().destroy()
+  getQuickCaptureWindowManager().destroy()
+  getFenceWindowManager().destroyAll()
   reminderService?.stop()
   summarySchedulerService?.stop()
   destroyTray()
@@ -155,7 +188,10 @@ app.on('before-quit', () => {
 })
 
 app.on('window-all-closed', () => {
-  // 托盘模式：Windows 上关闭窗口不退出进程
+  // 托盘模式默认保留进程；显式退出时才真正结束应用。
+  if ((app as typeof app & { isQuitting?: boolean }).isQuitting) {
+    app.quit()
+  }
 })
 
 if (!app.isPackaged) {

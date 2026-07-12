@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import BetterSqlite3 from 'better-sqlite3'
 import { initDatabaseForTest, closeDatabase } from '../db/database'
 import { TaskReminderRepository } from '../db/task-reminder-repository'
+import { TagRepository } from '../db/tag-repository'
 import { TaskRepository } from '../db/task-repository'
 import { TaskService } from './task-service'
 import { AppError } from '@shared/types'
@@ -14,7 +15,11 @@ describe('TaskService', () => {
     closeDatabase()
     const db = new BetterSqlite3(':memory:')
     initDatabaseForTest(db)
-    service = new TaskService(new TaskRepository(db), new TaskReminderRepository(db))
+    service = new TaskService(
+      new TaskRepository(db),
+      new TaskReminderRepository(db),
+      new TagRepository(db)
+    )
   })
 
   it('creates task with TODO status', () => {
@@ -22,6 +27,7 @@ describe('TaskService', () => {
     expect(task.title).toBe('测试任务')
     expect(task.status).toBe('TODO')
     expect(task.priority).toBe(4)
+    expect(task.triagedAt).toBeNull()
     expect(task.completedAt).toBeNull()
   })
 
@@ -39,9 +45,22 @@ describe('TaskService', () => {
     expect(loaded.reminders).toHaveLength(2)
   })
 
-  it('creates task with explicit priority', () => {
+  it('creates task with explicit priority without auto triage', () => {
     const task = service.create({ title: '紧急', priority: 1 })
     expect(task.priority).toBe(1)
+    expect(task.triagedAt).toBeNull()
+  })
+
+  it('explicit triagedAt on create', () => {
+    const task = service.create({ title: '已排优', triagedAt: '2026-01-02T00:00:00' })
+    expect(task.triagedAt).toBe('2026-01-02T00:00:00')
+  })
+
+  it('priority update sets triagedAt', () => {
+    const task = service.create({ title: '待排优' })
+    const updated = service.update(task.id, { priority: 2 })
+    expect(updated.priority).toBe(2)
+    expect(updated.triagedAt).not.toBeNull()
   })
 
   it('coerces string priority on create (IPC JSON)', () => {
@@ -144,6 +163,21 @@ describe('TaskService', () => {
     expect(task.title).toBe('快捷添加')
     expect(task.categoryId).toBeNull()
     expect(task.parentId).toBeNull()
+    expect(task.startAt).toBeNull()
+  })
+
+  it('persists startAt on create and update', () => {
+    const task = service.create({
+      title: '有开始日',
+      startAt: '2026-07-01T09:00:00',
+      dueAt: '2026-07-03T18:00:00'
+    })
+    expect(task.startAt).toBe('2026-07-01T09:00:00')
+    expect(task.dueAt).toBe('2026-07-03T18:00:00')
+    const updated = service.update(task.id, { startAt: '2026-07-02T09:00:00' })
+    expect(updated.startAt).toBe('2026-07-02T09:00:00')
+    const cleared = service.update(task.id, { startAt: null })
+    expect(cleared.startAt).toBeNull()
   })
 
   it('inherits parent category for subtasks', () => {
@@ -285,5 +319,16 @@ describe('TaskService', () => {
         recurrence: { type: 'weekly' }
       })
     ).toThrow('设置重复规则需要先设置截止时间')
+  })
+
+  it('creates and updates task tags', () => {
+    const task = service.create({ title: '带标签', tags: ['工作', '紧急'] })
+    expect(task.tags).toEqual(['工作', '紧急'])
+
+    const updated = service.update(task.id, { tags: ['工作', '个人'] })
+    expect(updated.tags).toEqual(['个人', '工作'])
+
+    const listed = service.list().find((t) => t.id === task.id)
+    expect(listed?.tags).toEqual(['个人', '工作'])
   })
 })

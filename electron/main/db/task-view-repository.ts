@@ -1,6 +1,7 @@
 import type { TaskView } from '@shared/types'
 import type { KanbanBoardMode } from '@shared/kanban-config'
 import { parseFilterAstJson, serializeFilterAst } from '@shared/task-filter-ast'
+import type { QuadrantLayoutOptions } from '@shared/quadrant-layout'
 import type Database from 'better-sqlite3'
 
 interface TaskViewRow {
@@ -12,9 +13,19 @@ interface TaskViewRow {
   group_by: string
   sort_by: string
   kanban_board_mode: string | null
+  quadrant_options_json: string | null
   sort_order: number
   created_at: string
   updated_at: string
+}
+
+function parseQuadrantOptions(json: string | null): QuadrantLayoutOptions | null {
+  if (!json) return null
+  try {
+    return JSON.parse(json) as QuadrantLayoutOptions
+  } catch {
+    return null
+  }
 }
 
 function mapRow(row: TaskViewRow): TaskView {
@@ -27,6 +38,7 @@ function mapRow(row: TaskViewRow): TaskView {
     groupBy: row.group_by as TaskView['groupBy'],
     sortBy: row.sort_by as TaskView['sortBy'],
     kanbanBoardMode: row.kanban_board_mode as KanbanBoardMode | null,
+    quadrantOptions: parseQuadrantOptions(row.quadrant_options_json),
     sortOrder: row.sort_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -69,10 +81,10 @@ export class TaskViewRepository {
       .prepare(
         `INSERT INTO task_views (
           id, name, layout, scope_key, filter_rule_json, group_by, sort_by,
-          kanban_board_mode, sort_order, created_at, updated_at
+          kanban_board_mode, quadrant_options_json, sort_order, created_at, updated_at
         ) VALUES (
           @id, @name, @layout, @scopeKey, @filterRuleJson, @groupBy, @sortBy,
-          @kanbanBoardMode, @sortOrder, @createdAt, @updatedAt
+          @kanbanBoardMode, @quadrantOptionsJson, @sortOrder, @createdAt, @updatedAt
         )`
       )
       .run({
@@ -84,6 +96,7 @@ export class TaskViewRepository {
         groupBy: view.groupBy,
         sortBy: view.sortBy,
         kanbanBoardMode: view.kanbanBoardMode,
+        quadrantOptionsJson: view.quadrantOptions ? JSON.stringify(view.quadrantOptions) : null,
         sortOrder: view.sortOrder,
         createdAt: view.createdAt,
         updatedAt: view.updatedAt
@@ -96,8 +109,8 @@ export class TaskViewRepository {
         `UPDATE task_views SET
           name = @name, layout = @layout, scope_key = @scopeKey,
           filter_rule_json = @filterRuleJson, group_by = @groupBy, sort_by = @sortBy,
-          kanban_board_mode = @kanbanBoardMode, sort_order = @sortOrder,
-          updated_at = @updatedAt
+          kanban_board_mode = @kanbanBoardMode, quadrant_options_json = @quadrantOptionsJson,
+          sort_order = @sortOrder, updated_at = @updatedAt
          WHERE id = @id`
       )
       .run({
@@ -109,6 +122,7 @@ export class TaskViewRepository {
         groupBy: view.groupBy,
         sortBy: view.sortBy,
         kanbanBoardMode: view.kanbanBoardMode,
+        quadrantOptionsJson: view.quadrantOptions ? JSON.stringify(view.quadrantOptions) : null,
         sortOrder: view.sortOrder,
         updatedAt: view.updatedAt
       })

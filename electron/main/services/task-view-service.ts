@@ -15,13 +15,23 @@ import type {
 import type { TaskGroupBy, TaskSortBy } from '@shared/task-list-layout'
 import type { TaskViewLayout } from '@shared/types'
 import type { KanbanBoardMode } from '@shared/kanban-config'
+import type { QuadrantLayoutOptions } from '@shared/quadrant-layout'
 import { AppError } from '@shared/types'
 import type { TaskViewRepository } from '../db/task-view-repository'
 import type { TaskRepository } from '../db/task-repository'
 
-const LAYOUTS: TaskViewLayout[] = ['list', 'kanban', 'timeline']
+const LAYOUTS: TaskViewLayout[] = ['list', 'kanban', 'timeline', 'quadrant']
 const GROUP_BY: TaskGroupBy[] = ['custom', 'time', 'tag', 'priority', 'none']
-const SORT_BY: TaskSortBy[] = ['custom', 'time', 'title', 'tag', 'priority']
+const SORT_BY: TaskSortBy[] = [
+  'custom',
+  'time',
+  'createdAt',
+  'completedAt',
+  'remindAt',
+  'title',
+  'tag',
+  'priority'
+]
 
 export class TaskViewService {
   constructor(
@@ -53,6 +63,7 @@ export class TaskViewService {
     const groupBy = normalizeGroupBy(dto.groupBy)
     const sortBy = normalizeSortBy(dto.sortBy)
     const kanbanBoardMode = normalizeKanbanMode(dto.layout, dto.kanbanBoardMode)
+    const quadrantOptions = normalizeQuadrantOptions(dto.layout, dto.quadrantOptions)
 
     const ts = nowIso()
     const view: TaskView = {
@@ -64,6 +75,7 @@ export class TaskViewService {
       groupBy,
       sortBy,
       kanbanBoardMode,
+      quadrantOptions,
       sortOrder: dto.sortOrder ?? this.repo.maxSortOrder() + 1,
       createdAt: ts,
       updatedAt: ts
@@ -99,6 +111,12 @@ export class TaskViewService {
           ? normalizeKanbanMode(layout, dto.kanbanBoardMode)
           : layout === 'kanban'
             ? existing.kanbanBoardMode ?? 'group'
+            : null,
+      quadrantOptions:
+        dto.quadrantOptions !== undefined
+          ? normalizeQuadrantOptions(layout, dto.quadrantOptions)
+          : layout === 'quadrant'
+            ? existing.quadrantOptions
             : null,
       sortOrder: dto.sortOrder ?? existing.sortOrder,
       updatedAt: nowIso()
@@ -151,7 +169,29 @@ function normalizeKanbanMode(
   mode?: KanbanBoardMode | null
 ): KanbanBoardMode | null {
   if (layout !== 'kanban') return null
-  return mode === 'status' ? 'status' : 'group'
+  if (mode === 'status' || mode === 'priority') return mode
+  return 'group'
+}
+
+function normalizeQuadrantOptions(
+  layout: TaskViewLayout,
+  options?: QuadrantLayoutOptions | null
+): QuadrantLayoutOptions | null {
+  if (layout !== 'quadrant') return null
+  if (!options) {
+    return {
+      showCompleted: false,
+      enableGrouping: true,
+      groupBy: 'status',
+      sortBy: 'time'
+    }
+  }
+  return {
+    showCompleted: Boolean(options.showCompleted),
+    enableGrouping: Boolean(options.enableGrouping),
+    groupBy: options.groupBy ?? 'status',
+    sortBy: options.sortBy ?? 'time'
+  }
 }
 
 function buildHasSubtasksMap(tasks: Task[]): Map<string, boolean> {

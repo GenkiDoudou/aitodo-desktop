@@ -44,7 +44,9 @@
           <div class="app-message-panel__content">
             <div class="app-message-panel__head">
               <span class="app-message-panel__title">
+                <span v-if="!item.readAt" class="app-message-panel__unread-dot" aria-label="未读" />
                 <span v-if="isSummaryMessage(item)" class="app-message-panel__tag">定时汇总</span>
+                <span v-if="!item.readAt" class="app-message-panel__unread-tag">未读</span>
                 {{ displayTitle(item) }}
               </span>
               <time class="app-message-panel__date">{{ formatDate(item.createdAt) }}</time>
@@ -207,8 +209,17 @@ onMounted(() => {
     background: #fafbfc;
   }
 
-  &.is-unread .app-message-panel__title {
-    font-weight: 600;
+  &.is-unread {
+    background: color-mix(in srgb, var(--el-color-primary) 6%, #fff);
+
+    .app-message-panel__title {
+      font-weight: 600;
+      color: var(--desktop-text);
+    }
+  }
+
+  &.is-unread:hover {
+    background: color-mix(in srgb, var(--el-color-primary) 10%, #fff);
   }
 
   &:last-child {
@@ -253,6 +264,25 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.app-message-panel__unread-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+}
+
+.app-message-panel__unread-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--el-color-primary) 14%, #fff);
+  color: var(--el-color-primary);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .app-message-panel__tag {

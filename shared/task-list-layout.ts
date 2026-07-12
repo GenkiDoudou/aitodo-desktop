@@ -9,22 +9,33 @@ import { startOfWeekMonday, endOfWeekSunday } from './smart-list'
 export type TaskGroupBy = 'custom' | 'time' | 'tag' | 'priority' | 'none'
 
 /** 排序方式 */
-export type TaskSortBy = 'custom' | 'time' | 'title' | 'tag' | 'priority'
+export type TaskSortBy =
+  | 'custom'
+  | 'time'
+  | 'createdAt'
+  | 'completedAt'
+  | 'remindAt'
+  | 'priority'
+  | 'title'
+  | 'tag'
 
 export const TASK_GROUP_BY_LABELS: Record<TaskGroupBy, string> = {
   custom: '自定义',
   time: '时间',
   tag: '标签',
-  priority: '优先级',
+  priority: '任务级别',
   none: '无'
 }
 
 export const TASK_SORT_BY_LABELS: Record<TaskSortBy, string> = {
   custom: '自定义',
-  time: '时间',
+  time: '截止时间',
+  createdAt: '创建时间',
+  completedAt: '完成时间',
+  remindAt: '提醒时间',
+  priority: '任务级别',
   title: '标题',
-  tag: '标签',
-  priority: '优先级'
+  tag: '标签'
 }
 
 export interface TaskListGroupHeader {
@@ -44,6 +55,66 @@ export type TaskListLayoutItem = TaskListGroupHeader | TaskListRow
 /** 列表展示用时间键：优先截止日，无则创建日 */
 export function taskSortTimeIso(task: Task): string | null {
   return task.dueAt ?? task.createdAt ?? null
+}
+
+function compareByTimeField(
+  a: Task,
+  b: Task,
+  field: 'dueAt' | 'createdAt' | 'completedAt' | 'remindAt'
+): number {
+  const ia = a[field] ?? null
+  const ib = b[field] ?? null
+  if (!ia && !ib) return a.title.localeCompare(b.title, 'zh-CN')
+  if (!ia) return 1
+  if (!ib) return -1
+  const cmp = ia.localeCompare(ib)
+  if (cmp !== 0) return cmp
+  return a.title.localeCompare(b.title, 'zh-CN')
+}
+
+export function compareTasks(a: Task, b: Task, sortBy: TaskSortBy): number {
+  if (sortBy === 'custom') {
+    const so = a.sortOrder - b.sortOrder
+    if (so !== 0) return so
+    return (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
+  }
+  if (sortBy === 'title') {
+    return a.title.localeCompare(b.title, 'zh-CN')
+  }
+  if (sortBy === 'priority') {
+    const pa = a.priority ?? 4
+    const pb = b.priority ?? 4
+    if (pa !== pb) return pa - pb
+    return a.title.localeCompare(b.title, 'zh-CN')
+  }
+  if (sortBy === 'tag') {
+    const ta = primaryTaskTag(a)
+    const tb = primaryTaskTag(b)
+    if (ta !== tb) {
+      if (!ta) return 1
+      if (!tb) return -1
+      return ta.localeCompare(tb, 'zh-CN')
+    }
+    return a.title.localeCompare(b.title, 'zh-CN')
+  }
+  if (sortBy === 'createdAt') {
+    return -compareByTimeField(a, b, 'createdAt')
+  }
+  if (sortBy === 'completedAt') {
+    return compareByTimeField(a, b, 'completedAt')
+  }
+  if (sortBy === 'remindAt') {
+    return compareByTimeField(a, b, 'remindAt')
+  }
+  // time：截止时间优先，无则创建时间
+  const ia = taskSortTimeIso(a)
+  const ib = taskSortTimeIso(b)
+  if (!ia && !ib) return a.title.localeCompare(b.title, 'zh-CN')
+  if (!ia) return 1
+  if (!ib) return -1
+  const cmp = ia.localeCompare(ib)
+  if (cmp !== 0) return cmp
+  return a.title.localeCompare(b.title, 'zh-CN')
 }
 
 /** 时间分组桶 key + 中文标题 */
@@ -87,42 +158,6 @@ function tagGroup(task: Task): { key: string; label: string; order: number } {
   const tag = primaryTaskTag(task)
   if (!tag) return { key: '__none__', label: '无标签', order: 9999 }
   return { key: tag, label: `#${tag}`, order: 0 }
-}
-
-export function compareTasks(a: Task, b: Task, sortBy: TaskSortBy): number {
-  if (sortBy === 'custom') {
-    const so = a.sortOrder - b.sortOrder
-    if (so !== 0) return so
-    return (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
-  }
-  if (sortBy === 'title') {
-    return a.title.localeCompare(b.title, 'zh-CN')
-  }
-  if (sortBy === 'priority') {
-    const pa = a.priority ?? 4
-    const pb = b.priority ?? 4
-    if (pa !== pb) return pa - pb
-    return a.title.localeCompare(b.title, 'zh-CN')
-  }
-  if (sortBy === 'tag') {
-    const ta = primaryTaskTag(a)
-    const tb = primaryTaskTag(b)
-    if (ta !== tb) {
-      if (!ta) return 1
-      if (!tb) return -1
-      return ta.localeCompare(tb, 'zh-CN')
-    }
-    return a.title.localeCompare(b.title, 'zh-CN')
-  }
-  // time
-  const ia = taskSortTimeIso(a)
-  const ib = taskSortTimeIso(b)
-  if (!ia && !ib) return a.title.localeCompare(b.title, 'zh-CN')
-  if (!ia) return 1
-  if (!ib) return -1
-  const cmp = ia.localeCompare(ib)
-  if (cmp !== 0) return cmp
-  return a.title.localeCompare(b.title, 'zh-CN')
 }
 
 function sortTaskList(tasks: Task[], sortBy: TaskSortBy): Task[] {

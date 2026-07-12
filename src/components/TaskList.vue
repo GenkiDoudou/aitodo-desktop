@@ -39,16 +39,9 @@
 
           <div class="task-list__body">
             <div class="task-list__title-row">
+              <TaskPriorityBadge :priority="item.task.priority ?? 4" />
               <span class="task-list__title" :class="{ 'is-done': item.task.status === 'DONE' }">
                 {{ item.task.title }}
-              </span>
-              <span
-                v-if="item.task.priority && item.task.priority < 4"
-                class="task-list__priority"
-                :style="{ color: priorityColor(item.task.priority) }"
-                :title="priorityLabel(item.task.priority)"
-              >
-                {{ priorityRoman(item.task.priority) }}
               </span>
               <span
                 v-if="hasChildren(item.task.id) && !isExpanded(item.task.id)"
@@ -58,6 +51,13 @@
               </span>
             </div>
             <div v-if="hasMeta(item.task)" class="task-list__meta">
+              <span
+                v-if="categoryLabel(item.task)"
+                class="task-list__meta-item task-list__meta-item--category"
+                title="清单"
+              >
+                {{ categoryLabel(item.task) }}
+              </span>
               <span
                 v-if="showCompletedAt(item.task)"
                 class="task-list__meta-item task-list__meta-item--completed"
@@ -94,17 +94,26 @@ import dayjs from 'dayjs'
 import type { Task } from '@shared/types'
 import type { TaskListLayoutItem } from '@shared/task-list-layout'
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
-import { getTaskPriorityMeta } from '@shared/task-priority'
 import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
+import TaskPriorityBadge from '@/components/TaskPriorityBadge.vue'
 
-const props = defineProps<{
-  layoutItems: TaskListLayoutItem[]
-  loading: boolean
-  selectedId?: string | null
-  /** 列表行内展示哪些时间字段 */
-  metaVisibility?: TaskListMetaVisibility
-}>()
+const props = withDefaults(
+  defineProps<{
+    layoutItems: TaskListLayoutItem[]
+    loading: boolean
+    selectedId?: string | null
+    /** 列表行内展示哪些时间字段 */
+    metaVisibility?: TaskListMetaVisibility
+    /** 是否在行内显示清单名（全部/视图等跨清单场景） */
+    showCategory?: boolean
+    categories?: { id: string; name: string }[]
+  }>(),
+  {
+    showCategory: false,
+    categories: () => []
+  }
+)
 
 const emit = defineEmits<{
   select: [string]
@@ -171,6 +180,15 @@ function metaVis() {
   return props.metaVisibility ?? DEFAULT_TASK_LIST_META_VISIBILITY
 }
 
+function categoryLabel(task: Task): string {
+  if (!props.showCategory) return ''
+  if (task.categoryId) {
+    return props.categories.find((c) => c.id === task.categoryId)?.name ?? ''
+  }
+  if (task.categoryId === null) return '未分类'
+  return ''
+}
+
 function showCreatedAt(task: Task) {
   return metaVis().createdAt && Boolean(task.createdAt)
 }
@@ -189,6 +207,7 @@ function showCompletedAt(task: Task) {
 
 function hasMeta(task: Task): boolean {
   return (
+    Boolean(categoryLabel(task)) ||
     showCreatedAt(task) ||
     showDueAt(task) ||
     showRemindAt(task) ||
@@ -250,18 +269,6 @@ watch(
 function isOverdue(task: Task) {
   if (task.status === 'DONE' || !task.dueAt) return false
   return dayjs(task.dueAt).isBefore(dayjs(), 'minute')
-}
-
-function priorityRoman(priority: TaskPriority) {
-  return getTaskPriorityMeta(priority).roman
-}
-
-function priorityLabel(priority: TaskPriority) {
-  return getTaskPriorityMeta(priority).label
-}
-
-function priorityColor(priority: TaskPriority) {
-  return getTaskPriorityMeta(priority).color
 }
 </script>
 
@@ -373,12 +380,6 @@ function priorityColor(priority: TaskPriority) {
   }
 }
 
-.task-list__priority {
-  font-size: 11px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
 .task-list__child-count {
   font-size: 11px;
   color: var(--desktop-muted);
@@ -409,6 +410,15 @@ function priorityColor(priority: TaskPriority) {
 
   &--completed {
     color: var(--el-color-success);
+  }
+
+  &--category {
+    color: var(--desktop-text);
+    background: var(--desktop-bg);
+    border: 1px solid var(--desktop-border);
+    border-radius: 999px;
+    padding: 0 6px;
+    line-height: 18px;
   }
 }
 </style>

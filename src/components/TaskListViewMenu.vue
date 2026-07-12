@@ -8,35 +8,53 @@
     @update:visible="onVisibleChange"
   >
     <template #reference>
-      <button type="button" class="task-view-menu-trigger" title="更多" @click.stop>
-        <el-icon><MoreFilled /></el-icon>
+      <button type="button" class="task-view-menu-trigger" title="列表设置" @click.stop>
+        <el-icon><Setting /></el-icon>
       </button>
     </template>
 
     <div class="task-view-menu">
-      <div class="task-view-menu__section-label">视图</div>
-      <div class="task-view-menu__view-modes">
-        <button
-          v-for="m in viewModes"
-          :key="m.value"
-          type="button"
-          class="task-view-menu__view-btn"
-          :class="{ 'is-active': viewMode === m.value }"
-          :title="m.label"
-          @click="viewMode = m.value"
-        >
-          <el-icon><component :is="m.icon" /></el-icon>
-        </button>
-      </div>
-
       <button type="button" class="task-view-menu__row task-view-menu__row--static">
         <el-icon class="task-view-menu__row-icon"><CircleCheck /></el-icon>
         <span class="task-view-menu__row-label">隐藏已完成</span>
         <el-switch v-model="hideDone" size="small" @click.stop />
       </button>
 
+      <button type="button" class="task-view-menu__row task-view-menu__row--static">
+        <span class="task-view-menu__row-label">启用分组</span>
+        <el-switch v-model="enableGrouping" size="small" @click.stop />
+      </button>
+
+      <div class="task-view-menu__sub">
+        <div class="task-view-menu__sub-title">分组条件</div>
+        <el-select
+          v-model="groupBy"
+          size="small"
+          class="task-view-menu__select"
+          :disabled="!enableGrouping"
+          @change="onGroupByChange"
+        >
+          <el-option
+            v-for="(label, key) in groupByLabels"
+            :key="key"
+            :label="label"
+            :value="key"
+          />
+        </el-select>
+
+        <div class="task-view-menu__sub-title">排序</div>
+        <el-select v-model="sortBy" size="small" class="task-view-menu__select">
+          <el-option
+            v-for="(label, key) in sortByLabels"
+            :key="key"
+            :label="label"
+            :value="key"
+          />
+        </el-select>
+      </div>
+
       <button type="button" class="task-view-menu__row" @click="showDisplaySettings = !showDisplaySettings">
-        <el-icon class="task-view-menu__row-icon"><Setting /></el-icon>
+        <el-icon class="task-view-menu__row-icon"><View /></el-icon>
         <span class="task-view-menu__row-label">显示设置</span>
         <el-icon class="task-view-menu__chevron" :class="{ 'is-open': showDisplaySettings }">
           <ArrowRight />
@@ -64,31 +82,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, type Component } from 'vue'
-import {
-  ArrowRight,
-  CircleCheck,
-  List,
-  MoreFilled,
-  Setting,
-  Grid,
-  DataLine
-} from '@element-plus/icons-vue'
-import type { TaskDetailStyle, TaskListMetaVisibility, TaskListViewMode } from '@shared/list-view-preferences'
+import { computed, ref } from 'vue'
+import { ArrowRight, CircleCheck, Setting, View } from '@element-plus/icons-vue'
+import type { TaskDetailStyle, TaskListMetaVisibility } from '@shared/list-view-preferences'
+import { TASK_GROUP_BY_LABELS, TASK_SORT_BY_LABELS, type TaskGroupBy, type TaskSortBy } from '@shared/task-list-layout'
 
-const viewMode = defineModel<TaskListViewMode>('viewMode', { required: true })
 const hideDone = defineModel<boolean>('hideDone', { required: true })
 const detailStyle = defineModel<TaskDetailStyle>('detailStyle', { required: true })
 const metaVisibility = defineModel<TaskListMetaVisibility>('metaVisibility', { required: true })
+const groupBy = defineModel<TaskGroupBy>('groupBy', { required: true })
+const sortBy = defineModel<TaskSortBy>('sortBy', { required: true })
 
 const visible = ref(false)
 const showDisplaySettings = ref(false)
-
-const viewModes: { value: TaskListViewMode; label: string; icon: Component }[] = [
-  { value: 'list', label: '列表视图', icon: List },
-  { value: 'kanban', label: '看板视图', icon: Grid },
-  { value: 'timeline', label: '时间线视图', icon: DataLine }
-]
 
 const metaOptions: { key: keyof TaskListMetaVisibility; label: string }[] = [
   { key: 'createdAt', label: '创建时间' },
@@ -97,9 +103,31 @@ const metaOptions: { key: keyof TaskListMetaVisibility; label: string }[] = [
   { key: 'completedAt', label: '完成时间' }
 ]
 
+const groupByLabels = TASK_GROUP_BY_LABELS
+const sortByLabels = TASK_SORT_BY_LABELS
+
+const enableGrouping = computed({
+  get: () => groupBy.value !== 'none',
+  set: (value: boolean) => {
+    if (!value) {
+      groupBy.value = 'none'
+      return
+    }
+    if (groupBy.value === 'none') {
+      groupBy.value = 'custom'
+    }
+  }
+})
+
 function onVisibleChange(v: boolean) {
   visible.value = v
   if (!v) showDisplaySettings.value = false
+}
+
+function onGroupByChange(value: TaskGroupBy) {
+  if (value === 'none') {
+    enableGrouping.value = false
+  }
 }
 
 function updateMeta(key: keyof TaskListMetaVisibility, value: boolean) {
@@ -124,44 +152,6 @@ function updateMeta(key: keyof TaskListMetaVisibility, value: boolean) {
   &:hover {
     background: var(--desktop-hover);
     color: var(--desktop-text);
-  }
-}
-
-.task-view-menu__section-label {
-  font-size: 12px;
-  color: var(--desktop-muted);
-  padding: 4px 8px 8px;
-}
-
-.task-view-menu__view-modes {
-  display: flex;
-  gap: 8px;
-  padding: 0 8px 12px;
-}
-
-.task-view-menu__view-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 44px;
-  border: 1px solid var(--desktop-border);
-  border-radius: 10px;
-  background: #fff;
-  color: #6b7280;
-  font-size: 22px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    border-color: #c0c4cc;
-    color: var(--desktop-text);
-  }
-
-  &.is-active {
-    border-color: var(--el-color-primary);
-    background: rgba(64, 158, 255, 0.08);
-    color: var(--el-color-primary);
   }
 }
 
@@ -228,6 +218,10 @@ function updateMeta(key: keyof TaskListMetaVisibility, value: boolean) {
   &:first-child {
     margin-top: 0;
   }
+}
+
+.task-view-menu__select {
+  width: 100%;
 }
 
 .task-view-menu__check {

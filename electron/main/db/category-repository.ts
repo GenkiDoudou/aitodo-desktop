@@ -1,11 +1,13 @@
 import type Database from 'better-sqlite3'
 import type { Category } from '@shared/types'
+import { parseCategoryKeywordsJson, serializeCategoryKeywords } from '@shared/category-keywords'
 
 interface CategoryRow {
   id: string
   name: string
   color: string | null
   sort_order: number
+  keywords: string
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -17,6 +19,7 @@ function mapRow(row: CategoryRow): Category {
     name: row.name,
     color: row.color,
     sortOrder: row.sort_order,
+    keywords: parseCategoryKeywordsJson(row.keywords),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at
@@ -45,20 +48,24 @@ export class CategoryRepository {
   insert(category: Category): void {
     this.db
       .prepare(
-        `INSERT INTO categories (id, name, color, sort_order, created_at, updated_at, deleted_at)
-         VALUES (@id, @name, @color, @sortOrder, @createdAt, @updatedAt, NULL)`
+        `INSERT INTO categories (id, name, color, sort_order, keywords, created_at, updated_at, deleted_at)
+         VALUES (@id, @name, @color, @sortOrder, @keywords, @createdAt, @updatedAt, NULL)`
       )
       .run({
         id: category.id,
         name: category.name,
         color: category.color,
         sortOrder: category.sortOrder,
+        keywords: serializeCategoryKeywords(category.keywords),
         createdAt: category.createdAt,
         updatedAt: category.updatedAt
       })
   }
 
-  update(id: string, fields: Partial<Pick<Category, 'name' | 'color' | 'sortOrder' | 'updatedAt'>>): void {
+  update(
+    id: string,
+    fields: Partial<Pick<Category, 'name' | 'color' | 'sortOrder' | 'keywords' | 'updatedAt'>>
+  ): void {
     const existing = this.findById(id)
     if (!existing) {
       return
@@ -67,11 +74,15 @@ export class CategoryRepository {
       name: fields.name ?? existing.name,
       color: fields.color !== undefined ? fields.color : existing.color,
       sortOrder: fields.sortOrder ?? existing.sortOrder,
+      keywords:
+        fields.keywords !== undefined
+          ? serializeCategoryKeywords(fields.keywords)
+          : serializeCategoryKeywords(existing.keywords),
       updatedAt: fields.updatedAt ?? existing.updatedAt
     }
     this.db
       .prepare(
-        `UPDATE categories SET name = @name, color = @color, sort_order = @sortOrder, updated_at = @updatedAt WHERE id = @id`
+        `UPDATE categories SET name = @name, color = @color, sort_order = @sortOrder, keywords = @keywords, updated_at = @updatedAt WHERE id = @id`
       )
       .run({ id, ...next })
   }

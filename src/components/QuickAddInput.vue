@@ -57,6 +57,7 @@ import {
   type AiParsedTaskDraft
 } from '@shared/ai-task-parser'
 import { recurrenceLabel } from '@shared/task-reminder'
+import { toParseCategories } from '@shared/quick-create-task'
 
 const props = withDefaults(
   defineProps<{
@@ -113,7 +114,7 @@ function runParse() {
     draft.value = null
     return
   }
-  draft.value = parseAiTaskInput(text, { categories: props.categories })
+  draft.value = parseAiTaskInput(text, { categories: toParseCategories(props.categories) })
 }
 
 function scheduleParse() {

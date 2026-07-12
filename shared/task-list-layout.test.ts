@@ -78,4 +78,14 @@ describe('task-list-layout', () => {
       compareTasks(task({ id: '1', sortOrder: 2 }), task({ id: '2', sortOrder: 1 }), 'custom')
     ).toBeGreaterThan(0)
   })
+
+  it('compareTasks createdAt sorts newest first', () => {
+    expect(
+      compareTasks(
+        task({ id: '1', createdAt: '2026-07-02T10:00:00' }),
+        task({ id: '2', createdAt: '2026-07-03T10:00:00' }),
+        'createdAt'
+      )
+    ).toBeGreaterThan(0)
+  })
 })

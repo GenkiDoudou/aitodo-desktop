@@ -1,7 +1,6 @@
-/**
- * 从任务标题与正文提取 #标签（v1 无独立标签表，与编辑器 #标签 块一致）。
- * 正文为 Markdown/HTML 时仅做轻量剥离后匹配。
- */
+/** 标签名：中文、字母数字、连字符，1–32 字符 */
+const TAG_NAME_RE = /^[\u4e00-\u9fa5\w-]{1,32}$/
+
 export function stripMarkupForTags(text: string): string {
   return text
     .replace(/<[^>]+>/g, ' ')
@@ -9,8 +8,9 @@ export function stripMarkupForTags(text: string): string {
     .replace(/[*_`~>-]/g, ' ')
 }
 
-export function extractTaskTags(task: { title: string; description?: string | null }): string[] {
-  const raw = `${task.title} ${stripMarkupForTags(task.description ?? '')}`
+/** 从纯文本中解析 #标签（兼容旧数据） */
+export function extractTagsFromText(title: string, description?: string | null): string[] {
+  const raw = `${title} ${stripMarkupForTags(description ?? '')}`
   const found = new Set<string>()
   const re = /#([\u4e00-\u9fa5\w-]{1,32})/g
   let m: RegExpExecArray | null
@@ -20,7 +20,46 @@ export function extractTaskTags(task: { title: string; description?: string | nu
   return [...found].sort((a, b) => a.localeCompare(b, 'zh-CN'))
 }
 
+/** 规范化单个标签名；非法则返回 null */
+export function normalizeTagName(raw: string): string | null {
+  const name = raw.trim().replace(/^#+/, '')
+  if (!name || !TAG_NAME_RE.test(name)) {
+    return null
+  }
+  return name
+}
+
+/** 去重、校验并排序标签列表 */
+export function normalizeTagNames(names: readonly string[]): string[] {
+  const set = new Set<string>()
+  for (const raw of names) {
+    const norm = normalizeTagName(raw)
+    if (norm) {
+      set.add(norm)
+    }
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, 'zh-CN'))
+}
+
+/**
+ * 任务标签列表：优先使用持久化字段，否则从标题/正文解析（旧数据兼容）。
+ */
+export function extractTaskTags(task: {
+  title: string
+  description?: string | null
+  tags?: string[]
+}): string[] {
+  if (task.tags?.length) {
+    return [...task.tags].sort((a, b) => a.localeCompare(b, 'zh-CN'))
+  }
+  return extractTagsFromText(task.title, task.description)
+}
+
 /** 排序/分组用：首个标签，无则空串 */
-export function primaryTaskTag(task: { title: string; description?: string | null }): string {
+export function primaryTaskTag(task: {
+  title: string
+  description?: string | null
+  tags?: string[]
+}): string {
   return extractTaskTags(task)[0] ?? ''
 }
