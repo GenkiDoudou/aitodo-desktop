@@ -29,6 +29,7 @@
       <SettingsTaskActivitySection v-else-if="activeSection === 'taskActivity'" />
       <SettingsCloseBehaviorSection v-else-if="activeSection === 'closeBehavior'" />
       <SettingsWorkdaySection v-else-if="activeSection === 'workday'" />
+      <SettingsThemeSection v-else-if="activeSection === 'theme'" />
       <SettingsWidgetSection v-else-if="activeSection === 'widget'" />
       <SettingsAboutSection v-else />
     </main>
@@ -41,6 +42,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   Coin,
   Calendar,
+  Brush,
   Cpu,
   Document,
   Folder,
@@ -64,6 +66,7 @@ import SettingsCloseBehaviorSection from '@/components/settings/SettingsCloseBeh
 import SettingsWorkdaySection from '@/components/settings/SettingsWorkdaySection.vue'
 import SettingsWidgetSection from '@/components/settings/SettingsWidgetSection.vue'
 import SettingsAboutSection from '@/components/settings/SettingsAboutSection.vue'
+import SettingsThemeSection from '@/components/settings/SettingsThemeSection.vue'
 
 type SettingsSection =
   | 'data'
@@ -75,6 +78,7 @@ type SettingsSection =
   | 'taskActivity'
   | 'closeBehavior'
   | 'workday'
+  | 'theme'
   | 'widget'
   | 'about'
 
@@ -95,6 +99,7 @@ watch(
       section === 'taskActivity' ||
       section === 'closeBehavior' ||
       section === 'workday' ||
+      section === 'theme' ||
       section === 'widget' ||
       section === 'about'
     ) {
@@ -124,6 +129,7 @@ const menuItems: MenuItem[] = [
   { id: 'taskActivity', label: '任务动态', icon: Timer },
   { id: 'closeBehavior', label: '关闭行为', icon: SwitchButton },
   { id: 'workday', label: '工作日', icon: Calendar },
+  { id: 'theme', label: '风格切换', icon: Brush },
   { id: 'widget', label: '桌面挂件', icon: Monitor },
   { id: 'desktopOrganize', label: '桌面整理', icon: Folder, route: '/desktop-organize' },
   { id: 'about', label: '关于', icon: InfoFilled }

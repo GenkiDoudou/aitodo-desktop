@@ -13,6 +13,7 @@ import CloseBehaviorDialog from '@/components/CloseBehaviorDialog.vue'
 import { useDesktopActions } from '@/composables/useDesktopActions'
 import { useShortcutStore } from '@/stores/shortcut-store'
 import { unwrapIpc } from '@/ipc/client'
+import { initDesktopTheme } from '@/utils/theme-preferences'
 
 const router = useRouter()
 const shortcutStore = useShortcutStore()
@@ -65,6 +66,7 @@ let cleanupNavigate: (() => void) | undefined
 let cleanupCloseRequest: (() => void) | undefined
 
 onMounted(async () => {
+  initDesktopTheme()
   await shortcutStore.load()
   window.addEventListener('keydown', onKeydown)
   cleanupNewTask = window.api.app.onNewTask(() => {
@@ -91,6 +93,5 @@ body,
   margin: 0;
   height: 100%;
   overflow: hidden;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 </style>

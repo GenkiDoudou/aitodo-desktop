@@ -1,17 +1,27 @@
 :root {
-  --desktop-bg: #f4f5f7;
-  --desktop-panel: #ffffff;
-  --desktop-sidebar: #fafbfc;
-  --desktop-sidebar-rail: #f0f1f3;
-  --desktop-sidebar-panel: #ffffff;
-  --desktop-sidebar-item-active: #eceef1;
-  --desktop-border: #e8eaed;
-  --desktop-hover: rgba(0, 0, 0, 0.035);
-  --desktop-active: rgba(64, 158, 255, 0.1);
-  --desktop-muted: #8b919a;
-  --desktop-text: #1f2329;
+  /* 默认主风格：Claude（运行时由 theme-preferences 覆盖） */
+  --desktop-bg: #faf9f5;
+  --desktop-panel: #f5f0e8;
+  --desktop-sidebar: #efe9de;
+  --desktop-sidebar-rail: #e8e0d2;
+  --desktop-sidebar-panel: #f5f0e8;
+  --desktop-sidebar-item-active: #ffffff;
+  --desktop-border: #e6dfd8;
+  --desktop-hover: rgba(20, 20, 19, 0.05);
+  --desktop-active: rgba(204, 120, 92, 0.15);
+  --desktop-muted: #6c6a64;
+  --desktop-text: #141413;
 
-  /* AI 入口专用 Teal，与主操作蓝区分 */
+  --desktop-font: "Source Sans 3", -apple-system, BlinkMacSystemFont, sans-serif;
+  --desktop-font-display: "Libre Baskerville", Georgia, serif;
+  --desktop-radius-sm: 6px;
+  --desktop-radius-md: 8px;
+  --desktop-radius-lg: 12px;
+  --desktop-radius-pill: 8px;
+  --desktop-title-weight: 400;
+  --desktop-shadow: none;
+
+  /* AI 入口专用 Teal，与主操作色区分 */
   --desktop-ai: #0d9488;
   --desktop-ai-light: rgba(13, 148, 136, 0.08);
   --desktop-ai-border: rgba(13, 148, 136, 0.22);
@@ -19,9 +29,23 @@
   --desktop-ai-hover-solid: #0f766e;
   --desktop-ai-active: #115e59;
 
-  --el-font-size-base: 13px;
+  --el-font-size-base: 14px;
   --el-component-size: 32px;
   --el-border-radius-base: 8px;
+}
+
+body {
+  font-family: var(--desktop-font);
+  color: var(--desktop-text);
+}
+
+/* 页面级标题使用 display 字体 */
+.home__view-title,
+.settings-layout__nav-head h1,
+.settings-section__title,
+.detail__title {
+  font-family: var(--desktop-font-display);
+  font-weight: var(--desktop-title-weight);
 }
 
 /* 弱化网页卡片感，贴近桌面工具窗口 */
@@ -33,13 +57,26 @@
 
 .el-button {
   font-weight: 500;
-  border-radius: 8px;
+  border-radius: var(--desktop-radius-md);
+}
+
+.el-button--primary {
+  border-radius: var(--desktop-radius-pill);
 }
 
 .el-input__wrapper {
-  border-radius: 8px;
+  border-radius: var(--desktop-radius-md);
 }
 
 .el-dialog {
-  border-radius: 12px;
+  border-radius: var(--desktop-radius-lg);
+  box-shadow: var(--desktop-shadow);
+}
+
+/* Figma / Notion / Airtable / Airbnb 药丸主按钮 */
+[data-desktop-theme='notion'] .el-button--primary,
+[data-desktop-theme='figma'] .el-button--primary,
+[data-desktop-theme='airtable'] .el-button--primary,
+[data-desktop-theme='airbnb'] .el-button--primary {
+  border-radius: var(--desktop-radius-pill);
 }
