@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>aiTodo Desktop — Apple 风格首页概念稿</title>
+  <style>
+    /* ── Apple Design Tokens (from DESIGN-apple.md) ── */
+    :root {
+      --primary: #0066cc;
+      --primary-focus: #0071e3;
+      --primary-on-dark: #2997ff;
+      --ink: #1d1d1f;
+      --body: #1d1d1f;
+      --body-on-dark: #ffffff;
+      --body-muted: #cccccc;
+      --ink-muted-80: #333333;
+      --ink-muted-48: #7a7a7a;
+      --divider-soft: #f0f0f0;
+      --hairline: #e0e0e0;
+      --canvas: #ffffff;
+      --canvas-parchment: #f5f5f7;
+      --surface-pearl: #fafafc;
+      --surface-tile-1: #272729;
+      --surface-black: #000000;
+      --surface-chip: rgba(210, 210, 215, 0.64);
+      --on-primary: #ffffff;
+      --success: #34c759;
+      --warning: #ff9500;
+      --danger: #ff3b30;
+
+      --font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --font-text: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+      --radius-sm: 8px;
+      --radius-md: 11px;
+      --radius-lg: 18px;
+      --radius-pill: 9999px;
+
+      --rail-w: 52px;
+      --panel-w: 248px;
+      --detail-w: 400px;
+      --global-nav-h: 44px;
+      --sub-nav-h: 52px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--canvas-parchment);
+      color: var(--ink);
+      font-family: var(--font-text);
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.47;
+      letter-spacing: -0.374px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* global-nav */
+    .global-nav {
+      height: var(--global-nav-h);
+      background: var(--surface-black);
+      color: var(--body-on-dark);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    .global-nav__brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      color: var(--body-on-dark);
+    }
+
+    .global-nav__logo {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: linear-gradient(135deg, #2997ff, #0066cc);
+    }
+
+    .global-nav__links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .global-nav__link {
+      font-size: 12px;
+      letter-spacing: -0.12px;
+      color: var(--body-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .global-nav__link:hover,
+    .global-nav__link.is-active {
+      color: var(--body-on-dark);
+    }
+
+    .global-nav__actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-utility {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 15px;
+      background: var(--ink);
+      color: var(--body-on-dark);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: -0.224px;
+      cursor: pointer;
+      transition: transform 0.12s;
+    }
+
+    .btn-utility:active { transform: scale(0.95); }
+
+    .btn-icon-circle {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--body-on-dark);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      position: relative;
+      transition: transform 0.12s, background 0.15s;
+    }
+
+    .btn-icon-circle:hover { background: rgba(255, 255, 255, 0.2); }
+    .btn-icon-circle:active { transform: scale(0.95); }
+
+    .btn-icon-circle svg { width: 16px; height: 16px; }
+
+    .badge-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 7px;
+      height: 7px;
+      background: var(--danger);
+      border-radius: 50%;
+      border: 1.5px solid var(--surface-black);
+    }
+
+    /* App body */
+    .app {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Rail */
+    .rail {
+      width: var(--rail-w);
+      background: var(--canvas);
+      border-right: 1px solid var(--hairline);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      flex-shrink: 0;
+    }
+
+    .rail__main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      width: 100%;
+      padding: 0 6px;
+    }
+
+    .rail__btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--ink-muted-48);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      transition: background 0.15s, color 0.15s, transform 0.12s;
+    }
+
+    .rail__btn:hover {
+      background: var(--canvas-parchment);
+      color: var(--ink);
+    }
+
+    .rail__btn.is-active {
+      background: var(--canvas-parchment);
+      color: var(--primary);
+    }
+
+    .rail__btn:active { transform: scale(0.95); }
+    .rail__btn svg { width: 20px; height: 20px; }
+
+    .rail__footer {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 0 6px;
+    }
+
+    /* Sidebar panel */
+    .panel {
+      width: var(--panel-w);
+      background: var(--canvas-parchment);
+      border-right: 1px solid var(--hairline);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .panel__search {
+      padding: 12px 16px;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 36px;
+      padding: 0 14px 0 36px;
+      background: var(--canvas);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: var(--radius-pill);
+      font-family: var(--font-text);
+      font-size: 14px;
+      color: var(--ink);
+      outline: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237a7a7a' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 12px center;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary-focus);
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+    }
+
+    .search-input::placeholder { color: var(--ink-muted-48); }
+
+    .panel__scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 8px 16px;
+    }
+
+    .panel__section {
+      margin-bottom: 8px;
+    }
+
+    .panel__section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 8px 4px;
+    }
+
+    .panel__section-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: -0.12px;
+      color: var(--ink-muted-48);
+      text-transform: uppercase;
+    }
+
+    .panel__add {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--primary);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.15s, transform 0.12s;
+    }
+
+    .panel__add:hover { background: rgba(0, 102, 204, 0.08); }
+    .panel__add:active { transform: scale(0.95); }
+
+    .panel__row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px 10px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--ink);
+      font-family: var(--font-text);
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: -0.2px;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.12s, transform 0.12s;
+    }
+
+    .panel__row:hover { background: rgba(0, 0, 0, 0.04); }
+    .panel__row:active { transform: scale(0.98); }
+
+    .panel__row.is-active {
+      background: var(--canvas);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+
+    .panel__row-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      color: var(--ink-muted-48);
+    }
+
+    .panel__row.is-active .panel__row-icon { color: var(--primary); }
+
+    .panel__row-label { flex: 1; min-width: 0; }
+
+    .panel__row-count {
+      font-size: 13px;
+      color: var(--ink-muted-48);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .panel__dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Workspace */
+    .workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      position: relative;
+      background: var(--canvas);
+    }
+
+    /* sub-nav-frosted */
+    .sub-nav {
+      height: var(--sub-nav-h);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(245, 245, 247, 0.8);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      flex-shrink: 0;
+    }
+
+    .sub-nav__left {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .sub-nav__title {
+      font-family: var(--font-display);
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1.19;
+      letter-spacing: 0.231px;
+      color: var(--ink);
+    }
+
+    .sub-nav__meta {
+      font-size: 14px;
+      color: var(--ink-muted-48);
+      letter-spacing: -0.224px;
+    }
+
+    .sub-nav__actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 18px;
+      background: var(--primary);
+      color: var(--on-primary);
+      border: none;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-text);
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: -0.2px;
+      cursor: pointer;
+      transition: transform 0.12s;
+    }
+
+    .btn-primary:focus-visible {
+      outline: 2px solid var(--primary-focus);
+      outline-offset: 2px;
+    }
+
+    .btn-primary:active { transform: scale(0.95); }
+
+    .btn-secondary-pill {
+      display: inline-flex;
+      align-items: center;
+      height: 32px;
+      padding: 0 16px;
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      border-radius: var(--radius-pill);
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.12s, background 0.15s;
+    }
+
+    .btn-secondary-pill:hover { background: rgba(0, 102, 204, 0.06); }
+    .btn-secondary-pill:active { transform: scale(0.95); }
+
+    .btn-pearl {
+      display: inline-flex;
+      align-items: center;
+      height: 32px;
+      padding: 0 14px;
+      background: var(--surface-pearl);
+      color: var(--ink-muted-80);
+      border: 3px solid var(--divider-soft);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.12s;
+    }
+
+    .btn-pearl:active { transform: scale(0.95); }
+
+    /* Main content area */
+    .main {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      padding-right: var(--detail-w);
+    }
+
+    .list-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    /* Stats utility cards */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding: 20px 24px 8px;
+    }
+
+    .utility-card {
+      background: var(--canvas);
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      transition: transform 0.15s;
+    }
+
+    .utility-card:hover { transform: translateY(-1px); }
+
+    .utility-card__value {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.28px;
+      color: var(--ink);
+    }
+
+    .utility-card__label {
+      margin-top: 4px;
+      font-size: 14px;
+      color: var(--ink-muted-48);
+      letter-spacing: -0.224px;
+    }
+
+    /* View chips */
+    .chips {
+      display: flex;
+      gap: 8px;
+      padding: 8px 24px 12px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      height: 32px;
+      padding: 0 16px;
+      background: var(--canvas);
+      color: var(--ink);
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-pill);
+      font-size: 14px;
+      letter-spacing: -0.224px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s;
+    }
+
+    .chip:hover { border-color: rgba(0, 102, 204, 0.4); }
+
+    .chip.is-selected {
+      border: 2px solid var(--primary-focus);
+      padding: 0 15px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .chip:active { transform: scale(0.95); }
+
+    /* Quick add */
+    .quick-add {
+      margin: 0 24px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 44px;
+      padding: 0 6px 0 14px;
+      background: var(--canvas-parchment);
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .quick-add__input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: var(--font-text);
+      font-size: 17px;
+      color: var(--ink);
+      outline: none;
+      letter-spacing: -0.374px;
+    }
+
+    .quick-add__input::placeholder { color: var(--ink-muted-48); }
+
+    .priority-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 50%;
+      background: var(--surface-chip);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.12s;
+    }
+
+    .priority-btn--high { background: rgba(255, 59, 48, 0.15); box-shadow: inset 0 0 0 2px var(--danger); }
+    .priority-btn:active { transform: scale(0.95); }
+
+    /* Task list */
+    .task-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 24px 24px;
+    }
+
+    .task-group { margin-bottom: 20px; }
+
+    .task-group__head {
+      padding: 8px 4px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.224px;
+      color: var(--ink-muted-48);
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      margin-bottom: 6px;
+      border-radius: var(--radius-lg);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+    }
+
+    .task-item:hover {
+      background: var(--canvas-parchment);
+    }
+
+    .task-item.is-selected {
+      background: var(--canvas);
+      border-color: var(--hairline);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .task-check {
+      width: 22px;
+      height: 22px;
+      border: 1.5px solid var(--hairline);
+      border-radius: 50%;
+      background: var(--canvas);
+      flex-shrink: 0;
+      margin-top: 1px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s;
+    }
+
+    .task-check:hover { border-color: var(--primary); }
+    .task-check:active { transform: scale(0.9); }
+
+    .task-check.is-done {
+      background: var(--primary);
+      border-color: var(--primary);
+      position: relative;
+    }
+
+    .task-check.is-done::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 3px;
+      width: 5px;
+      height: 9px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .task-body { flex: 1; min-width: 0; }
+
+    .task-title {
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.35;
+      letter-spacing: -0.374px;
+      color: var(--ink);
+    }
+
+    .task-item.is-done .task-title {
+      color: var(--ink-muted-48);
+      text-decoration: line-through;
+    }
+
+    .task-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--ink-muted-48);
+      letter-spacing: -0.2px;
+    }
+
+    .task-meta__pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      background: var(--canvas-parchment);
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+    }
+
+    .task-meta__pill--due { color: var(--danger); background: rgba(255, 59, 48, 0.08); }
+    .task-meta__pill--blue { color: var(--primary); background: rgba(0, 102, 204, 0.08); }
+
+    /* Detail panel */
+    .detail {
+      position: absolute;
+      top: var(--sub-nav-h);
+      right: 0;
+      bottom: 0;
+      width: var(--detail-w);
+      background: var(--canvas-parchment);
+      border-left: 1px solid var(--hairline);
+      display: flex;
+      flex-direction: column;
+      animation: slideIn 0.4s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(12px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .detail__head {
+      padding: 24px 24px 16px;
+      background: var(--canvas);
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .detail__eyebrow {
+      font-size: 12px;
+      color: var(--ink-muted-48);
+      letter-spacing: -0.12px;
+      margin-bottom: 8px;
+    }
+
+    .detail__title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: -0.28px;
+      color: var(--ink);
+    }
+
+    .detail__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+    }
+
+    .detail-field { margin-bottom: 20px; }
+
+    .detail-field__label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: -0.12px;
+      color: var(--ink-muted-48);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .detail-field__text {
+      font-size: 15px;
+      line-height: 1.47;
+      color: var(--ink-muted-80);
+      letter-spacing: -0.2px;
+    }
+
+    .detail-field__input {
+      width: 100%;
+      height: 44px;
+      padding: 0 16px;
+      background: var(--canvas);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: var(--radius-pill);
+      font-family: var(--font-text);
+      font-size: 15px;
+      color: var(--ink);
+      outline: none;
+    }
+
+    .detail-field__input:focus {
+      border-color: var(--primary-focus);
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+    }
+
+    .detail__tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .detail__footer {
+      padding: 16px 24px 20px;
+      background: var(--canvas);
+      border-top: 1px solid var(--hairline);
+      display: flex;
+      gap: 10px;
+    }
+
+    .detail__footer .btn-primary,
+    .detail__footer .btn-secondary-pill {
+      flex: 1;
+      height: 40px;
+    }
+
+    /* Floating sticky bar */
+    .sticky-bar {
+      position: fixed;
+      bottom: 16px;
+      left: calc(var(--rail-w) + var(--panel-w) + 24px);
+      right: calc(var(--detail-w) + 24px);
+      height: 52px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(245, 245, 247, 0.85);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: var(--radius-lg);
+      font-size: 14px;
+      color: var(--ink-muted-80);
+      z-index: 50;
+    }
+
+    .sticky-bar strong { color: var(--ink); font-weight: 600; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 4px;
+    }
+
+    @media (max-width: 1100px) {
+      .detail { display: none; }
+      .main { padding-right: 0; }
+      .sticky-bar { right: 24px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .panel { display: none; }
+      .global-nav__links { display: none; }
+      .sub-nav__meta { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- global-nav -->
+    <header class="global-nav">
+      <div class="global-nav__brand">
+        <span class="global-nav__logo" aria-hidden="true"></span>
+        aiTodo
+      </div>
+      <ul class="global-nav__links">
+        <li><a class="global-nav__link is-active" href="#">任务</a></li>
+        <li><a class="global-nav__link" href="#">日历</a></li>
+        <li><a class="global-nav__link" href="#">看板</a></li>
+        <li><a class="global-nav__link" href="#">四象限</a></li>
+      </ul>
+      <div class="global-nav__actions">
+        <button class="btn-icon-circle" title="消息">
+          <span class="badge-dot"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1"/></svg>
+        </button>
+        <button class="btn-utility">设置</button>
+      </div>
+    </header>
+
+    <div class="app">
+      <!-- Rail -->
+      <nav class="rail" aria-label="快捷导航">
+        <div class="rail__main">
+          <button class="rail__btn is-active" title="任务">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </button>
+          <button class="rail__btn" title="日历">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </button>
+          <button class="rail__btn" title="四象限">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+          </button>
+          <button class="rail__btn" title="看板">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
+          </button>
+        </div>
+        <div class="rail__footer">
+          <button class="rail__btn" title="设置">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2"/></svg>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Sidebar -->
+      <aside class="panel">
+        <div class="panel__search">
+          <input class="search-input" type="search" placeholder="搜索任务…" />
+        </div>
+        <div class="panel__scroll">
+          <div class="panel__section">
+            <div class="panel__section-head">
+              <span class="panel__section-title">智能清单</span>
+              <button class="panel__add" title="新建视图">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+            <button class="panel__row">
+              <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+              <span class="panel__row-label">全部</span>
+              <span class="panel__row-count">24</span>
+            </button>
+            <button class="panel__row is-active">
+              <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+              <span class="panel__row-label">今天</span>
+              <span class="panel__row-count">5</span>
+            </button>
+            <button class="panel__row">
+              <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>
+              <span class="panel__row-label">本周</span>
+              <span class="panel__row-count">12</span>
+            </button>
+            <button class="panel__row">
+              <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6M16 6l-4-4-4 4M12 2v14"/></svg>
+              <span class="panel__row-label">收件箱</span>
+              <span class="panel__row-count">3</span>
+            </button>
+          </div>
+
+          <div class="panel__section">
+            <div class="panel__section-head">
+              <span class="panel__section-title">清单</span>
+              <button class="panel__add" title="新建清单">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+            <button class="panel__row">
+              <span class="panel__dot" style="background:#0066cc"></span>
+              <span class="panel__row-label">工作</span>
+              <span class="panel__row-count">9</span>
+            </button>
+            <button class="panel__row">
+              <span class="panel__dot" style="background:#ff9500"></span>
+              <span class="panel__row-label">个人</span>
+              <span class="panel__row-count">6</span>
+            </button>
+            <button class="panel__row">
+              <span class="panel__dot" style="background:#34c759"></span>
+              <span class="panel__row-label">学习</span>
+              <span class="panel__row-count">4</span>
+            </button>
+            <button class="panel__row">
+              <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+              <span class="panel__row-label">未分类</span>
+              <span class="panel__row-count">2</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Workspace -->
+      <main class="workspace">
+        <header class="sub-nav">
+          <div class="sub-nav__left">
+            <h1 class="sub-nav__title">今天</h1>
+            <span class="sub-nav__meta">5 项待办 · 2 项今日到期</span>
+          </div>
+          <div class="sub-nav__actions">
+            <button class="btn-pearl">筛选</button>
+            <button class="btn-secondary-pill">布局</button>
+            <button class="btn-primary">+ 新建任务</button>
+          </div>
+        </header>
+
+        <div class="main">
+          <section class="list-pane">
+            <div class="stats-row">
+              <div class="utility-card">
+                <div class="utility-card__value">5</div>
+                <div class="utility-card__label">待办</div>
+              </div>
+              <div class="utility-card">
+                <div class="utility-card__value">2</div>
+                <div class="utility-card__label">今日到期</div>
+              </div>
+              <div class="utility-card">
+                <div class="utility-card__value">1</div>
+                <div class="utility-card__label">进行中</div>
+              </div>
+              <div class="utility-card">
+                <div class="utility-card__value">3</div>
+                <div class="utility-card__label">高优先级</div>
+              </div>
+            </div>
+
+            <nav class="chips" aria-label="视图">
+              <button class="chip is-selected">列表</button>
+              <button class="chip">看板</button>
+              <button class="chip">日历</button>
+              <button class="chip">四象限</button>
+            </nav>
+
+            <div class="quick-add">
+              <button class="priority-btn priority-btn--high" title="优先级"></button>
+              <input class="quick-add__input" type="text" placeholder="添加任务，按回车创建" />
+              <button class="btn-primary" style="height:36px;padding:0 16px;font-size:13px">截止</button>
+            </div>
+
+            <div class="task-list">
+              <div class="task-group">
+                <div class="task-group__head">已逾期</div>
+                <article class="task-item is-selected">
+                  <button class="task-check" aria-label="完成"></button>
+                  <div class="task-body">
+                    <div class="task-title">完成 Desktop 首页 Apple 风格视觉稿</div>
+                    <div class="task-meta">
+                      <span class="task-meta__pill task-meta__pill--due">昨天 18:00</span>
+                      <span class="task-meta__pill">#设计</span>
+                      <span class="task-meta__pill task-meta__pill--blue">进行中</span>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <div class="task-group">
+                <div class="task-group__head">今天</div>
+                <article class="task-item">
+                  <button class="task-check" aria-label="完成"></button>
+                  <div class="task-body">
+                    <div class="task-title">联调多提醒与法定节假日循环</div>
+                    <div class="task-meta">
+                      <span class="task-meta__pill task-meta__pill--due">今天 14:30</span>
+                      <span class="task-meta__pill">工作</span>
+                    </div>
+                  </div>
+                </article>
+                <article class="task-item">
+                  <button class="task-check" aria-label="完成"></button>
+                  <div class="task-body">
+                    <div class="task-title">Review PR：看板分组拖拽修复</div>
+                    <div class="task-meta">
+                      <span class="task-meta__pill">今天</span>
+                      <span class="task-meta__pill">#代码审查</span>
+                    </div>
+                  </div>
+                </article>
+                <article class="task-item is-done">
+                  <button class="task-check is-done" aria-label="已完成"></button>
+                  <div class="task-body">
+                    <div class="task-title">更新 README 数据目录说明</div>
+                    <div class="task-meta">
+                      <span class="task-meta__pill">已完成 09:12</span>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <div class="task-group">
+                <div class="task-group__head">无日期</div>
+                <article class="task-item">
+                  <button class="task-check" aria-label="完成"></button>
+                  <div class="task-body">
+                    <div class="task-title">探索 OpenSpec 批量归档工作流</div>
+                    <div class="task-meta">
+                      <span class="task-meta__pill">学习</span>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <!-- Detail -->
+          <aside class="detail">
+            <header class="detail__head">
+              <div class="detail__eyebrow">任务详情</div>
+              <h2 class="detail__title">完成 Desktop 首页 Apple 风格视觉稿</h2>
+            </header>
+            <div class="detail__body">
+              <div class="detail-field">
+                <div class="detail-field__label">描述</div>
+                <p class="detail-field__text">
+                  参照 DESIGN-apple.md：近白画布、Action Blue 交互色、SF Pro 字阶、药丸按钮与磨砂顶栏。保持 desktop 三栏信息架构不变。
+                </p>
+              </div>
+              <div class="detail-field">
+                <div class="detail-field__label">截止时间</div>
+                <input class="detail-field__input" type="text" value="2026-07-15 18:00" readonly />
+              </div>
+              <div class="detail-field">
+                <div class="detail-field__label">状态</div>
+                <div class="detail__tags">
+                  <span class="chip is-selected" style="height:28px;font-size:12px">进行中</span>
+                  <span class="chip" style="height:28px;font-size:12px">P1</span>
+                </div>
+              </div>
+              <div class="detail-field">
+                <div class="detail-field__label">提醒</div>
+                <div class="detail__tags">
+                  <span class="chip" style="height:28px;font-size:12px">提前 30 分钟</span>
+                  <span class="chip" style="height:28px;font-size:12px">准时</span>
+                </div>
+              </div>
+              <div class="detail-field">
+                <div class="detail-field__label">标签</div>
+                <div class="detail__tags">
+                  <span class="chip" style="height:28px;font-size:12px">#设计</span>
+                  <span class="chip" style="height:28px;font-size:12px">#desktop</span>
+                </div>
+              </div>
+            </div>
+            <footer class="detail__footer">
+              <button class="btn-secondary-pill">删除</button>
+              <button class="btn-primary">保存</button>
+            </footer>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <div class="sticky-bar">
+      <span>aiTodo Desktop · <strong>Apple Design Concept</strong></span>
+      <span>本地 SQLite · 无云同步</span>
+    </div>
+  </div>
+</body>
+</html>

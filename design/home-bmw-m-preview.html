@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>aiTodo Desktop — BMW M 风格首页概念稿</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700&family=Barlow:wght@300;400;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── BMW M Design Tokens (from DESIGN-bmw-m.md) ── */
+    :root {
+      --primary: #ffffff;
+      --ink: #ffffff;
+      --body: #bbbbbb;
+      --body-strong: #e6e6e6;
+      --muted: #7e7e7e;
+      --hairline: #3c3c3c;
+      --hairline-strong: #262626;
+      --canvas: #000000;
+      --surface-card: #1a1a1a;
+      --surface-elevated: #262626;
+      --surface-soft: #0d0d0d;
+      --m-blue-light: #0066b1;
+      --m-blue-dark: #1c69d4;
+      --m-red: #e22718;
+      --bmw-blue: #1c69d4;
+      --carbon-gray: #2b2b2b;
+      --success: #0fa336;
+      --warning: #f4b400;
+      --priority-high: #e22718;
+      --priority-mid: #f4b400;
+      --priority-low: #1c69d4;
+
+      --font-display: "Barlow Condensed", "Segoe UI", sans-serif;
+      --font-body: "Barlow", -apple-system, BlinkMacSystemFont, sans-serif;
+
+      --rail-w: 56px;
+      --panel-w: 240px;
+      --detail-w: 380px;
+      --header-h: 64px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-weight: 300;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* M tricolor stripe */
+    .m-stripe {
+      height: 4px;
+      background: linear-gradient(
+        90deg,
+        var(--m-blue-light) 0%,
+        var(--m-blue-light) 33.33%,
+        var(--m-blue-dark) 33.33%,
+        var(--m-blue-dark) 66.66%,
+        var(--m-red) 66.66%,
+        var(--m-red) 100%
+      );
+      flex-shrink: 0;
+    }
+
+    .app {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* ── Rail (一级导航) ── */
+    .rail {
+      width: var(--rail-w);
+      background: var(--canvas);
+      border-right: 1px solid var(--hairline);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .rail__brand {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .rail__brand::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--hairline);
+    }
+
+    .rail__brand::after {
+      content: "";
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--m-blue-light), var(--m-blue-dark), var(--m-red));
+    }
+
+    .rail__main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .rail__btn {
+      width: 40px;
+      height: 40px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+
+    .rail__btn:hover {
+      color: var(--ink);
+      border-color: var(--hairline);
+    }
+
+    .rail__btn.is-active {
+      color: var(--ink);
+      background: var(--surface-card);
+      border-color: var(--hairline);
+    }
+
+    .rail__btn svg { width: 18px; height: 18px; }
+
+    .rail__footer {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: auto;
+    }
+
+    .rail__badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 6px;
+      height: 6px;
+      background: var(--m-red);
+      border-radius: 50%;
+    }
+
+    .rail__btn--message { position: relative; }
+
+    /* ── Sidebar Panel (二级导航) ── */
+    .panel {
+      width: var(--panel-w);
+      background: var(--surface-soft);
+      border-right: 1px solid var(--hairline);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      animation: slideIn 0.5s ease 0.1s both;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-12px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .panel__head {
+      padding: 20px 16px 12px;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .panel__logo-text {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .panel__logo-sub {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
+
+    .panel__scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0 16px;
+    }
+
+    .panel__section-label {
+      padding: 16px 16px 8px;
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .panel__row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      background: transparent;
+      color: var(--body);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 300;
+      text-align: left;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+    }
+
+    .panel__row:hover {
+      color: var(--body-strong);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .panel__row.is-active {
+      color: var(--ink);
+      background: var(--surface-card);
+      border-left-color: var(--ink);
+    }
+
+    .panel__row-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .panel__row.is-active .panel__row-icon { opacity: 1; }
+
+    .panel__row-label { flex: 1; min-width: 0; }
+
+    .panel__row-count {
+      font-size: 12px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .panel__row.is-active .panel__row-count { color: var(--body); }
+
+    .panel__divider {
+      height: 1px;
+      background: var(--hairline);
+      margin: 8px 16px;
+    }
+
+    /* ── Workspace ── */
+    .workspace {
+      flex: 1;
+      display: flex;
+      min-width: 0;
+      position: relative;
+      background: var(--canvas);
+    }
+
+    .list-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding-right: var(--detail-w);
+      animation: slideIn 0.5s ease 0.15s both;
+    }
+
+    /* Header band — hero-photo-band inspired */
+    .list-header {
+      min-height: var(--header-h);
+      padding: 20px 32px 16px;
+      border-bottom: 1px solid var(--hairline);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      background:
+        linear-gradient(135deg, rgba(0, 102, 177, 0.08) 0%, transparent 40%),
+        linear-gradient(225deg, rgba(226, 39, 24, 0.06) 0%, transparent 35%),
+        var(--canvas);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .list-header::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    .list-header__left {
+      position: relative;
+      z-index: 1;
+    }
+
+    .list-header__eyebrow {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .list-header__title {
+      font-family: var(--font-display);
+      font-size: 40px;
+      font-weight: 700;
+      line-height: 1.05;
+      text-transform: uppercase;
+      letter-spacing: -0.5px;
+    }
+
+    .list-header__meta {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--body);
+      font-weight: 300;
+    }
+
+    .list-header__meta strong {
+      color: var(--body-strong);
+      font-weight: 400;
+    }
+
+    .list-header__actions {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 40px;
+      padding: 0 20px;
+      border: 1px solid var(--ink);
+      background: transparent;
+      color: var(--ink);
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn:hover {
+      background: var(--ink);
+      color: var(--canvas);
+    }
+
+    .btn--ghost {
+      border-color: var(--hairline);
+      color: var(--body-strong);
+    }
+
+    .btn--ghost:hover {
+      border-color: var(--ink);
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid var(--hairline);
+      background: var(--surface-card);
+      color: var(--ink);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+
+    .btn-icon:hover { border-color: var(--ink); }
+
+    /* Category tabs */
+    .tabs {
+      display: flex;
+      gap: 24px;
+      padding: 0 32px;
+      border-bottom: 1px solid var(--hairline);
+      background: var(--canvas);
+    }
+
+    .tab {
+      padding: 14px 0;
+      border: none;
+      background: transparent;
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--body);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab:hover { color: var(--body-strong); }
+
+    .tab.is-active {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+    }
+
+    /* Quick add */
+    .quick-add {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 32px;
+      padding: 0 16px;
+      height: 48px;
+      background: var(--surface-card);
+      border: 1px solid var(--hairline);
+    }
+
+    .quick-add__input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 300;
+      outline: none;
+    }
+
+    .quick-add__input::placeholder { color: var(--muted); }
+
+    .quick-add__flag {
+      width: 14px;
+      height: 14px;
+      border: none;
+      background: var(--muted);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .quick-add__flag--high { background: var(--priority-high); }
+    .quick-add__flag--mid { background: var(--warning); }
+
+    /* Task list */
+    .task-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 32px 32px;
+    }
+
+    .task-group {
+      margin-bottom: 24px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .task-group:nth-child(1) { animation-delay: 0.2s; }
+    .task-group:nth-child(2) { animation-delay: 0.28s; }
+    .task-group:nth-child(3) { animation-delay: 0.36s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .task-group__head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0 8px;
+      border-bottom: 1px solid var(--hairline-strong);
+      margin-bottom: 4px;
+    }
+
+    .task-group__title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--body-strong);
+    }
+
+    .task-group__count {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--hairline-strong);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .task-item:hover {
+      background: rgba(255, 255, 255, 0.02);
+      margin: 0 -12px;
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
+    .task-item.is-selected {
+      background: var(--surface-card);
+      margin: 0 -12px;
+      padding-left: 12px;
+      padding-right: 12px;
+      border-left: 2px solid var(--m-blue-dark);
+    }
+
+    .task-check {
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--hairline);
+      background: transparent;
+      flex-shrink: 0;
+      margin-top: 2px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .task-check:hover { border-color: var(--ink); }
+
+    .task-check.is-done {
+      background: var(--success);
+      border-color: var(--success);
+    }
+
+    .task-body { flex: 1; min-width: 0; }
+
+    .task-title {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--body-strong);
+      line-height: 1.4;
+    }
+
+    .task-item.is-done .task-title {
+      color: var(--muted);
+      text-decoration: line-through;
+    }
+
+    .task-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .task-meta__tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    .task-meta__tag--due { color: var(--m-red); }
+    .task-meta__tag--progress { color: var(--bmw-blue); }
+
+    .task-priority {
+      width: 3px;
+      align-self: stretch;
+      flex-shrink: 0;
+      background: var(--hairline);
+    }
+
+    .task-priority--high { background: var(--priority-high); }
+    .task-priority--mid { background: var(--warning); }
+    .task-priority--low { background: var(--priority-low); }
+
+    /* Spec cells row (stats) */
+    .spec-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      margin: 0 32px 16px;
+      background: var(--hairline);
+      border: 1px solid var(--hairline);
+    }
+
+    .spec-cell {
+      background: var(--surface-soft);
+      padding: 16px 20px;
+    }
+
+    .spec-cell__value {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--ink);
+    }
+
+    .spec-cell__label {
+      margin-top: 6px;
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* Detail panel */
+    .detail {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: var(--detail-w);
+      background: var(--surface-soft);
+      border-left: 1px solid var(--hairline);
+      display: flex;
+      flex-direction: column;
+      animation: slideInRight 0.45s ease 0.25s both;
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(16px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .detail__stripe { flex-shrink: 0; }
+
+    .detail__head {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .detail__label {
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .detail__title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.25;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .detail__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+    }
+
+    .detail-field {
+      margin-bottom: 20px;
+    }
+
+    .detail-field__label {
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .detail-field__value {
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--body);
+      line-height: 1.6;
+    }
+
+    .detail-field__input {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      background: var(--surface-card);
+      border: 1px solid var(--hairline);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 300;
+    }
+
+    .detail-field__input:focus {
+      outline: none;
+      border-color: var(--ink);
+    }
+
+    .detail__chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      padding: 6px 10px;
+      background: var(--surface-card);
+      border: 1px solid var(--hairline);
+      font-size: 12px;
+      color: var(--body);
+      letter-spacing: 0.3px;
+    }
+
+    .detail__footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--hairline);
+      display: flex;
+      gap: 8px;
+    }
+
+    .detail__footer .btn { flex: 1; height: 44px; }
+
+    /* Status bar */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: calc(var(--rail-w) + var(--panel-w));
+      right: var(--detail-w);
+      height: 28px;
+      background: var(--surface-soft);
+      border-top: 1px solid var(--hairline);
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      z-index: 5;
+    }
+
+    .status-bar span { margin-right: 20px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--hairline); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* Responsive note */
+    @media (max-width: 1100px) {
+      .detail { display: none; }
+      .list-pane { padding-right: 0; }
+      .status-bar { right: 0; }
+      .spec-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .panel { display: none; }
+      .list-header__title { font-size: 32px; }
+      .status-bar { left: var(--rail-w); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- 一级：图标轨 -->
+    <nav class="rail" aria-label="主导航">
+      <button class="rail__brand" title="aiTodo" aria-label="aiTodo"></button>
+      <div class="rail__main">
+        <button class="rail__btn is-active" title="任务">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        </button>
+        <button class="rail__btn" title="日历">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="0"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </button>
+        <button class="rail__btn" title="四象限">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+        </button>
+        <button class="rail__btn" title="看板">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
+        </button>
+      </div>
+      <div class="rail__footer">
+        <button class="rail__btn rail__btn--message" title="消息">
+          <span class="rail__badge"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        </button>
+        <button class="rail__btn" title="设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- 二级：侧栏面板 -->
+    <aside class="panel">
+      <div class="panel__head">
+        <div class="panel__logo-text">aiTodo</div>
+        <div class="panel__logo-sub">Desktop · v1</div>
+      </div>
+      <div class="m-stripe"></div>
+      <div class="panel__scroll">
+        <button class="panel__row is-active">
+          <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <span class="panel__row-label">全部</span>
+          <span class="panel__row-count">24</span>
+        </button>
+        <button class="panel__row">
+          <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 12H4M20 6H4M20 18H4"/></svg>
+          <span class="panel__row-label">今天</span>
+          <span class="panel__row-count">5</span>
+        </button>
+        <button class="panel__row">
+          <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18"/><path d="M3 10h18"/></svg>
+          <span class="panel__row-label">本周</span>
+          <span class="panel__row-count">12</span>
+        </button>
+        <button class="panel__row">
+          <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span class="panel__row-label">最近 7 天</span>
+          <span class="panel__row-count">8</span>
+        </button>
+
+        <div class="panel__divider"></div>
+        <div class="panel__section-label">智能清单</div>
+
+        <button class="panel__row">
+          <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6M16 6l-4-4-4 4M12 2v14"/></svg>
+          <span class="panel__row-label">收件箱</span>
+          <span class="panel__row-count">3</span>
+        </button>
+        <button class="panel__row">
+          <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          <span class="panel__row-label">已完成</span>
+          <span class="panel__row-count">41</span>
+        </button>
+
+        <div class="panel__divider"></div>
+        <div class="panel__section-label">清单</div>
+
+        <button class="panel__row">
+          <span class="panel__row-icon" style="width:8px;height:8px;background:#1c69d4;border-radius:0"></span>
+          <span class="panel__row-label">工作</span>
+          <span class="panel__row-count">9</span>
+        </button>
+        <button class="panel__row">
+          <span class="panel__row-icon" style="width:8px;height:8px;background:#e22718;border-radius:0"></span>
+          <span class="panel__row-label">个人</span>
+          <span class="panel__row-count">6</span>
+        </button>
+        <button class="panel__row">
+          <span class="panel__row-icon" style="width:8px;height:8px;background:#0fa336;border-radius:0"></span>
+          <span class="panel__row-label">学习</span>
+          <span class="panel__row-count">4</span>
+        </button>
+        <button class="panel__row">
+          <svg class="panel__row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          <span class="panel__row-label">未分类</span>
+          <span class="panel__row-count">2</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主工作区 -->
+    <main class="workspace">
+      <section class="list-pane">
+        <header class="list-header">
+          <div class="list-header__left">
+            <div class="list-header__eyebrow">Smart List · Today</div>
+            <h1 class="list-header__title">今天</h1>
+            <p class="list-header__meta">
+              <strong>5</strong> 项待办 · 截止今日 <strong>2</strong> · 进行中 <strong>1</strong>
+            </p>
+          </div>
+          <div class="list-header__actions">
+            <button class="btn btn--ghost">筛选</button>
+            <button class="btn">+ 新建任务</button>
+            <button class="btn-icon" title="布局">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h7v12H4zM13 6h7v5h-7zM13 13h7v5h-7z"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="m-stripe"></div>
+
+        <!-- spec-cell 统计带 -->
+        <div class="spec-row" style="margin-top:20px">
+          <div class="spec-cell">
+            <div class="spec-cell__value">5</div>
+            <div class="spec-cell__label">Open</div>
+          </div>
+          <div class="spec-cell">
+            <div class="spec-cell__value">2</div>
+            <div class="spec-cell__label">Due Today</div>
+          </div>
+          <div class="spec-cell">
+            <div class="spec-cell__value">1</div>
+            <div class="spec-cell__label">In Progress</div>
+          </div>
+          <div class="spec-cell">
+            <div class="spec-cell__value">3</div>
+            <div class="spec-cell__label">High Priority</div>
+          </div>
+        </div>
+
+        <nav class="tabs" aria-label="视图切换">
+          <button class="tab is-active">列表</button>
+          <button class="tab">看板</button>
+          <button class="tab">日历</button>
+          <button class="tab">四象限</button>
+        </nav>
+
+        <div class="quick-add">
+          <button class="quick-add__flag quick-add__flag--mid" title="优先级"></button>
+          <input class="quick-add__input" type="text" placeholder="添加任务，回车即可创建…" />
+          <button class="btn btn--ghost" style="height:32px;padding:0 12px;font-size:10px">截止</button>
+        </div>
+
+        <div class="task-list">
+          <div class="task-group">
+            <div class="task-group__head">
+              <span class="task-group__title">Overdue</span>
+              <span class="task-group__count">1 item</span>
+            </div>
+            <article class="task-item is-selected">
+              <div class="task-priority task-priority--high"></div>
+              <button class="task-check" aria-label="完成"></button>
+              <div class="task-body">
+                <div class="task-title">完成桌面端 BMW M 主题视觉稿</div>
+                <div class="task-meta">
+                  <span class="task-meta__tag task-meta__tag--due">昨天 18:00</span>
+                  <span class="task-meta__tag">#设计</span>
+                  <span class="task-meta__tag task-meta__tag--progress">进行中</span>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="task-group">
+            <div class="task-group__head">
+              <span class="task-group__title">Today</span>
+              <span class="task-group__count">3 items</span>
+            </div>
+            <article class="task-item">
+              <div class="task-priority task-priority--mid"></div>
+              <button class="task-check" aria-label="完成"></button>
+              <div class="task-body">
+                <div class="task-title">联调多提醒与法定节假日循环</div>
+                <div class="task-meta">
+                  <span class="task-meta__tag task-meta__tag--due">今天 14:30</span>
+                  <span class="task-meta__tag">工作</span>
+                </div>
+              </div>
+            </article>
+            <article class="task-item">
+              <div class="task-priority task-priority--low"></div>
+              <button class="task-check" aria-label="完成"></button>
+              <div class="task-body">
+                <div class="task-title">Review PR：看板分组拖拽修复</div>
+                <div class="task-meta">
+                  <span class="task-meta__tag">今天</span>
+                  <span class="task-meta__tag">#代码审查</span>
+                </div>
+              </div>
+            </article>
+            <article class="task-item">
+              <div class="task-priority"></div>
+              <button class="task-check is-done" aria-label="已完成"></button>
+              <div class="task-body is-done">
+                <div class="task-title">更新 README 数据目录说明</div>
+                <div class="task-meta">
+                  <span class="task-meta__tag">已完成 09:12</span>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="task-group">
+            <div class="task-group__head">
+              <span class="task-group__title">No Date</span>
+              <span class="task-group__count">1 item</span>
+            </div>
+            <article class="task-item">
+              <div class="task-priority"></div>
+              <button class="task-check" aria-label="完成"></button>
+              <div class="task-body">
+                <div class="task-title">探索 OpenSpec 批量归档工作流</div>
+                <div class="task-meta">
+                  <span class="task-meta__tag">学习</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- 任务详情侧栏 -->
+      <aside class="detail">
+        <div class="m-stripe detail__stripe"></div>
+        <header class="detail__head">
+          <div class="detail__label">Task Detail</div>
+          <h2 class="detail__title">完成桌面端 BMW M 主题视觉稿</h2>
+        </header>
+        <div class="detail__body">
+          <div class="detail-field">
+            <div class="detail-field__label">Description</div>
+            <p class="detail-field__value">
+              参考 DESIGN-bmw-m.md 设计规范，将 desktop 首页改造为近黑画布 + 大写标题 + M 三色条纹点缀的 motorsport 工程美学。保持现有信息架构：侧栏、列表、详情三栏布局。
+            </p>
+          </div>
+          <div class="detail-field">
+            <div class="detail-field__label">Due Date</div>
+            <input class="detail-field__input" type="text" value="2026-07-15 18:00" readonly />
+          </div>
+          <div class="detail-field">
+            <div class="detail-field__label">Status</div>
+            <div class="detail__chips">
+              <span class="chip" style="border-color:var(--bmw-blue);color:var(--body-strong)">IN PROGRESS</span>
+              <span class="chip">P1</span>
+            </div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-field__label">Reminders</div>
+            <div class="detail__chips">
+              <span class="chip">提前 30 分钟</span>
+              <span class="chip">准时</span>
+            </div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-field__label">Recurrence</div>
+            <div class="detail__chips">
+              <span class="chip">不重复</span>
+            </div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-field__label">Tags</div>
+            <div class="detail__chips">
+              <span class="chip">#设计</span>
+              <span class="chip">#desktop</span>
+            </div>
+          </div>
+        </div>
+        <footer class="detail__footer">
+          <button class="btn btn--ghost">删除</button>
+          <button class="btn">保存</button>
+        </footer>
+      </aside>
+    </main>
+  </div>
+
+  <div class="status-bar">
+    <span>aiTodo Desktop</span>
+    <span>BMW M Design Concept</span>
+    <span>本地 SQLite · 无云同步</span>
+  </div>
+</body>
+</html>
