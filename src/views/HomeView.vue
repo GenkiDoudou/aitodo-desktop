@@ -27,6 +27,7 @@
       @select-category="onCategory"
       @select-view="onView"
       @create-view="openCreateView"
+      @create-view-from-template="onCreateViewFromTemplate"
       @edit-view="openEditView"
       @save-as-view="openSaveAsView"
       @open-settings="router.push('/settings')"
@@ -324,6 +325,7 @@
         :initial-kanban-board-mode="viewEditorKanbanMode"
         :initial-quadrant-options="viewEditorQuadrantOptions"
         :initial-rule="viewEditorRule"
+        :initial-scope-key="viewEditorScopeKey"
         :initial-hide-done="viewEditorHideDone"
         :initial-detail-style="viewEditorDetailStyle"
         :initial-meta-visibility="viewEditorMetaVisibility"
@@ -499,6 +501,7 @@ const viewEditorSortBy = ref<TaskSortBy>('custom')
 const viewEditorKanbanMode = ref<KanbanBoardMode>('group')
 const viewEditorQuadrantOptions = ref<import('@shared/quadrant-layout').QuadrantLayoutOptions | null>(null)
 const viewEditorRule = ref<FilterNode | null>(null)
+const viewEditorScopeKey = ref<string | null>(null)
 
 const dateFieldLabels = TASK_DATE_FIELD_LABELS
 const doneTimeRangeLabels = DONE_TIME_RANGE_LABELS
@@ -573,9 +576,11 @@ const taskListLayout = computed(() =>
   buildTaskListLayout(listDisplayTasks.value, taskGroupBy.value, taskSortBy.value)
 )
 
-/** 看板自定义分组作用域（随侧栏导航变化） */
-const kanbanScopeKeyValue = computed(() =>
-  kanbanScopeKey({
+/** 看板自定义分组作用域：命名视图可固定 scopeKey，否则随侧栏导航 */
+const kanbanScopeKeyValue = computed(() => {
+  const fixed = viewStore.selectedView?.scopeKey?.trim()
+  if (fixed) return fixed
+  return kanbanScopeKey({
     categoryId: navViewId.value ? undefined : navCategoryId.value,
     smart: navViewId.value
       ? 'all'
@@ -583,7 +588,7 @@ const kanbanScopeKeyValue = computed(() =>
         ? navSmart.value
         : undefined
   })
-)
+})
 
 /** 看板列内快捷添加默认清单 */
 const kanbanDefaultCategoryId = computed(() => {
@@ -1070,6 +1075,7 @@ function seedViewEditorFrom(view = viewStore.selectedView) {
   viewEditorKanbanMode.value = view?.kanbanBoardMode ?? 'group'
   viewEditorQuadrantOptions.value = view?.quadrantOptions ?? null
   viewEditorRule.value = view?.filterRule ?? null
+  viewEditorScopeKey.value = view?.scopeKey ?? null
   const mode = view?.layout === 'kanban' ? view.kanbanBoardMode ?? 'group' : null
   const display = view?.id
     ? readViewDisplayPreferences(view.id, mode)
@@ -1089,11 +1095,22 @@ function openCreateView() {
   viewEditorKanbanMode.value = 'group'
   viewEditorQuadrantOptions.value = null
   viewEditorRule.value = null
+  viewEditorScopeKey.value = null
   const display = defaultViewDisplayPreferences(null)
   viewEditorHideDone.value = display.hideDone
   viewEditorDetailStyle.value = taskDetailStyle.value
   viewEditorMetaVisibility.value = { ...taskListMetaVisibility.value }
   viewEditorVisible.value = true
+}
+
+async function onCreateViewFromTemplate(templateId: import('@shared/view-templates').ViewTemplateId) {
+  try {
+    const created = await viewStore.createFromTemplate(templateId)
+    await onView(created.id)
+    ElMessage.success(`已从模板创建：${created.name}`)
+  } catch {
+    /* unwrapIpc 已 Toast */
+  }
 }
 
 function openEditView(id?: string) {

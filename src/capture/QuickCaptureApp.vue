@@ -21,7 +21,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
-import { buildQuickCreateTaskDto, toParseCategories } from '@shared/quick-create-task'
+import { buildQuickCreateTaskDtoFromDraft, toParseCategories } from '@shared/quick-create-task'
 import type { AiParseCategoryRef } from '@shared/ai-task-parser'
 import { DEFAULT_TASK_PRIORITY, type TaskPriority } from '@shared/task-priority'
 import QuickAddInput from '@/components/QuickAddInput.vue'
@@ -65,9 +65,14 @@ async function onSubmit() {
   status.value = ''
   statusError.value = false
   try {
-    // 与首页快捷添加一致：解析分类关键词 + 当前优先级
     await loadCategories()
-    const dto = buildQuickCreateTaskDto(trimmed, categories.value, {
+    const parsedRes = await window.captureApi.parseTaskInput(trimmed, categories.value)
+    if (!parsedRes.ok) {
+      status.value = parsedRes.error.message
+      statusError.value = true
+      return
+    }
+    const dto = buildQuickCreateTaskDtoFromDraft(parsedRes.data.draft, trimmed, categories.value, {
       triagedAt: null,
       priority: priority.value
     })
@@ -84,7 +89,11 @@ async function onSubmit() {
     }
     text.value = ''
     priority.value = DEFAULT_TASK_PRIORITY
-    status.value = `已保存：${res.data.title}`
+    const fallbackHint =
+      parsedRes.data.fellBackToLocal && parsedRes.data.draft.warnings[0]
+        ? `（${parsedRes.data.draft.warnings[0]}）`
+        : ''
+    status.value = `已保存：${res.data.title}${fallbackHint}`
     setTimeout(() => {
       void hideWindow()
     }, 180)

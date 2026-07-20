@@ -20,7 +20,7 @@ import type {
 } from '@shared/types'
 import type { ViewTemplateId } from '@shared/view-templates'
 import { getViewTemplate } from '@shared/view-templates'
-import { getActiveDataDir, getDatabase } from '../db/database'
+import { getActiveDataDir, getDatabase, closeDatabase } from '../db/database'
 import { CategoryRepository } from '../db/category-repository'
 import { KanbanGroupRepository } from '../db/kanban-group-repository'
 import { AppMessageRepository } from '../db/app-message-repository'
@@ -47,10 +47,10 @@ import {
   readLlmConfig,
   readAiPromptConfig,
   readCloseBehavior,
+  relocateDataDir,
   saveLlmConfig,
   saveAiPromptConfig,
   saveCloseBehavior,
-  savePendingDataDir,
   saveShortcutBindings
 } from '../data-path'
 import { registerGlobalShortcuts, createDefaultShortcutHandlers } from '../shortcuts'
@@ -82,6 +82,8 @@ import { getWidgetWindowManager } from '../widget-window-manager'
 import { getQuickCaptureWindowManager } from '../quick-capture-window-manager'
 import { markQuitting, toggleMainWindow } from '../tray'
 import { showSystemNotification } from '../services/system-notification'
+import { parseTaskInputWithConfig } from '../services/task-parse-service'
+import type { AiParseCategoryRef } from '@shared/ai-task-parser'
 
 function services() {
   const db = getDatabase()
@@ -250,8 +252,16 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.APP_GET_DATA_PATH, () => wrapIpc(() => getActiveDataDir()))
   ipcMain.handle(IPC.APP_SET_DATA_PATH, (_e, newPath: string) =>
     wrapIpc(() => {
-      savePendingDataDir(getDefaultDataDir(), newPath)
-      return { requiresRestart: true as const, pendingPath: newPath }
+      const source = getActiveDataDir()
+      closeDatabase()
+      const pendingPath = relocateDataDir(newPath, { sourceDir: source })
+      // 搬迁完成：下一 tick 重启，让 IPC 响应先返回
+      setImmediate(() => {
+        markQuitting()
+        app.relaunch()
+        app.exit(0)
+      })
+      return { requiresRestart: true as const, pendingPath, migrated: true as const }
     })
   )
   ipcMain.handle(IPC.APP_GET_VERSION, () => wrapIpc(() => app.getVersion()))
@@ -339,6 +349,12 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       saveAiPromptConfig(config)
       return readAiPromptConfig()
     })
+  )
+
+  ipcMain.handle(
+    IPC.APP_PARSE_TASK_INPUT,
+    (_e, text: string, categories?: AiParseCategoryRef[]) =>
+      wrapIpcAsync(() => parseTaskInputWithConfig(text ?? '', categories ?? []))
   )
 
   ipcMain.handle(IPC.APP_GET_CLOSE_BEHAVIOR, () => wrapIpc(() => readCloseBehavior()))

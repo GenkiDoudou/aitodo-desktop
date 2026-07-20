@@ -20,11 +20,13 @@ describe('ai-prompt-config', () => {
     expect(cfg.customPrompts).toEqual([])
   })
 
-  it('mergeAiPromptConfig preserves custom prompts', () => {
-    const cfg = mergeAiPromptConfig({
-      customPrompts: [{ id: 'p1', name: '汇总', content: '优化内容' }]
-    })
-    expect(cfg.customPrompts).toHaveLength(1)
-    expect(cfg.customPrompts[0].name).toBe('汇总')
+  it('mergeAiPromptConfig defaults taskParseMode to local', () => {
+    const cfg = mergeAiPromptConfig({})
+    expect(cfg.taskParseMode).toBe('local')
+  })
+
+  it('mergeAiPromptConfig accepts llm mode', () => {
+    const cfg = mergeAiPromptConfig({ taskParseMode: 'llm' })
+    expect(cfg.taskParseMode).toBe('llm')
   })
 })

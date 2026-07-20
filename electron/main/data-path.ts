@@ -112,8 +112,63 @@ export function isDirectoryWritable(dir: string): boolean {
 }
 
 /**
- * 将新的数据目录写入当前数据目录下的 config.json。
- * v1 不自动搬迁文件，由 UI 提示用户手动复制后重启。
+ * 将数据目录内容复制到新目录，成功后删除源目录中的库与附件（保留默认目录下的 config.json）。
+ * 调用前须已 closeDatabase()。
+ */
+export function migrateDataDirContents(sourceDir: string, targetDir: string): void {
+  const src = path.resolve(sourceDir)
+  const dest = path.resolve(targetDir)
+  if (src === dest) {
+    throw new Error('目标目录与当前目录相同')
+  }
+  if (!isDirectoryWritable(dest)) {
+    throw new Error('目标目录不可写')
+  }
+
+  fs.mkdirSync(dest, { recursive: true })
+
+  const entries = fs.existsSync(src) ? fs.readdirSync(src) : []
+  for (const name of entries) {
+    // 默认目录里的 config.json 是指针与设置源，不随业务数据搬迁到自定义目录
+    if (name === CONFIG_FILE && src === path.resolve(getDefaultDataDir())) {
+      continue
+    }
+    const from = path.join(src, name)
+    const to = path.join(dest, name)
+    fs.cpSync(from, to, { recursive: true, force: true })
+  }
+
+  // 校验关键文件：若源有 data.db，目标必须存在
+  const srcDb = path.join(src, 'data.db')
+  const destDb = path.join(dest, 'data.db')
+  if (fs.existsSync(srcDb) && !fs.existsSync(destDb)) {
+    throw new Error('复制数据库失败')
+  }
+
+  // 成功后再删源（跳过 config.json）
+  for (const name of entries) {
+    if (name === CONFIG_FILE && src === path.resolve(getDefaultDataDir())) {
+      continue
+    }
+    const from = path.join(src, name)
+    fs.rmSync(from, { recursive: true, force: true })
+  }
+}
+
+/**
+ * 写入新数据目录指针到默认目录 config.json，并搬迁业务数据。
+ * @returns pendingPath
+ */
+export function relocateDataDir(newDir: string, options: { sourceDir: string }): string {
+  const target = path.resolve(newDir)
+  const source = path.resolve(options.sourceDir)
+  migrateDataDirContents(source, target)
+  savePendingDataDir(getDefaultDataDir(), target)
+  return target
+}
+
+/**
+ * 将新的数据目录写入默认目录下的 config.json（指针，重启后生效）。
  */
 export function savePendingDataDir(currentDir: string, newDir: string): void {
   if (!isDirectoryWritable(newDir)) {

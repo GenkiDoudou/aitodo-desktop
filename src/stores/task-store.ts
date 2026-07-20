@@ -10,7 +10,7 @@ import { isDueSmartList } from '@shared/smart-list'
 import type { CreateTaskDto, DeleteTaskOptions, Task, TaskListFilter } from '@shared/types'
 import type { TaskPriority } from '@shared/task-priority'
 import type { AiParseCategoryRef } from '@shared/ai-task-parser'
-import { buildQuickCreateTaskDto } from '@shared/quick-create-task'
+import { buildQuickCreateTaskDtoFromDraft } from '@shared/quick-create-task'
 import { cloneTaskListFilter, isMatrixListFilter } from '@shared/task-list-filter'
 import { unwrapIpc } from '@/ipc/client'
 
@@ -288,7 +288,7 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   /**
-   * 快捷添加：本地规则解析日期/提醒/循环后创建，保持当前侧栏筛选不变。
+   * 快捷添加：按设置走本地或 LLM 解析后创建，保持当前侧栏筛选不变。
    */
   async function quickCreate(
     rawInput: string,
@@ -307,7 +307,9 @@ export const useTaskStore = defineStore('tasks', () => {
     if (!trimmed) {
       throw new Error('title required')
     }
-    const dto = buildQuickCreateTaskDto(trimmed, options?.parseCategories ?? [], {
+    const cats = options?.parseCategories ?? []
+    const parsed = unwrapIpc(await window.api.app.parseTaskInput(trimmed, cats))
+    const dto = buildQuickCreateTaskDtoFromDraft(parsed.draft, trimmed, cats, {
       categoryId: options?.categoryId ?? null,
       ...(options?.priority !== undefined ? { priority: options.priority } : {}),
       ...(options?.kanbanGroupId !== undefined ? { kanbanGroupId: options.kanbanGroupId } : {}),

@@ -272,6 +272,8 @@ export interface SetDataPathResult {
   /** 新路径已写入 config，需重启后生效 */
   requiresRestart: true
   pendingPath: string
+  /** 是否已自动复制并清理源目录 */
+  migrated?: boolean
 }
 
 export interface AppInfo {

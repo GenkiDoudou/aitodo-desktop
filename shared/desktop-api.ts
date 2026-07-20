@@ -33,7 +33,17 @@ import type { CloseBehavior, ConfirmClosePayload } from './close-behavior'
 import type { UserConfigImportResult } from '@shared/user-config-export'
 import type { HolidayCalendarDay, HolidayCacheStatus } from '@shared/timor-holiday'
 import type { FilterNode } from '@shared/task-filter-ast'
-import type { UpdateWidgetSettingsDto, WidgetSettings, WidgetNote, CreateWidgetNoteDto, UpdateWidgetNoteDto, ConvertWidgetNoteToTaskDto } from './widget-notes'
+import type {
+  UpdateWidgetSettingsDto,
+  WidgetSettings,
+  WidgetNote,
+  CreateWidgetNoteDto,
+  UpdateWidgetNoteDto,
+  ConvertWidgetNoteToTaskDto
+} from './widget-notes'
+import type { AiParseCategoryRef } from './ai-task-parser'
+import type { ParseTaskInputResult } from './llm-task-parse'
+import type { SavedAttachment } from './attachment'
 
 /**
  * Preload 暴露给渲染进程的 API 形状。
@@ -158,6 +168,11 @@ export interface DesktopApi {
     setLlmConfig(config: LlmConfig): Promise<IpcResult<LlmConfig>>
     getAiPrompt(): Promise<IpcResult<AiPromptConfig>>
     setAiPrompt(config: AiPromptConfig): Promise<IpcResult<AiPromptConfig>>
+    /** 按设置解析任务（本地 / LLM，失败回落本地） */
+    parseTaskInput(
+      text: string,
+      categories?: AiParseCategoryRef[]
+    ): Promise<IpcResult<ParseTaskInputResult>>
     getCloseBehavior(): Promise<IpcResult<CloseBehavior>>
     setCloseBehavior(behavior: CloseBehavior): Promise<IpcResult<CloseBehavior>>
     confirmClose(payload: ConfirmClosePayload): Promise<IpcResult<void>>

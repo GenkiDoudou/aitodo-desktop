@@ -134,7 +134,9 @@ app.whenReady().then(() => {
     onToggleWidget: () => {
       getWidgetWindowManager().toggle()
     },
-    onNewTask: () => {},
+    onNewTask: () => {
+      getQuickCaptureWindowManager().toggle()
+    },
     onQuit: () => {
       markQuitting()
       app.quit()

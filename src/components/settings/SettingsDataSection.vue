@@ -10,16 +10,22 @@
       class="settings-section__alert"
     />
     <div class="settings-section__row">
-      <el-button type="primary" @click="pickAndChangePath">更改（重启后生效）</el-button>
+      <el-button type="primary" :loading="migrating" @click="pickAndChangePath">
+        更改并迁移（将自动重启）
+      </el-button>
       <el-button
         v-if="info && info.dataPath !== info.defaultDataPath"
+        :loading="migrating"
         @click="useDefaultPath"
       >
-        使用安装目录
+        迁回安装目录
       </el-button>
     </div>
     <p v-if="info" class="settings-section__hint">
       默认路径：{{ info.defaultDataPath }}
+    </p>
+    <p class="settings-section__hint">
+      更改时会先完整复制数据库与附件到新目录，成功后再删除原目录中的业务文件，然后自动重启。
     </p>
     <p v-if="info && !info.writable" class="settings-section__error">当前目录不可写，请尽快更改。</p>
   </section>
@@ -32,18 +38,30 @@ import type { AppInfo } from '@shared/types'
 import { unwrapIpc } from '@/ipc/client'
 
 const info = ref<AppInfo | null>(null)
+const migrating = ref(false)
 
 async function loadInfo() {
   info.value = unwrapIpc(await window.api.app.getInfo())
 }
 
 async function applyNewPath(path: string) {
-  const result = await unwrapIpc(await window.api.app.setDataPath(path))
-  await ElMessageBox.alert(
-    `新路径已保存：${result.pendingPath}\n请手动复制原 data 目录下的文件到新目录后重启应用。`,
-    '需重启生效',
-    { type: 'info' }
-  )
+  migrating.value = true
+  try {
+    await ElMessageBox.confirm(
+      `将把当前数据复制到：\n${path}\n\n复制成功后删除原目录业务文件并自动重启。是否继续？`,
+      '迁移数据目录',
+      { type: 'warning', confirmButtonText: '开始迁移', cancelButtonText: '取消' }
+    )
+    const result = await unwrapIpc(await window.api.app.setDataPath(path))
+    ElMessage.success(`已迁移到 ${result.pendingPath}，正在重启…`)
+  } catch (err) {
+    if (err === 'cancel' || (err && typeof err === 'object' && 'action' in err)) {
+      return
+    }
+    /* unwrapIpc 已 Toast */
+  } finally {
+    migrating.value = false
+  }
 }
 
 async function pickAndChangePath() {
@@ -79,25 +97,26 @@ onMounted(loadInfo)
 }
 
 .settings-section__alert {
-  margin: 16px 0;
+  margin: 12px 0;
 }
 
 .settings-section__row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .settings-section__hint {
   margin: 8px 0 0;
   font-size: 12px;
   color: var(--desktop-muted);
-  word-break: break-all;
+  line-height: 1.5;
 }
 
 .settings-section__error {
-  color: var(--el-color-danger);
+  margin: 8px 0 0;
   font-size: 13px;
+  color: var(--el-color-danger);
 }
 </style>

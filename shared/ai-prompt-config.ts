@@ -7,9 +7,13 @@ export interface CustomPromptEntry {
   content: string
 }
 
+/** 快捷添加 / 捕获的任务解析模式 */
+export type TaskParseMode = 'local' | 'llm'
+
 /**
  * AI 提示词配置，持久化于 config.json 的 aiPrompt 字段。
  * - 内置「任务提示词」：systemPrompt + userTemplate（AI 一句话建任务）
+ * - taskParseMode：是否走大模型解析（失败回落本地）
  * - customPrompts：供定时汇总等场景选择
  */
 export interface AiPromptConfig {
@@ -17,6 +21,8 @@ export interface AiPromptConfig {
   taskPromptName: string
   systemPrompt: string
   userTemplate: string
+  /** 任务解析：local=规则引擎；llm=大模型（需配置 API Key） */
+  taskParseMode: TaskParseMode
   customPrompts: CustomPromptEntry[]
 }
 
@@ -51,8 +57,13 @@ export function getDefaultAiPromptConfig(): AiPromptConfig {
     taskPromptName: BUILTIN_TASK_PROMPT_NAME,
     systemPrompt: DEFAULT_AI_SYSTEM_PROMPT,
     userTemplate: DEFAULT_AI_USER_TEMPLATE,
+    taskParseMode: 'local',
     customPrompts: []
   }
+}
+
+function normalizeTaskParseMode(raw: unknown): TaskParseMode {
+  return raw === 'llm' ? 'llm' : 'local'
 }
 
 export function mergeAiPromptConfig(partial?: Partial<AiPromptConfig> | null): AiPromptConfig {
@@ -73,6 +84,7 @@ export function mergeAiPromptConfig(partial?: Partial<AiPromptConfig> | null): A
     taskPromptName: partial.taskPromptName?.trim() || BUILTIN_TASK_PROMPT_NAME,
     systemPrompt: partial.systemPrompt?.trim() || defaults.systemPrompt,
     userTemplate: partial.userTemplate?.trim() || defaults.userTemplate,
+    taskParseMode: normalizeTaskParseMode(partial.taskParseMode),
     customPrompts
   }
 }

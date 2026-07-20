@@ -216,7 +216,7 @@ import { TASK_PRIORITIES, DEFAULT_TASK_PRIORITY, isValidTaskPriority, type TaskP
 import { KANBAN_DONE_COLUMN_ID, KANBAN_UNGROUPED_ID } from '@shared/kanban-scope'
 import { readKanbanConfig } from '@/utils/kanban-preferences'
 import { taskDescriptionPreview } from '@shared/task-description'
-import { buildQuickCreateTaskDto } from '@shared/quick-create-task'
+import { buildQuickCreateTaskDtoFromDraft } from '@shared/quick-create-task'
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
 import QuickAddInput from '@/components/QuickAddInput.vue'
@@ -729,28 +729,27 @@ async function submitQuickAdd(columnId: string) {
     return
   }
   try {
-    if (boardMode.value === 'status' && isStatusColumn(columnId)) {
-      const dto = buildQuickCreateTaskDto(title, props.parseCategories ?? [], {
-        categoryId: props.defaultCategoryId ?? null,
-        status: columnId,
-        priority: quickAddPriority.value
-      })
-      unwrapIpc(await window.api.tasks.create(dto))
-    } else if (boardMode.value === 'priority' && isValidTaskPriority(Number(columnId))) {
-      const dto = buildQuickCreateTaskDto(title, props.parseCategories ?? [], {
-        categoryId: props.defaultCategoryId ?? null,
-        priority: Number(columnId) as TaskPriority
-      })
-      unwrapIpc(await window.api.tasks.create(dto))
-    } else {
-      const kanbanGroupId = columnId === KANBAN_UNGROUPED_ID ? null : columnId
-      const dto = buildQuickCreateTaskDto(title, props.parseCategories ?? [], {
-        categoryId: props.defaultCategoryId ?? null,
-        kanbanGroupId,
-        priority: quickAddPriority.value
-      })
-      unwrapIpc(await window.api.tasks.create(dto))
-    }
+    const cats = props.parseCategories ?? []
+    const parsed = unwrapIpc(await window.api.app.parseTaskInput(title, cats))
+    const baseOverrides =
+      boardMode.value === 'status' && isStatusColumn(columnId)
+        ? {
+            categoryId: props.defaultCategoryId ?? null,
+            status: columnId as import('@shared/types').TaskStatus,
+            priority: quickAddPriority.value
+          }
+        : boardMode.value === 'priority' && isValidTaskPriority(Number(columnId))
+          ? {
+              categoryId: props.defaultCategoryId ?? null,
+              priority: Number(columnId) as TaskPriority
+            }
+          : {
+              categoryId: props.defaultCategoryId ?? null,
+              kanbanGroupId: columnId === KANBAN_UNGROUPED_ID ? null : columnId,
+              priority: quickAddPriority.value
+            }
+    const dto = buildQuickCreateTaskDtoFromDraft(parsed.draft, title, cats, baseOverrides)
+    unwrapIpc(await window.api.tasks.create(dto))
     cancelQuickAdd()
     emit('changed')
   } catch {

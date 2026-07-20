@@ -151,6 +151,8 @@ const api: DesktopApi = {
     setLlmConfig: (config) => ipcRenderer.invoke(IPC.APP_SET_LLM_CONFIG, config),
     getAiPrompt: () => ipcRenderer.invoke(IPC.APP_GET_AI_PROMPT),
     setAiPrompt: (config) => ipcRenderer.invoke(IPC.APP_SET_AI_PROMPT, config),
+    parseTaskInput: (text, categories) =>
+      ipcRenderer.invoke(IPC.APP_PARSE_TASK_INPUT, text, categories),
     getCloseBehavior: () => ipcRenderer.invoke(IPC.APP_GET_CLOSE_BEHAVIOR),
     setCloseBehavior: (behavior) => ipcRenderer.invoke(IPC.APP_SET_CLOSE_BEHAVIOR, behavior),
     confirmClose: (payload: ConfirmClosePayload) =>

@@ -63,9 +63,24 @@
                 <span class="sidebar__row-label">全部</span>
                 <span v-if="taskCounts?.all != null" class="sidebar__row-count">{{ taskCounts.all }}</span>
               </button>
-              <button type="button" class="sidebar__section-add" title="新建视图" @click="emit('create-view')">
-                <el-icon><Plus /></el-icon>
-              </button>
+              <el-dropdown trigger="click" @command="onCreateViewCommand">
+                <button type="button" class="sidebar__section-add" title="新建视图">
+                  <el-icon><Plus /></el-icon>
+                </button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="blank">新建空白视图</el-dropdown-item>
+                    <el-dropdown-item disabled divided>从模板</el-dropdown-item>
+                    <el-dropdown-item
+                      v-for="tpl in viewTemplates"
+                      :key="tpl.id"
+                      :command="`tpl:${tpl.id}`"
+                    >
+                      {{ tpl.title }}
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
             <nav class="sidebar__view-list">
               <p v-if="sidebarViews.length === 0" class="sidebar__filter-hint sidebar__filter-hint--nested">
@@ -275,6 +290,7 @@ import {
   DEFAULT_TASK_VIEW_KANBAN_ID
 } from '@shared/apply-task-view'
 import type { Category } from '@shared/types'
+import { VIEW_TEMPLATES, type ViewTemplateId } from '@shared/view-templates'
 import AppMessagePanel from '@/components/AppMessagePanel.vue'
 import CategoryEditDialog from '@/components/CategoryEditDialog.vue'
 
@@ -317,6 +333,7 @@ const emit = defineEmits<{
   'select-category': [string | null]
   'select-view': [string]
   'create-view': []
+  'create-view-from-template': [ViewTemplateId]
   'edit-view': [string]
   'save-as-view': [string]
   'select-tasks': []
@@ -330,6 +347,7 @@ let unsubscribeMessagePush: (() => void) | null = null
 
 const categoryStore = useCategoryStore()
 const viewStore = useViewStore()
+const viewTemplates = VIEW_TEMPLATES
 const categoryEditOpen = ref(false)
 const editingCategory = ref<Category | null>(null)
 
@@ -487,6 +505,17 @@ function selectCategory(id: string | null) {
 
 function selectView(id: string) {
   emit('select-view', id)
+}
+
+function onCreateViewCommand(command: string) {
+  if (command === 'blank') {
+    emit('create-view')
+    return
+  }
+  if (command.startsWith('tpl:')) {
+    const id = command.slice(4) as ViewTemplateId
+    emit('create-view-from-template', id)
+  }
 }
 
 async function onViewCommand(command: string, id: string, name: string) {

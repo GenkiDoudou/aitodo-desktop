@@ -39,6 +39,8 @@ export const IPC = {
   APP_SET_LLM_CONFIG: 'app:setLlmConfig',
   APP_GET_AI_PROMPT: 'app:getAiPrompt',
   APP_SET_AI_PROMPT: 'app:setAiPrompt',
+  /** 按设置解析任务文本（本地 / LLM，失败回落） */
+  APP_PARSE_TASK_INPUT: 'app:parseTaskInput',
   APP_GET_CLOSE_BEHAVIOR: 'app:getCloseBehavior',
   APP_SET_CLOSE_BEHAVIOR: 'app:setCloseBehavior',
   APP_CLOSE_REQUEST: 'app:closeRequest',

@@ -61,6 +61,23 @@
       <section class="task-view-editor__section">
         <h3 class="task-view-editor__section-title">显示选项</h3>
         <div class="task-view-editor__options-grid">
+          <div v-if="layout === 'kanban'" class="task-view-editor__option task-view-editor__option--full">
+            <label class="task-view-editor__field-label">看板作用域</label>
+            <el-select v-model="scopeKeyMode" class="task-view-editor__select">
+              <el-option label="跟随侧栏导航" value="follow" />
+              <el-option label="固定：全部" value="scope:smart:all" />
+              <el-option
+                v-for="cat in categories"
+                :key="cat.id"
+                :label="`固定：${cat.name}`"
+                :value="`scope:cat:${cat.id}`"
+              />
+              <el-option label="固定：未分类" value="scope:uncategorized" />
+            </el-select>
+            <p class="task-view-editor__hint">
+              自定义看板列按作用域隔离。固定后切换清单不会换列集合；选「跟随」则与侧栏当前导航一致。
+            </p>
+          </div>
           <div v-if="layout === 'list'" class="task-view-editor__option">
             <label class="task-view-editor__field-label">分组</label>
             <el-select v-model="groupBy" class="task-view-editor__select">
@@ -252,6 +269,7 @@ const props = withDefaults(
     initialKanbanBoardMode?: KanbanBoardMode | null
     initialQuadrantOptions?: QuadrantLayoutOptions | null
     initialRule?: FilterNode | null
+    initialScopeKey?: string | null
     initialHideDone?: boolean
     initialDetailStyle?: TaskDetailStyle
     initialMetaVisibility?: TaskListMetaVisibility
@@ -266,6 +284,7 @@ const props = withDefaults(
     initialSortBy: 'custom',
     initialKanbanBoardMode: 'group',
     initialRule: null,
+    initialScopeKey: null,
     initialHideDone: undefined,
     initialDetailStyle: 'sidebar',
     initialMetaVisibility: undefined
@@ -285,6 +304,8 @@ const layout = ref<TaskViewLayout>('list')
 const groupBy = ref<TaskGroupBy>('none')
 const sortBy = ref<TaskSortBy>('custom')
 const kanbanBoardMode = ref<KanbanBoardMode>('group')
+/** follow = null scopeKey；否则为固定 kanban scope */
+const scopeKeyMode = ref<string>('follow')
 const quadrantOptions = ref<QuadrantLayoutOptions>(readQuadrantViewPreferences())
 const quadrantGroupByLabels = QUADRANT_GROUP_BY_LABELS
 const hideDone = ref(true)
@@ -319,6 +340,7 @@ watch(
     groupBy.value = props.initialGroupBy
     sortBy.value = props.initialSortBy
     kanbanBoardMode.value = props.initialKanbanBoardMode ?? 'group'
+    scopeKeyMode.value = props.initialScopeKey?.trim() || 'follow'
     quadrantOptions.value = props.initialQuadrantOptions
       ? { ...props.initialQuadrantOptions }
       : props.initialLayout === 'quadrant'
@@ -401,6 +423,8 @@ async function onSave() {
     groupBy: layout.value === 'list' ? groupBy.value : ('none' as TaskGroupBy),
     sortBy: layout.value === 'quadrant' ? quadrantOptions.value.sortBy : sortBy.value,
     filterRule,
+    scopeKey:
+      layout.value === 'kanban' && scopeKeyMode.value !== 'follow' ? scopeKeyMode.value : null,
     kanbanBoardMode: layout.value === 'kanban' ? kanbanBoardMode.value : null,
     quadrantOptions:
       layout.value === 'quadrant'

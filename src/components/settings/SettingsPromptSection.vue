@@ -8,10 +8,19 @@
         <el-tag size="small" type="info">内置</el-tag>
       </header>
       <p class="settings-section__hint">
-        用于「AI 一句话」解析任务。用户模板须包含占位符：
+        用于快捷添加 / 快捷捕获的任务解析。用户模板须包含占位符：
         <code>{input}</code>、<code>{today}</code>、<code>{categories}</code>
       </p>
       <el-form label-position="top" class="settings-section__form">
+        <el-form-item label="解析方式">
+          <el-radio-group v-model="form.taskParseMode">
+            <el-radio value="local">本地规则</el-radio>
+            <el-radio value="llm">大模型</el-radio>
+          </el-radio-group>
+          <p class="settings-section__hint settings-section__hint--inline">
+            选择大模型时使用下方提示词；失败或未配置 API Key 时自动回落本地解析。
+          </p>
+        </el-form-item>
         <el-form-item label="提示词名称">
           <el-input v-model="form.taskPromptName" disabled />
         </el-form-item>
@@ -118,6 +127,7 @@ function applyFromStore() {
   form.taskPromptName = cfg.taskPromptName
   form.systemPrompt = cfg.systemPrompt
   form.userTemplate = cfg.userTemplate
+  form.taskParseMode = cfg.taskParseMode
   form.customPrompts = cfg.customPrompts.map((p) => ({ ...p }))
 }
 
@@ -131,6 +141,7 @@ async function persistConfig() {
     taskPromptName: form.taskPromptName,
     systemPrompt: form.systemPrompt,
     userTemplate: form.userTemplate,
+    taskParseMode: form.taskParseMode,
     customPrompts: form.customPrompts
   })
   await promptStore.save(next)
@@ -160,6 +171,7 @@ async function resetBuiltin() {
     form.taskPromptName = BUILTIN_TASK_PROMPT_NAME
     form.systemPrompt = defaults.systemPrompt
     form.userTemplate = defaults.userTemplate
+    form.taskParseMode = defaults.taskParseMode
   } catch {
     /* 取消 */
   }

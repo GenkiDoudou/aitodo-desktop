@@ -73,7 +73,7 @@
 
 
 
-          <!-- 清单 / 优先级：轻量元信息行 -->
+          <!-- 清单 / 优先级 / 状态 -->
           <div v-show="!contentExpanded" class="task-panel__meta-row">
 
             <el-dropdown trigger="click" class="task-panel__category-dropdown" @command="onCategoryCommand">
@@ -119,6 +119,18 @@
               </template>
 
             </el-dropdown>
+
+            <el-select
+              v-model="form.status"
+              size="small"
+              class="task-panel__status-select"
+              placeholder="状态"
+              title="列表勾选为完成/未完成二态；进行中请在此设置或用状态看板"
+            >
+              <el-option label="待办" value="TODO" />
+              <el-option label="进行中" value="IN_PROGRESS" />
+              <el-option label="已完成" value="DONE" />
+            </el-select>
 
             <TaskTagEditor v-model="form.tags" class="task-panel__tag-editor" />
 
@@ -1276,6 +1288,11 @@ async function remove() {
   flex: 0 1 auto;
   min-width: 120px;
   max-width: 45%;
+}
+
+.task-panel__status-select {
+  width: 110px;
+  flex: 0 0 auto;
 }
 
 .task-panel__tag-editor {
