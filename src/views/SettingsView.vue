@@ -10,7 +10,7 @@
           v-for="item in menuItems"
           :key="item.id"
           class="settings-layout__menu-item"
-          :class="{ 'is-active': !item.route && activeSection === item.id }"
+          :class="{ 'is-active': activeSection === item.id }"
           @click="onMenuClick(item)"
         >
           <el-icon><component :is="item.icon" /></el-icon>
@@ -21,7 +21,6 @@
 
     <main class="settings-layout__main">
       <SettingsDataSection v-if="activeSection === 'data'" />
-      <SettingsSmartListSection v-else-if="activeSection === 'smartList'" />
       <SettingsShortcutsSection v-else-if="activeSection === 'shortcuts'" />
       <SettingsLlmSection v-else-if="activeSection === 'llm'" />
       <SettingsPromptSection v-else-if="activeSection === 'prompt'" />
@@ -45,18 +44,15 @@ import {
   Brush,
   Cpu,
   Document,
-  Folder,
   FolderOpened,
   InfoFilled,
   Key,
-  List,
   Monitor,
   SwitchButton,
   Timer
 } from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 import SettingsDataSection from '@/components/settings/SettingsDataSection.vue'
-import SettingsSmartListSection from '@/components/settings/SettingsSmartListSection.vue'
 import SettingsShortcutsSection from '@/components/settings/SettingsShortcutsSection.vue'
 import SettingsLlmSection from '@/components/settings/SettingsLlmSection.vue'
 import SettingsPromptSection from '@/components/settings/SettingsPromptSection.vue'
@@ -70,7 +66,6 @@ import SettingsThemeSection from '@/components/settings/SettingsThemeSection.vue
 
 type SettingsSection =
   | 'data'
-  | 'smartList'
   | 'shortcuts'
   | 'llm'
   | 'prompt'
@@ -91,7 +86,6 @@ watch(
   (section) => {
     if (
       section === 'data' ||
-      section === 'smartList' ||
       section === 'shortcuts' ||
       section === 'llm' ||
       section === 'prompt' ||
@@ -113,15 +107,13 @@ watch(
 )
 
 type MenuItem = {
-  id: SettingsSection | 'desktopOrganize'
+  id: SettingsSection
   label: string
   icon: Component
-  route?: string
 }
 
 const menuItems: MenuItem[] = [
   { id: 'data', label: '数据存储', icon: Coin },
-  { id: 'smartList', label: '智能清单', icon: List },
   { id: 'shortcuts', label: '快捷键', icon: Key },
   { id: 'llm', label: '大模型', icon: Cpu },
   { id: 'prompt', label: '提示词', icon: Document },
@@ -131,16 +123,11 @@ const menuItems: MenuItem[] = [
   { id: 'workday', label: '工作日', icon: Calendar },
   { id: 'theme', label: '风格切换', icon: Brush },
   { id: 'widget', label: '桌面挂件', icon: Monitor },
-  { id: 'desktopOrganize', label: '桌面整理', icon: Folder, route: '/desktop-organize' },
   { id: 'about', label: '关于', icon: InfoFilled }
 ]
 
 function onMenuClick(item: MenuItem) {
-  if (item.route) {
-    void router.push(item.route)
-    return
-  }
-  activeSection.value = item.id as SettingsSection
+  activeSection.value = item.id
 }
 </script>
 

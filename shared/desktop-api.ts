@@ -33,23 +33,7 @@ import type { CloseBehavior, ConfirmClosePayload } from './close-behavior'
 import type { UserConfigImportResult } from '@shared/user-config-export'
 import type { HolidayCalendarDay, HolidayCacheStatus } from '@shared/timor-holiday'
 import type { FilterNode } from '@shared/task-filter-ast'
-import type {
-  CreateDesktopCategoryDto,
-  DesktopCategory,
-  DesktopOrganizeExecuteResult,
-  DesktopOrganizePlan,
-  DesktopOrganizeSettings,
-  DesktopScanItem,
-  UpdateDesktopCategoryDto,
-  UpdateDesktopOrganizeSettingsDto
-} from './desktop-organize-types'
 import type { UpdateWidgetSettingsDto, WidgetSettings, WidgetNote, CreateWidgetNoteDto, UpdateWidgetNoteDto, ConvertWidgetNoteToTaskDto } from './widget-notes'
-import type {
-  DesktopFenceLayout,
-  DesktopFenceSettings,
-  UpdateDesktopFenceLayoutDto,
-  UpdateDesktopFenceSettingsDto
-} from './fence-types'
 
 /**
  * Preload 暴露给渲染进程的 API 形状。
@@ -132,35 +116,6 @@ export interface DesktopApi {
     getRetention(): Promise<IpcResult<TaskActivityRetentionPolicy>>
     setRetention(policy: TaskActivityRetentionPolicy): Promise<IpcResult<TaskActivityRetentionPolicy>>
   }
-  desktopOrganize: {
-    scan(): Promise<IpcResult<DesktopScanItem[]>>
-    preview(): Promise<IpcResult<DesktopOrganizePlan>>
-    execute(plan?: DesktopOrganizePlan): Promise<IpcResult<DesktopOrganizeExecuteResult>>
-    undo(): Promise<IpcResult<{ restored: number; skipped: Array<{ path: string; reason: string }> }>>
-    canUndo(): Promise<IpcResult<boolean>>
-    getSettings(): Promise<IpcResult<DesktopOrganizeSettings>>
-    updateSettings(dto: UpdateDesktopOrganizeSettingsDto): Promise<IpcResult<DesktopOrganizeSettings>>
-    listCategories(): Promise<IpcResult<DesktopCategory[]>>
-    createCategory(dto: CreateDesktopCategoryDto): Promise<IpcResult<DesktopCategory>>
-    updateCategory(id: string, dto: UpdateDesktopCategoryDto): Promise<IpcResult<DesktopCategory>>
-    deleteCategory(id: string): Promise<IpcResult<void>>
-    reorderCategories(orderedIds: string[]): Promise<IpcResult<DesktopCategory[]>>
-    setManualAssignment(itemPath: string, categoryId: string): Promise<IpcResult<void>>
-    removeManualAssignment(itemPath: string): Promise<IpcResult<void>>
-    getDesktopPath(): Promise<IpcResult<string>>
-    openDesktop(): Promise<IpcResult<void>>
-    listCustomRules(): Promise<IpcResult<import('./desktop-organize-types').DesktopCustomRule[]>>
-    createCustomRule(
-      dto: import('./desktop-organize-types').CreateDesktopCustomRuleDto
-    ): Promise<IpcResult<import('./desktop-organize-types').DesktopCustomRule>>
-    updateCustomRule(
-      id: string,
-      dto: import('./desktop-organize-types').UpdateDesktopCustomRuleDto
-    ): Promise<IpcResult<import('./desktop-organize-types').DesktopCustomRule>>
-    deleteCustomRule(id: string): Promise<IpcResult<void>>
-    listDefaultRules(): Promise<IpcResult<import('./desktop-organize-types').DesktopDefaultRuleRow[]>>
-    setDefaultRuleEnabled(categoryId: string, enabled: boolean): Promise<IpcResult<DesktopCategory>>
-  }
   widget: {
     toggle(): Promise<IpcResult<void>>
     show(): Promise<IpcResult<void>>
@@ -188,21 +143,6 @@ export interface DesktopApi {
     update(id: string, dto: UpdateWidgetNoteDto): Promise<IpcResult<WidgetNote>>
     delete(id: string): Promise<IpcResult<void>>
     convertToTask(id: string, dto: ConvertWidgetNoteToTaskDto): Promise<IpcResult<Task>>
-  }
-  fence: {
-    getSettings(): Promise<IpcResult<DesktopFenceSettings>>
-    updateSettings(dto: UpdateDesktopFenceSettingsDto): Promise<IpcResult<DesktopFenceSettings>>
-    showAll(): Promise<IpcResult<void>>
-    hideAll(): Promise<IpcResult<void>>
-    listLayouts(): Promise<IpcResult<DesktopFenceLayout[]>>
-    updateLayout(categoryId: string, dto: UpdateDesktopFenceLayoutDto): Promise<IpcResult<DesktopFenceLayout>>
-    recoverDesktopIcons(): Promise<IpcResult<void>>
-    getWallpaper(): Promise<IpcResult<import('./fence-types').DesktopWallpaperState>>
-    pickWallpaper(): Promise<IpcResult<{ path: string; previewDataUrl: string | null } | null>>
-    applyWallpaper(sourcePath: string): Promise<IpcResult<import('./fence-types').DesktopWallpaperState>>
-    restoreWallpaper(): Promise<IpcResult<import('./fence-types').DesktopWallpaperState>>
-    listWallpaperPresets(): Promise<IpcResult<import('./fence-types').WallpaperPreset[]>>
-    applyWallpaperPreset(presetId: string): Promise<IpcResult<import('./fence-types').DesktopWallpaperState>>
   }
   app: {
     getDataPath(): Promise<IpcResult<string>>

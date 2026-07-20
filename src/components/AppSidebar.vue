@@ -269,7 +269,6 @@ import {
 import type { CalendarViewMode } from '@shared/calendar-tasks'
 import { useCategoryStore } from '@/stores/category-store'
 import { useViewStore } from '@/stores/view-store'
-import { useSmartListSidebarStore } from '@/stores/smart-list-sidebar-store'
 import { useMessageStore } from '@/stores/message-store'
 import {
   DEFAULT_TASK_VIEW_ALL_ID,
@@ -367,25 +366,15 @@ const otherSmartItems: { key: 'last7days'; label: string; icon: Component }[] = 
   { key: 'last7days', label: '最近7天', icon: Clock }
 ]
 
-const sidebarVisStore = useSmartListSidebarStore()
+const visibleOtherSmartItems = computed(() => otherSmartItems)
 
-const visibleOtherSmartItems = computed(() =>
-  otherSmartItems.filter((item) =>
-    sidebarVisStore.isVisible(item.key, props.taskCounts?.[item.key] ?? 0)
-  )
-)
+const showInbox = computed(() => (props.taskCounts?.inbox ?? 0) > 0)
 
-const showInbox = computed(() =>
-  sidebarVisStore.isVisible('inbox', props.taskCounts?.inbox ?? 0)
-)
+const showUncategorized = computed(() => true)
 
-const showUncategorized = computed(() =>
-  sidebarVisStore.isVisible('uncategorized', props.uncategorizedCount ?? 0)
-)
+const showDone = computed(() => true)
 
-const showDone = computed(() => sidebarVisStore.isVisible('done', props.doneCount ?? 0))
-
-const showTrash = computed(() => sidebarVisStore.isVisible('trash', props.trashCount ?? 0))
+const showTrash = computed(() => true)
 
 function selectPrimary(key: PrimaryKey) {
   if (key === 'tasks') {
@@ -565,7 +554,6 @@ function onMessageOpenTask(taskId: string) {
 }
 
 onMounted(() => {
-  sidebarVisStore.reload()
   void viewStore.load()
   void messageStore.refreshUnread()
   unsubscribeMessagePush = messageStore.subscribePush()

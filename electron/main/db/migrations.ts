@@ -510,6 +510,19 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       UPDATE widget_instances SET display_mode = 'edge_tab', collapse_policy = 'on_blur'
         WHERE kind IN ('matrix', 'view');
     `
+  },
+  {
+    version: 29,
+    sql: `
+      DROP TABLE IF EXISTS desktop_custom_rules;
+      DROP TABLE IF EXISTS desktop_category_rules;
+      DROP TABLE IF EXISTS desktop_manual_assignments;
+      DROP TABLE IF EXISTS desktop_categories;
+      DROP TABLE IF EXISTS desktop_organize_snapshots;
+      DROP TABLE IF EXISTS desktop_organize_settings;
+      DROP TABLE IF EXISTS desktop_fence_layout;
+      DROP TABLE IF EXISTS desktop_fence_settings;
+    `
   }
 ]
 

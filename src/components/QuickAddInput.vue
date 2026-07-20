@@ -56,6 +56,7 @@ import {
   type AiParseCategoryRef,
   type AiParsedTaskDraft
 } from '@shared/ai-task-parser'
+import { matchCategoryByKeywords } from '@shared/category-keywords'
 import { recurrenceLabel } from '@shared/task-reminder'
 import { toParseCategories } from '@shared/quick-create-task'
 
@@ -114,7 +115,17 @@ function runParse() {
     draft.value = null
     return
   }
-  draft.value = parseAiTaskInput(text, { categories: toParseCategories(props.categories) })
+  const cats = toParseCategories(props.categories)
+  const parsed = parseAiTaskInput(text, { categories: cats })
+  // 与创建路径一致：清单名未命中时再按关键词匹配，预览才能显示分类
+  if (!parsed.category) {
+    const byKeyword = matchCategoryByKeywords(text, cats)
+    if (byKeyword) {
+      draft.value = { ...parsed, category: byKeyword }
+      return
+    }
+  }
+  draft.value = parsed
 }
 
 function scheduleParse() {

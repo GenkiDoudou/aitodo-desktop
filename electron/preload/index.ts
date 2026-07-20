@@ -102,42 +102,6 @@ const api: DesktopApi = {
   tags: {
     list: () => ipcRenderer.invoke(IPC.TAGS_LIST)
   },
-  desktopOrganize: {
-    scan: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_SCAN),
-    preview: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_PREVIEW),
-    execute: (plan?: import('@shared/desktop-organize-types').DesktopOrganizePlan) =>
-      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_EXECUTE, plan),
-    undo: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_UNDO),
-    canUndo: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CAN_UNDO),
-    getSettings: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_SETTINGS_GET),
-    updateSettings: (dto: import('@shared/desktop-organize-types').UpdateDesktopOrganizeSettingsDto) =>
-      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_SETTINGS_SET, dto),
-    listCategories: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_LIST),
-    createCategory: (dto: import('@shared/desktop-organize-types').CreateDesktopCategoryDto) =>
-      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_CREATE, dto),
-    updateCategory: (
-      id: string,
-      dto: import('@shared/desktop-organize-types').UpdateDesktopCategoryDto
-    ) => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_UPDATE, id, dto),
-    deleteCategory: (id: string) => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_DELETE, id),
-    reorderCategories: (orderedIds: string[]) =>
-      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CATEGORIES_REORDER, orderedIds),
-    setManualAssignment: (itemPath: string, categoryId: string) =>
-      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_MANUAL_SET, itemPath, categoryId),
-    removeManualAssignment: (itemPath: string) =>
-      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_MANUAL_REMOVE, itemPath),
-    getDesktopPath: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_GET_DESKTOP_PATH),
-    openDesktop: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_OPEN_DESKTOP),
-    listCustomRules: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_LIST),
-    createCustomRule: (dto: import('@shared/desktop-organize-types').CreateDesktopCustomRuleDto) =>
-      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_CREATE, dto),
-    updateCustomRule: (id: string, dto: import('@shared/desktop-organize-types').UpdateDesktopCustomRuleDto) =>
-      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_UPDATE, id, dto),
-    deleteCustomRule: (id: string) => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_DELETE, id),
-    listDefaultRules: () => ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_DEFAULT_RULES_LIST),
-    setDefaultRuleEnabled: (categoryId: string, enabled: boolean) =>
-      ipcRenderer.invoke(IPC.DESKTOP_ORGANIZE_DEFAULT_RULES_SET_ENABLED, categoryId, enabled)
-  },
   widget: {
     toggle: () => ipcRenderer.invoke(IPC.WIDGET_TOGGLE),
     show: () => ipcRenderer.invoke(IPC.WIDGET_SHOW),
@@ -171,23 +135,6 @@ const api: DesktopApi = {
     delete: (id: string) => ipcRenderer.invoke(IPC.WIDGET_NOTES_DELETE, id),
     convertToTask: (id: string, dto: import('@shared/widget-notes').ConvertWidgetNoteToTaskDto) =>
       ipcRenderer.invoke(IPC.WIDGET_NOTES_CONVERT_TO_TASK, id, dto)
-  },
-  fence: {
-    getSettings: () => ipcRenderer.invoke(IPC.FENCE_GET_SETTINGS),
-    updateSettings: (dto: import('@shared/fence-types').UpdateDesktopFenceSettingsDto) =>
-      ipcRenderer.invoke(IPC.FENCE_UPDATE_SETTINGS, dto),
-    showAll: () => ipcRenderer.invoke(IPC.FENCE_SHOW_ALL),
-    hideAll: () => ipcRenderer.invoke(IPC.FENCE_HIDE_ALL),
-    listLayouts: () => ipcRenderer.invoke(IPC.FENCE_LIST_LAYOUTS),
-    updateLayout: (categoryId: string, dto: import('@shared/fence-types').UpdateDesktopFenceLayoutDto) =>
-      ipcRenderer.invoke(IPC.FENCE_UPDATE_LAYOUT, categoryId, dto),
-    recoverDesktopIcons: () => ipcRenderer.invoke(IPC.FENCE_RECOVER_DESKTOP_ICONS),
-    getWallpaper: () => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_GET),
-    pickWallpaper: () => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_PICK),
-    applyWallpaper: (sourcePath: string) => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_APPLY, sourcePath),
-    restoreWallpaper: () => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_RESTORE),
-    listWallpaperPresets: () => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_LIST_PRESETS),
-    applyWallpaperPreset: (presetId: string) => ipcRenderer.invoke(IPC.FENCE_WALLPAPER_APPLY_PRESET, presetId)
   },
   app: {
     getDataPath: () => ipcRenderer.invoke(IPC.APP_GET_DATA_PATH),

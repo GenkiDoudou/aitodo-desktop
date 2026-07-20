@@ -65,7 +65,12 @@ async function onSubmit() {
   status.value = ''
   statusError.value = false
   try {
-    const dto = buildQuickCreateTaskDto(trimmed, categories.value, { triagedAt: null })
+    // 与首页快捷添加一致：解析分类关键词 + 当前优先级
+    await loadCategories()
+    const dto = buildQuickCreateTaskDto(trimmed, categories.value, {
+      triagedAt: null,
+      priority: priority.value
+    })
     if (!dto.title.trim()) {
       status.value = '请输入任务内容'
       statusError.value = true
@@ -91,6 +96,7 @@ async function onSubmit() {
 onMounted(async () => {
   await loadCategories()
   cleanupFocus = window.captureApi.capture.onFocusRequest(() => {
+    void loadCategories()
     focusInput()
   })
   focusInput()

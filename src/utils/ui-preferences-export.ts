@@ -10,7 +10,6 @@ export const UI_PREFERENCE_STORAGE_KEYS = [
   'aitodo_list_view_mode',
   'aitodo_task_detail_style',
   'aitodo_task_list_meta_visibility',
-  'aitodo_smart_list_sidebar',
   'aitodo_kanban_config',
   'aitodo_kanban_board_mode',
   'aitodo_selected_view_id'

@@ -115,11 +115,13 @@ const TASK_GROUP_BY_KEY = 'aitodo_task_group_by'
 const TASK_SORT_BY_KEY = 'aitodo_task_sort_by'
 
 export function readTaskGroupBy(): import('@shared/task-list-layout').TaskGroupBy {
-  return readEnum(
+  const value = readEnum(
     TASK_GROUP_BY_KEY,
     ['custom', 'time', 'tag', 'priority', 'none'] as const,
-    'custom'
+    'none'
   )
+  // custom 不会生成分组标题，与关闭分组等价；归一为 none 避免开关误显开启
+  return value === 'custom' ? 'none' : value
 }
 
 export function persistTaskGroupBy(value: import('@shared/task-list-layout').TaskGroupBy): void {

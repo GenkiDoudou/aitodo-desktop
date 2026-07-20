@@ -75,55 +75,13 @@ import {
   importUserConfigFromFile
 } from '../services/user-config-service'
 import type { HolidayService } from '../services/holiday-service'
-import { DesktopOrganizeRepository } from '../db/desktop-organize-repository'
-import { DesktopOrganizeService } from '../services/desktop-organize-service'
-import type {
-  CreateDesktopCategoryDto,
-  CreateDesktopCustomRuleDto,
-  DesktopOrganizePlan,
-  UpdateDesktopCategoryDto,
-  UpdateDesktopCustomRuleDto,
-  UpdateDesktopOrganizeSettingsDto
-} from '@shared/desktop-organize-types'
 import type { UpdateWidgetSettingsDto } from '@shared/widget-notes'
 import { WidgetNoteRepository } from '../db/widget-note-repository'
 import { WidgetNoteService } from '../services/widget-note-service'
 import { getWidgetWindowManager } from '../widget-window-manager'
 import { getQuickCaptureWindowManager } from '../quick-capture-window-manager'
-import { getFenceWindowManager } from '../fence-window-manager'
-import { FenceLayoutRepository } from '../db/fence-layout-repository'
-import type { UpdateDesktopFenceLayoutDto, UpdateDesktopFenceSettingsDto } from '@shared/fence-types'
-import {
-  cancelDeferredHideNativeDesktopIcons,
-  deferHideNativeDesktopIcons,
-  getFileIconDataUrl,
-  openDesktopItem,
-  recoverDesktopIconsFromMarkerIfNeeded,
-  restoreNativeDesktopIconsIfNeeded
-} from '../services/fence-desktop'
-import {
-  prepareNativeDesktopIconsForFenceCollapse,
-  scheduleEnsureDesktopIconsVisibleAfterCollapse,
-  waitForDesktopShellOp
-} from '../services/desktop-shell'
-import { purgeDesktopFenceArtifacts } from '../services/desktop-fence-pin'
-import {
-  applyWallpaperFromFile,
-  applyWallpaperPreset,
-  getWallpaperState,
-  listWallpaperPresets,
-  pickWallpaperImage,
-  restorePreviousWallpaper
-} from '../services/desktop-wallpaper'
-import {
-  runBootAutoOrganize,
-  setDesktopOrganizeWatcherCallback,
-  syncDesktopOrganizeWatcher
-} from '../services/desktop-organize-watcher'
 import { markQuitting, toggleMainWindow } from '../tray'
 import { showSystemNotification } from '../services/system-notification'
-
-export { restoreNativeDesktopIconsIfNeeded, recoverDesktopIconsFromMarkerIfNeeded }
 
 function services() {
   const db = getDatabase()
@@ -138,7 +96,6 @@ function services() {
   const activityRepo = new TaskActivityRepository(db)
   const activityService = new TaskActivityService(activityRepo)
   const activityRecorder = new TaskActivityRecorder(categoryRepo, kanbanRepo)
-  const desktopOrganizeRepo = new DesktopOrganizeRepository(db)
   const widgetNoteRepo = new WidgetNoteRepository(db)
   const taskService = new TaskService(taskRepo, reminderRepo, tagRepo, activityService, activityRecorder)
   return {
@@ -150,57 +107,12 @@ function services() {
     scheduledSummaries: new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo),
     taskViews: new TaskViewService(viewRepo, taskRepo),
     taskActivities: activityService,
-    desktopOrganize: new DesktopOrganizeService(desktopOrganizeRepo),
     widgetNotes: new WidgetNoteService(widgetNoteRepo, taskService, categoryRepo),
     widgetSettings: widgetNoteRepo
   }
 }
 
 let getMainWindowRef: () => BrowserWindow | null = () => null
-
-function pushFenceScanIfEnabled(): void {
-  const fence = getFenceWindowManager()
-  const settings = fence.getSettings()
-  if (!settings.fencesEnabled) return
-  const svc = services().desktopOrganize
-  const plan = svc.previewForFences()
-  const categories = svc.listCategories()
-  const folderPrefix = svc.getSettings().folderPrefix
-  fence.broadcastPlan(plan, categories, folderPrefix)
-}
-
-function showDesktopFences(forceShow = false): void {
-  const fence = getFenceWindowManager()
-  const settings = fence.getSettings()
-  const svc = services().desktopOrganize
-  const plan = svc.previewForFences()
-  const categories = svc.listCategories()
-  fence.showAll(categories, settings.fencesAlwaysOnTop, { forceShow })
-  pushFenceScanIfEnabled()
-}
-
-/** 应用启动时恢复桌面 Fence */
-export function restoreDesktopFencesIfEnabled(): void {
-  try {
-    const fence = getFenceWindowManager()
-    const settings = fence.getSettings()
-    if (!settings.fencesEnabled) {
-      // 容器关闭时必须恢复原生图标，再清黑框（避免 HideIcons=1 残留导致桌面空白）
-      restoreNativeDesktopIconsIfNeeded()
-      fence.destroyAll({ purgeArtifacts: true })
-      scheduleEnsureDesktopIconsVisibleAfterCollapse()
-      return
-    }
-    showDesktopFences(true)
-    if (settings.hideNativeIcons) {
-      deferHideNativeDesktopIcons(settings)
-    }
-  } catch (err) {
-    console.warn('[fence] restore failed:', err)
-  }
-}
-
-let pendingFenceDragItemPath: string | null = null
 
 /** 主进程写入消息后推送给渲染进程（侧栏角标与列表刷新） */
 export function pushAppMessageToRenderer(message: AppMessage): void {
@@ -231,8 +143,6 @@ export function setHolidayService(service: HolidayService | null): void {
 /** 注册全部 IPC handler；在 app.whenReady 且数据库可用后调用 */
 export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): void {
   getMainWindowRef = getMainWindow
-  setDesktopOrganizeWatcherCallback(() => pushFenceScanIfEnabled())
-  syncDesktopOrganizeWatcher(services().desktopOrganize)
   ipcMain.handle(IPC.TASKS_LIST, (_e, filter?: TaskListFilter) =>
     wrapIpc(() => services().tasks.list(cloneTaskListFilter(filter ?? {})))
   )
@@ -570,103 +480,6 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     wrapIpc(() => services().taskActivities.updateRetentionPolicy(policy))
   )
 
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_SCAN, () =>
-    wrapIpc(() => {
-      const items = services().desktopOrganize.scan()
-      pushFenceScanIfEnabled()
-      return items
-    })
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_PREVIEW, () =>
-    wrapIpc(() => {
-      const plan = services().desktopOrganize.preview()
-      pushFenceScanIfEnabled()
-      return plan
-    })
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_EXECUTE, (_e, plan?: DesktopOrganizePlan) =>
-    wrapIpc(() => {
-      const result = services().desktopOrganize.execute(plan)
-      pushFenceScanIfEnabled()
-      return result
-    })
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_UNDO, () =>
-    wrapIpc(() => {
-      const result = services().desktopOrganize.undo()
-      pushFenceScanIfEnabled()
-      return result
-    })
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CAN_UNDO, () => wrapIpc(() => services().desktopOrganize.canUndo()))
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_SETTINGS_GET, () =>
-    wrapIpc(() => services().desktopOrganize.getSettings())
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_SETTINGS_SET, (_e, dto: UpdateDesktopOrganizeSettingsDto) =>
-    wrapIpc(() => {
-      const settings = services().desktopOrganize.updateSettings(dto)
-      syncDesktopOrganizeWatcher(services().desktopOrganize)
-      return settings
-    })
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CATEGORIES_LIST, () =>
-    wrapIpc(() => services().desktopOrganize.listCategories())
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CATEGORIES_CREATE, (_e, dto: CreateDesktopCategoryDto) =>
-    wrapIpc(() => services().desktopOrganize.createCategory(dto))
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CATEGORIES_UPDATE, (_e, id: string, dto: UpdateDesktopCategoryDto) =>
-    wrapIpc(() => services().desktopOrganize.updateCategory(id, dto))
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CATEGORIES_DELETE, (_e, id: string) =>
-    wrapIpc(() => {
-      services().desktopOrganize.deleteCategory(id)
-      return undefined
-    })
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CATEGORIES_REORDER, (_e, orderedIds: string[]) =>
-    wrapIpc(() => services().desktopOrganize.reorderCategories(orderedIds))
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_MANUAL_SET, (_e, itemPath: string, categoryId: string) =>
-    wrapIpc(() => {
-      services().desktopOrganize.setManualAssignment(itemPath, categoryId)
-      return undefined
-    })
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_MANUAL_REMOVE, (_e, itemPath: string) =>
-    wrapIpc(() => {
-      services().desktopOrganize.removeManualAssignment(itemPath)
-      return undefined
-    })
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_GET_DESKTOP_PATH, () =>
-    wrapIpc(() => services().desktopOrganize.getDesktopPath())
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_OPEN_DESKTOP, () =>
-    wrapIpcAsync(() => services().desktopOrganize.openDesktopFolder())
-  )
-
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_LIST, () =>
-    wrapIpc(() => services().desktopOrganize.listCustomRules())
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_CREATE, (_e, dto: CreateDesktopCustomRuleDto) =>
-    wrapIpc(() => services().desktopOrganize.createCustomRule(dto))
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_UPDATE, (_e, id: string, dto: UpdateDesktopCustomRuleDto) =>
-    wrapIpc(() => services().desktopOrganize.updateCustomRule(id, dto))
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_CUSTOM_RULES_DELETE, (_e, id: string) =>
-    wrapIpc(() => {
-      services().desktopOrganize.deleteCustomRule(id)
-    })
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_DEFAULT_RULES_LIST, () =>
-    wrapIpc(() => services().desktopOrganize.listDefaultRules())
-  )
-  ipcMain.handle(IPC.DESKTOP_ORGANIZE_DEFAULT_RULES_SET_ENABLED, (_e, categoryId: string, enabled: boolean) =>
-    wrapIpc(() => services().desktopOrganize.setDefaultRuleEnabled(categoryId, enabled))
-  )
-
   const widgetManager = () => getWidgetWindowManager()
 
   ipcMain.handle(IPC.WIDGET_TOGGLE, () =>
@@ -787,121 +600,4 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       }
     })
   )
-
-  const fenceManager = () => getFenceWindowManager()
-  const fenceRepo = () => new FenceLayoutRepository(getDatabase())
-
-  ipcMain.handle(IPC.FENCE_GET_SETTINGS, () => wrapIpc(() => fenceManager().getSettings()))
-  ipcMain.handle(IPC.FENCE_UPDATE_SETTINGS, (_e, dto: UpdateDesktopFenceSettingsDto) =>
-    wrapIpcAsync(async () => {
-      const wasEnabled = fenceManager().getSettings().fencesEnabled
-      const settings = fenceManager().updateSettings(dto)
-      if (settings.fencesEnabled) {
-        showDesktopFences(true)
-        if (settings.hideNativeIcons) {
-          deferHideNativeDesktopIcons(settings)
-        } else {
-          restoreNativeDesktopIconsIfNeeded()
-        }
-      } else if (wasEnabled || dto.fencesEnabled === false) {
-        // 收起：先强制恢复原生图标，再清黑框（统一重启一次 Explorer）
-        cancelDeferredHideNativeDesktopIcons()
-        await prepareNativeDesktopIconsForFenceCollapse()
-        await waitForDesktopShellOp()
-        fenceManager().destroyAll({ purgeArtifacts: false })
-        purgeDesktopFenceArtifacts()
-        scheduleEnsureDesktopIconsVisibleAfterCollapse()
-      }
-      return settings
-    })
-  )
-  ipcMain.handle(IPC.FENCE_SHOW_ALL, () =>
-    wrapIpc(() => {
-      const settings = fenceManager().getSettings()
-      showDesktopFences(true)
-      if (settings.hideNativeIcons) {
-        deferHideNativeDesktopIcons(settings)
-      }
-    })
-  )
-  ipcMain.handle(IPC.FENCE_HIDE_ALL, () =>
-    wrapIpcAsync(async () => {
-      cancelDeferredHideNativeDesktopIcons()
-      await prepareNativeDesktopIconsForFenceCollapse()
-      await waitForDesktopShellOp()
-      fenceManager().destroyAll({ purgeArtifacts: false })
-      purgeDesktopFenceArtifacts()
-      scheduleEnsureDesktopIconsVisibleAfterCollapse()
-    })
-  )
-  ipcMain.handle(IPC.FENCE_LIST_LAYOUTS, () => wrapIpc(() => fenceRepo().listLayouts()))
-  ipcMain.handle(IPC.FENCE_UPDATE_LAYOUT, (_e, categoryId: string, dto: UpdateDesktopFenceLayoutDto) =>
-    wrapIpc(() => fenceRepo().updateLayout(categoryId, dto))
-  )
-  ipcMain.handle(IPC.FENCE_HIDE_WINDOW, (_e, slotId: string) =>
-    wrapIpc(() => {
-      fenceManager().hideSlot(slotId as import('@shared/fence-slot-config').FenceSlotId)
-    })
-  )
-  ipcMain.handle(IPC.FENCE_GET_FILE_ICON, async (_e, filePath: string) =>
-    wrapIpcAsync(async () => {
-      if (!filePath?.trim()) throw new AppError('VALIDATION_ERROR', '路径无效')
-      return getFileIconDataUrl(filePath)
-    })
-  )
-  ipcMain.handle(IPC.FENCE_OPEN_ITEM, async (_e, filePath: string) =>
-    wrapIpcAsync(async () => {
-      if (!filePath?.trim()) throw new AppError('VALIDATION_ERROR', '路径无效')
-      await openDesktopItem(filePath)
-    })
-  )
-  ipcMain.handle(IPC.FENCE_BEGIN_DRAG, (_e, itemPath: string) =>
-    wrapIpc(() => {
-      pendingFenceDragItemPath = itemPath
-    })
-  )
-  ipcMain.handle(IPC.FENCE_DROP_ITEM, (_e, targetCategoryId: string) =>
-    wrapIpc(() => {
-      if (!pendingFenceDragItemPath) {
-        throw new AppError('VALIDATION_ERROR', '没有正在拖动的项目')
-      }
-      services().desktopOrganize.setManualAssignment(pendingFenceDragItemPath, targetCategoryId)
-      pendingFenceDragItemPath = null
-      pushFenceScanIfEnabled()
-    })
-  )
-  ipcMain.handle(IPC.FENCE_END_DRAG, () =>
-    wrapIpc(() => {
-      pendingFenceDragItemPath = null
-    })
-  )
-  ipcMain.handle(IPC.FENCE_RECOVER_DESKTOP_ICONS, () =>
-    wrapIpc(() => {
-      // 紧急恢复：关隐藏开关 + 强制显示图标，避免设置残留导致再次隐藏
-      fenceManager().updateSettings({ hideNativeIcons: false, fencesEnabled: false })
-      cancelDeferredHideNativeDesktopIcons()
-      restoreNativeDesktopIconsIfNeeded()
-      scheduleEnsureDesktopIconsVisibleAfterCollapse()
-    })
-  )
-  ipcMain.handle(IPC.FENCE_WALLPAPER_GET, () => wrapIpc(() => getWallpaperState()))
-  ipcMain.handle(IPC.FENCE_WALLPAPER_PICK, () =>
-    wrapIpcAsync(async () => pickWallpaperImage(getMainWindowRef()))
-  )
-  ipcMain.handle(IPC.FENCE_WALLPAPER_APPLY, (_e, sourcePath: string) =>
-    wrapIpc(() => {
-      if (!sourcePath?.trim()) throw new AppError('VALIDATION_ERROR', '请先选择图片')
-      return applyWallpaperFromFile(sourcePath)
-    })
-  )
-  ipcMain.handle(IPC.FENCE_WALLPAPER_RESTORE, () => wrapIpc(() => restorePreviousWallpaper()))
-  ipcMain.handle(IPC.FENCE_WALLPAPER_LIST_PRESETS, () => wrapIpc(() => listWallpaperPresets()))
-  ipcMain.handle(IPC.FENCE_WALLPAPER_APPLY_PRESET, (_e, presetId: string) =>
-    wrapIpc(() => {
-      if (!presetId?.trim()) throw new AppError('VALIDATION_ERROR', '请选择壁纸')
-      return applyWallpaperPreset(presetId)
-    })
-  )
-
-  runBootAutoOrganize(services().desktopOrganize)
 }

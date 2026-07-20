@@ -1445,6 +1445,7 @@ async function onQuickAdd() {
 
     const quickOpts: Parameters<typeof taskStore.quickCreate>[1] = {
       categoryId: defaultCategoryForCreate.value ?? null,
+      priority: quickAddPriority.value,
       kanbanGroupId: kanbanGid !== undefined ? kanbanGid : undefined,
       status: kanbanStatus,
       parseCategories: parseCategoriesForMatch.value,

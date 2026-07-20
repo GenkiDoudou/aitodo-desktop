@@ -1,6 +1,21 @@
 import { resolve } from 'path'
+import type { Plugin } from 'vite'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
+
+/**
+ * 打包后 Electron 用 file:// 加载页面时，带 crossorigin 的 script/link
+ * 会被当成 CORS 请求并静默失败，导致白屏。开发态走 http:// 无此问题。
+ */
+function removeCrossOriginPlugin(): Plugin {
+  return {
+    name: 'remove-crossorigin',
+    enforce: 'post',
+    transformIndexHtml(html) {
+      return html.replace(/ crossorigin(="[^"]*")?/g, '')
+    }
+  }
+}
 
 export default defineConfig({
   main: {
@@ -23,7 +38,6 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'electron/preload/index.ts'),
           widget: resolve(__dirname, 'electron/preload/widget.ts'),
-          fence: resolve(__dirname, 'electron/preload/fence.ts'),
           capture: resolve(__dirname, 'electron/preload/capture.ts')
         },
         output: {
@@ -40,11 +54,13 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, '.'),
     build: {
+      modulePreload: {
+        polyfill: false
+      },
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'index.html'),
           widget: resolve(__dirname, 'widget.html'),
-          fence: resolve(__dirname, 'fence.html'),
           capture: resolve(__dirname, 'capture.html')
         }
       }
@@ -55,6 +71,6 @@ export default defineConfig({
         '@shared': resolve(__dirname, 'shared')
       }
     },
-    plugins: [vue()]
+    plugins: [vue(), removeCrossOriginPlugin()]
   }
 })

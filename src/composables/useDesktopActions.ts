@@ -74,12 +74,6 @@ export function useDesktopActions() {
 
         break
 
-      case 'goDesktopOrganize':
-
-        await router.push('/desktop-organize')
-
-        break
-
       case 'openSettings':
 
         await router.push('/settings')

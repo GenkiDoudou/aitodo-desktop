@@ -11,7 +11,6 @@ export type ShortcutActionId =
   | 'goInbox'
   | 'goDone'
   | 'goTrash'
-  | 'goDesktopOrganize'
   | 'openSettings'
 
 export type ShortcutActionCategory = 'global' | 'navigation' | 'task'
@@ -119,13 +118,6 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
     label: '垃圾桶',
     description: '打开垃圾桶',
     defaultAccelerator: 'Mod+Shift+T'
-  },
-  {
-    id: 'goDesktopOrganize',
-    category: 'navigation',
-    label: '桌面整理',
-    description: '打开桌面整理页面',
-    defaultAccelerator: 'Mod+Shift+O'
   },
   {
     id: 'openSettings',

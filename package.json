@@ -29,7 +29,6 @@
     "better-sqlite3": "^11.7.0",
     "dayjs": "^1.11.21",
     "element-plus": "^2.9.1",
-    "koffi": "^3.1.1",
     "markdown-it": "^14.3.0",
     "markdown-it-mark": "^4.0.0",
     "markdown-it-task-lists": "^2.1.1",
@@ -67,14 +66,9 @@
       "package.json"
     ],
     "asarUnpack": [
-      "node_modules/better-sqlite3/**/*",
-      "node_modules/koffi/**/*"
+      "node_modules/better-sqlite3/**/*"
     ],
     "extraResources": [
-      {
-        "from": "resources/wallpapers",
-        "to": "wallpapers"
-      },
       {
         "from": "resources/tray.png",
         "to": "tray.png"

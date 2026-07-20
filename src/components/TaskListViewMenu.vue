@@ -103,18 +103,22 @@ const metaOptions: { key: keyof TaskListMetaVisibility; label: string }[] = [
   { key: 'completedAt', label: '完成时间' }
 ]
 
-const groupByLabels = TASK_GROUP_BY_LABELS
+const GROUPING_OPTIONS: TaskGroupBy[] = ['time', 'tag', 'priority']
+
+const groupByLabels = Object.fromEntries(
+  GROUPING_OPTIONS.map((key) => [key, TASK_GROUP_BY_LABELS[key]])
+) as Record<TaskGroupBy, string>
 const sortByLabels = TASK_SORT_BY_LABELS
 
 const enableGrouping = computed({
-  get: () => groupBy.value !== 'none',
+  get: () => GROUPING_OPTIONS.includes(groupBy.value),
   set: (value: boolean) => {
     if (!value) {
       groupBy.value = 'none'
       return
     }
-    if (groupBy.value === 'none') {
-      groupBy.value = 'custom'
+    if (!GROUPING_OPTIONS.includes(groupBy.value)) {
+      groupBy.value = 'time'
     }
   }
 })
@@ -125,8 +129,8 @@ function onVisibleChange(v: boolean) {
 }
 
 function onGroupByChange(value: TaskGroupBy) {
-  if (value === 'none') {
-    enableGrouping.value = false
+  if (value === 'none' || value === 'custom') {
+    groupBy.value = 'none'
   }
 }
 

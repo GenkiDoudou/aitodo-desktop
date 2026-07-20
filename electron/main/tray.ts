@@ -172,6 +172,15 @@ type CloseBehaviorDeps = {
 
 
 
+/** 渲染进程能否弹出关闭确认（白屏/崩溃时不能依赖 IPC） */
+function canAskRenderer(mainWindow: BrowserWindow): boolean {
+  const wc = mainWindow.webContents
+  if (wc.isDestroyed() || wc.isCrashed()) return false
+  if (wc.isLoadingMainFrame()) return false
+  const url = wc.getURL()
+  return Boolean(url) && url !== 'about:blank'
+}
+
 /** 按用户偏好处理主窗口关闭：询问、隐藏到托盘或退出应用 */
 
 export function bindMinimizeToTray(mainWindow: BrowserWindow, deps: CloseBehaviorDeps = {}): void {
@@ -202,7 +211,7 @@ export function bindMinimizeToTray(mainWindow: BrowserWindow, deps: CloseBehavio
 
 
 
-    if (behavior === 'ask') {
+    if (behavior === 'ask' && canAskRenderer(mainWindow)) {
 
       event.preventDefault()
 
@@ -214,6 +223,7 @@ export function bindMinimizeToTray(mainWindow: BrowserWindow, deps: CloseBehavio
 
 
 
+    // tray，或 ask 但页面不可用：隐藏到托盘，避免白屏时关不掉
     event.preventDefault()
 
     mainWindow.hide()

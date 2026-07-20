@@ -5,12 +5,8 @@ import {
   registerIpcHandlers,
   pushAppMessageToRenderer,
   setSummarySchedulerService,
-  setHolidayService,
-  restoreDesktopFencesIfEnabled,
-  restoreNativeDesktopIconsIfNeeded,
-  recoverDesktopIconsFromMarkerIfNeeded
+  setHolidayService
 } from './ipc/handlers'
-import { stopDesktopOrganizeWatcher } from './services/desktop-organize-watcher'
 import { TaskRepository } from './db/task-repository'
 import { AppMessageRepository } from './db/app-message-repository'
 import { TaskReminderRepository } from './db/task-reminder-repository'
@@ -28,7 +24,6 @@ import { resolveDataDir } from './data-path'
 import { registerGlobalShortcuts, unregisterGlobalShortcuts, createDefaultShortcutHandlers } from './shortcuts'
 import { getWidgetWindowManager } from './widget-window-manager'
 import { getQuickCaptureWindowManager } from './quick-capture-window-manager'
-import { getFenceWindowManager } from './fence-window-manager'
 import {
   registerAttachmentProtocol,
   registerAttachmentSchemePrivilege
@@ -105,13 +100,6 @@ app.whenReady().then(() => {
   mainWindow = createWindow()
   registerGlobalShortcuts(mainWindow, createDefaultShortcutHandlers(() => mainWindow))
 
-  try {
-    const fence = getFenceWindowManager()
-    void recoverDesktopIconsFromMarkerIfNeeded(fence.getSettings().fencesEnabled)
-  } catch {
-    /* 异常退出后恢复桌面图标，失败不阻塞启动 */
-  }
-
   const db = getDatabase()
   const taskRepo = new TaskRepository(db)
   const messageService = new AppMessageService(new AppMessageRepository(db))
@@ -161,9 +149,6 @@ app.whenReady().then(() => {
     /* 挂件设置读取失败不阻塞启动 */
   }
 
-  // 恢复桌面 Fence（若用户曾开启）
-  setTimeout(() => restoreDesktopFencesIfEnabled(), 800)
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow()
@@ -175,12 +160,9 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   markQuitting()
-  stopDesktopOrganizeWatcher()
   unregisterGlobalShortcuts()
-  restoreNativeDesktopIconsIfNeeded()
   getWidgetWindowManager().destroy()
   getQuickCaptureWindowManager().destroy()
-  getFenceWindowManager().destroyAll()
   reminderService?.stop()
   summarySchedulerService?.stop()
   destroyTray()
