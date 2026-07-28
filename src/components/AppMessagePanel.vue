@@ -23,41 +23,83 @@
           {{ messageStore.unreadActivities }}
         </span>
       </button>
+      <button
+        type="button"
+        class="app-message-panel__tab"
+        :class="{ 'is-active': activeTab === 'pending' }"
+        @click="switchPending"
+      >
+        待发送
+        <span v-if="pendingItems.length > 0" class="app-message-panel__tab-badge">
+          {{ pendingItems.length }}
+        </span>
+      </button>
     </div>
 
-    <div v-loading="messageStore.loading" class="app-message-panel__body">
-      <div v-if="currentList.length === 0 && !messageStore.loading" class="app-message-panel__empty">
-        {{ activeTab === 'notification' ? '暂无通知' : '暂无动态' }}
-      </div>
-
-      <ul v-else class="app-message-panel__list">
-        <li
-          v-for="item in currentList"
-          :key="item.id"
-          class="app-message-panel__item"
-          :class="{ 'is-unread': !item.readAt }"
-          @click="onItemClick(item)"
-        >
-          <span class="app-message-panel__avatar" aria-hidden="true" :class="avatarClass(item)">
-            <el-icon><component :is="itemIcon(item)" /></el-icon>
-          </span>
-          <div class="app-message-panel__content">
-            <div class="app-message-panel__head">
-              <span class="app-message-panel__title">
-                <span v-if="!item.readAt" class="app-message-panel__unread-dot" aria-label="未读" />
-                <span v-if="isSummaryMessage(item)" class="app-message-panel__tag">定时汇总</span>
-                <span v-if="!item.readAt" class="app-message-panel__unread-tag">未读</span>
-                {{ displayTitle(item) }}
-              </span>
-              <time class="app-message-panel__date">{{ formatDate(item.createdAt) }}</time>
+    <div v-loading="panelLoading" class="app-message-panel__body">
+      <template v-if="activeTab === 'pending'">
+        <div v-if="pendingItems.length === 0 && !pendingLoading" class="app-message-panel__empty">
+          暂无待发送
+        </div>
+        <ul v-else class="app-message-panel__list">
+          <li
+            v-for="item in pendingItems"
+            :key="item.id"
+            class="app-message-panel__item"
+            @click="onPendingClick(item)"
+          >
+            <span class="app-message-panel__avatar is-summary" aria-hidden="true">
+              <el-icon><Timer /></el-icon>
+            </span>
+            <div class="app-message-panel__content">
+              <div class="app-message-panel__head">
+                <span class="app-message-panel__title">
+                  <span class="app-message-panel__tag">{{ pendingKindLabel(item.kind) }}</span>
+                  {{ item.title }}
+                </span>
+                <time class="app-message-panel__date">{{
+                  formatDate(item.deferredTo || item.fireAt)
+                }}</time>
+              </div>
+              <p v-if="item.bodyPreview" class="app-message-panel__body-text">{{ item.bodyPreview }}</p>
             </div>
-            <p v-if="item.body" class="app-message-panel__body-text">{{ item.body }}</p>
-          </div>
-        </li>
-      </ul>
+          </li>
+        </ul>
+      </template>
+      <template v-else>
+        <div v-if="currentList.length === 0 && !messageStore.loading" class="app-message-panel__empty">
+          {{ activeTab === 'notification' ? '暂无通知' : '暂无动态' }}
+        </div>
+
+        <ul v-else class="app-message-panel__list">
+          <li
+            v-for="item in currentList"
+            :key="item.id"
+            class="app-message-panel__item"
+            :class="{ 'is-unread': !item.readAt }"
+            @click="onItemClick(item)"
+          >
+            <span class="app-message-panel__avatar" aria-hidden="true" :class="avatarClass(item)">
+              <el-icon><component :is="itemIcon(item)" /></el-icon>
+            </span>
+            <div class="app-message-panel__content">
+              <div class="app-message-panel__head">
+                <span class="app-message-panel__title">
+                  <span v-if="!item.readAt" class="app-message-panel__unread-dot" aria-label="未读" />
+                  <span v-if="isSummaryMessage(item)" class="app-message-panel__tag">定时汇总</span>
+                  <span v-if="!item.readAt" class="app-message-panel__unread-tag">未读</span>
+                  {{ displayTitle(item) }}
+                </span>
+                <time class="app-message-panel__date">{{ formatDate(item.createdAt) }}</time>
+              </div>
+              <p v-if="item.body" class="app-message-panel__body-text">{{ item.body }}</p>
+            </div>
+          </li>
+        </ul>
+      </template>
     </div>
 
-    <footer v-if="currentList.length" class="app-message-panel__footer">
+    <footer v-if="activeTab !== 'pending' && currentList.length" class="app-message-panel__footer">
       <button type="button" class="app-message-panel__mark-all" @click="onMarkAllRead">
         全部标为已读
       </button>
@@ -71,22 +113,62 @@ import { Bell, Timer } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import type { AppMessage, AppMessageKind } from '@shared/types'
+import type { PendingNotifyItem } from '@shared/notification-config'
 import { useMessageStore } from '@/stores/message-store'
+import { unwrapIpc } from '@/ipc/client'
 
 const emit = defineEmits<{
   'open-task': [string]
 }>()
 
 const messageStore = useMessageStore()
-const activeTab = ref<AppMessageKind>('notification')
+const activeTab = ref<AppMessageKind | 'pending'>('notification')
+const pendingItems = ref<PendingNotifyItem[]>([])
+const pendingLoading = ref(false)
 
 const currentList = computed(() =>
-  activeTab.value === 'notification' ? messageStore.notifications : messageStore.activities
+  activeTab.value === 'notification'
+    ? messageStore.notifications
+    : activeTab.value === 'activity'
+      ? messageStore.activities
+      : []
+)
+
+const panelLoading = computed(() =>
+  activeTab.value === 'pending' ? pendingLoading.value : messageStore.loading
 )
 
 function formatDate(iso: string) {
   const d = dayjs(iso)
-  return d.isValid() ? d.format('YYYY/MM/DD') : iso
+  return d.isValid() ? d.format('YYYY/MM/DD HH:mm') : iso
+}
+
+function pendingKindLabel(kind: string) {
+  if (kind === 'deferred') return '延后'
+  if (kind === 'queued') return '队列'
+  return '即将'
+}
+
+async function loadPending() {
+  pendingLoading.value = true
+  try {
+    pendingItems.value = unwrapIpc(await window.api.notify.listPending())
+  } catch {
+    pendingItems.value = []
+  } finally {
+    pendingLoading.value = false
+  }
+}
+
+function switchPending() {
+  activeTab.value = 'pending'
+  void loadPending()
+}
+
+function onPendingClick(item: PendingNotifyItem) {
+  if (item.event === 'task_reminder' && item.entityId) {
+    emit('open-task', item.entityId)
+  }
 }
 
 function isSummaryMessage(item: AppMessage) {
@@ -118,6 +200,7 @@ async function onItemClick(item: AppMessage) {
 }
 
 async function onMarkAllRead() {
+  if (activeTab.value === 'pending') return
   await messageStore.markAllRead(activeTab.value)
   ElMessage.success('已全部标为已读')
 }

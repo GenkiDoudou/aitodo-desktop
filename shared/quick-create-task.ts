@@ -9,10 +9,12 @@ import type { CreateTaskDto } from './types'
 export function toParseCategories(
   categories: Array<{ id: string; name: string; keywords?: string[] | null }>
 ): AiParseCategoryRef[] {
+  // 必须产出可 structuredClone 的纯对象：Vue 响应式 keywords 数组直接传入 IPC 会报
+  // "An object could not be cloned."
   return categories.map((c) => ({
-    id: c.id,
-    name: c.name,
-    keywords: c.keywords ?? []
+    id: String(c.id),
+    name: String(c.name),
+    keywords: Array.isArray(c.keywords) ? c.keywords.map((k) => String(k)) : []
   }))
 }
 

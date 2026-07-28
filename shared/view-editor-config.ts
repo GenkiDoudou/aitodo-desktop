@@ -27,5 +27,7 @@ export const VIEW_EDITOR_FILTER_FIELD_LABELS: Record<
 export const VIEW_EDITOR_KANBAN_GROUP_OPTIONS: { value: KanbanBoardMode; label: string }[] = [
   { value: 'group', label: '任务分组' },
   { value: 'priority', label: '任务级别' },
-  { value: 'status', label: '任务状态' }
+  { value: 'status', label: '任务状态' },
+  { value: 'time', label: '时间' },
+  { value: 'tag', label: '标签' }
 ]

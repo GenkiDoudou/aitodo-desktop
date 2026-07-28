@@ -14,13 +14,25 @@
     </template>
 
     <div class="task-view-menu">
+      <div class="task-view-menu__sub task-view-menu__sub--top">
+        <div class="task-view-menu__sub-title">展示模式</div>
+        <el-radio-group v-model="viewMode" class="task-view-menu__radio-group" size="small">
+          <el-radio value="list">列表</el-radio>
+          <el-radio value="kanban">看板</el-radio>
+        </el-radio-group>
+      </div>
+
       <button type="button" class="task-view-menu__row task-view-menu__row--static">
         <el-icon class="task-view-menu__row-icon"><CircleCheck /></el-icon>
         <span class="task-view-menu__row-label">隐藏已完成</span>
         <el-switch v-model="hideDone" size="small" @click.stop />
       </button>
 
-      <button type="button" class="task-view-menu__row task-view-menu__row--static">
+      <button
+        v-if="viewMode === 'list'"
+        type="button"
+        class="task-view-menu__row task-view-menu__row--static"
+      >
         <span class="task-view-menu__row-label">启用分组</span>
         <el-switch v-model="enableGrouping" size="small" @click.stop />
       </button>
@@ -31,7 +43,7 @@
           v-model="groupBy"
           size="small"
           class="task-view-menu__select"
-          :disabled="!enableGrouping"
+          :disabled="viewMode === 'list' && !enableGrouping"
           @change="onGroupByChange"
         >
           <el-option
@@ -82,16 +94,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ArrowRight, CircleCheck, Setting, View } from '@element-plus/icons-vue'
 import type { TaskDetailStyle, TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { TASK_GROUP_BY_LABELS, TASK_SORT_BY_LABELS, type TaskGroupBy, type TaskSortBy } from '@shared/task-list-layout'
+
+export type GearViewMode = 'list' | 'kanban'
 
 const hideDone = defineModel<boolean>('hideDone', { required: true })
 const detailStyle = defineModel<TaskDetailStyle>('detailStyle', { required: true })
 const metaVisibility = defineModel<TaskListMetaVisibility>('metaVisibility', { required: true })
 const groupBy = defineModel<TaskGroupBy>('groupBy', { required: true })
 const sortBy = defineModel<TaskSortBy>('sortBy', { required: true })
+const viewMode = defineModel<GearViewMode>('viewMode', { required: true })
 
 const visible = ref(false)
 const showDisplaySettings = ref(false)
@@ -103,7 +118,7 @@ const metaOptions: { key: keyof TaskListMetaVisibility; label: string }[] = [
   { key: 'completedAt', label: '完成时间' }
 ]
 
-const GROUPING_OPTIONS: TaskGroupBy[] = ['time', 'tag', 'priority']
+const GROUPING_OPTIONS: TaskGroupBy[] = ['time', 'tag', 'priority', 'status']
 
 const groupByLabels = Object.fromEntries(
   GROUPING_OPTIONS.map((key) => [key, TASK_GROUP_BY_LABELS[key]])
@@ -123,12 +138,29 @@ const enableGrouping = computed({
   }
 })
 
+/** 看板必须有分组条件 */
+watch(
+  viewMode,
+  (mode) => {
+    if (mode === 'kanban' && !GROUPING_OPTIONS.includes(groupBy.value)) {
+      groupBy.value = 'status'
+    }
+  },
+  { immediate: true }
+)
+
 function onVisibleChange(v: boolean) {
   visible.value = v
   if (!v) showDisplaySettings.value = false
 }
 
 function onGroupByChange(value: TaskGroupBy) {
+  if (viewMode.value === 'kanban') {
+    if (!GROUPING_OPTIONS.includes(value)) {
+      groupBy.value = 'status'
+    }
+    return
+  }
   if (value === 'none' || value === 'custom') {
     groupBy.value = 'none'
   }
@@ -211,6 +243,10 @@ function updateMeta(key: keyof TaskListMetaVisibility, value: boolean) {
   padding: 10px 12px;
   background: #f7f8fa;
   border-radius: 10px;
+
+  &--top {
+    margin-top: 4px;
+  }
 }
 
 .task-view-menu__sub-title {

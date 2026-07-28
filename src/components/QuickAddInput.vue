@@ -19,7 +19,7 @@
         :placeholder="placeholder"
         spellcheck="false"
         @input="onInput"
-        @keydown.enter.prevent="emit('enter')"
+        @keydown.enter="onEnterKey"
         @keydown.esc.prevent="emit('escape')"
         @focus="onFocus"
         @blur="onBlurAndEmit"
@@ -136,6 +136,15 @@ function scheduleParse() {
 function onInput(event: Event) {
   emit('update:modelValue', (event.target as HTMLInputElement).value)
   scheduleParse()
+}
+
+/** 输入法组词确认时的 Enter 不提交；勿用 keyCode 229（中文 Windows 下常误伤正常回车） */
+function onEnterKey(event: KeyboardEvent) {
+  if (event.isComposing) {
+    return
+  }
+  event.preventDefault()
+  emit('enter')
 }
 
 function onFocus() {

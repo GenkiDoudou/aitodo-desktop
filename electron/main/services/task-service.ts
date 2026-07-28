@@ -18,11 +18,18 @@ import { AppError } from '@shared/types'
 import type { TaskRepository } from '../db/task-repository'
 import type { TaskReminderRepository } from '../db/task-reminder-repository'
 import type { TagRepository } from '../db/tag-repository'
+import type { SyncOutbox } from '../db/sync-outbox'
 import type { TaskActivityService } from './task-activity-service'
 import type { TaskActivityRecorder } from './task-activity-recorder'
 import { normalizeTagNames } from '@shared/task-tags'
 
 const VALID_STATUS: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE']
+
+/** 同步载荷：排除本机提醒已触发状态 */
+function taskSyncPayload(task: Task): Record<string, unknown> {
+  const { remindFiredAt: _omit, ...rest } = task
+  return { ...rest }
+}
 
 /**
  * 任务业务规则：状态与 completed_at、父任务完成约束、删除时子任务级联。
@@ -34,8 +41,38 @@ export class TaskService {
     private readonly reminderRepo: TaskReminderRepository,
     private readonly tagRepo: TagRepository,
     private readonly activityService?: TaskActivityService,
-    private readonly activityRecorder?: TaskActivityRecorder
+    private readonly activityRecorder?: TaskActivityRecorder,
+    private readonly outbox?: SyncOutbox
   ) {}
+
+  private withTx<T>(fn: () => T): T {
+    return this.outbox ? this.outbox.runInTransaction(fn) : fn()
+  }
+
+  private enqueueTaskUpsert(task: Task): void {
+    this.outbox?.record({
+      entityType: 'task',
+      entityId: task.id,
+      operation: 'upsert',
+      payload: taskSyncPayload(task),
+      clientSyncVersion: task.syncVersion
+    })
+  }
+
+  private enqueueTaskDelete(task: Task, ts: string, syncVersion: number): void {
+    this.outbox?.record({
+      entityType: 'task',
+      entityId: task.id,
+      operation: 'delete',
+      payload: {
+        id: task.id,
+        deletedAt: ts,
+        updatedAt: ts,
+        syncVersion
+      },
+      clientSyncVersion: syncVersion
+    })
+  }
 
   list(filter?: TaskListFilter): Task[] {
     const tasks = this.repo.list(filter ?? {})
@@ -154,7 +191,7 @@ export class TaskService {
       createdAt: ts,
       updatedAt: ts,
       deletedAt: null,
-      syncVersion: 0,
+      syncVersion: 1,
       kanbanGroupId: dto.kanbanGroupId ?? null,
       recurrence,
       completedOccurrenceDates: [],
@@ -163,15 +200,18 @@ export class TaskService {
       triagedAt: dto.triagedAt !== undefined ? (dto.triagedAt ?? null) : null
     }
 
-    this.repo.insert(task)
-    if (task.tags.length) {
-      this.tagRepo.setTaskTags(task.id, task.tags, ts)
-    }
-    if (reminderInputs.length) {
-      this.reminderRepo.replaceForTask(task.id, reminderInputs, ts)
-    }
-    this.recordActivities(this.activityRecorder?.buildCreateEvents(task, dto) ?? [])
-    return this.enrichTask(task)
+    return this.withTx(() => {
+      this.repo.insert(task)
+      if (task.tags.length) {
+        this.tagRepo.setTaskTags(task.id, task.tags, ts)
+      }
+      if (reminderInputs.length) {
+        this.reminderRepo.replaceForTask(task.id, reminderInputs, ts)
+      }
+      this.enqueueTaskUpsert(task)
+      this.recordActivities(this.activityRecorder?.buildCreateEvents(task, dto) ?? [])
+      return this.enrichTask(task)
+    })
   }
 
   update(id: string, dto: UpdateTaskDto): Task {
@@ -268,7 +308,8 @@ export class TaskService {
       remindContinuous:
         dto.remindContinuous !== undefined ? dto.remindContinuous : existing.remindContinuous,
       triagedAt,
-      updatedAt: ts
+      updatedAt: ts,
+      syncVersion: existing.syncVersion + 1
     }
 
     if (!updated.title.trim()) {
@@ -281,20 +322,23 @@ export class TaskService {
     }
     updated.tags = nextTags
 
-    this.repo.update(updated)
-    if (dto.tags !== undefined) {
-      this.tagRepo.setTaskTags(id, nextTags, ts)
-    }
-    if (reminderInputs !== undefined) {
-      this.reminderRepo.replaceForTask(id, reminderInputs, ts)
-    } else if (dto.dueAt !== undefined && dueAt && existing.reminders?.length) {
-      // 截止变更时，按 offset 重算相对提醒
-      this.reminderRepo.rebuildOffsetsForTask(id, dueAt)
-    }
-    this.recordActivities(
-      this.activityRecorder?.buildUpdateEvents(existing, updated, dto) ?? []
-    )
-    return this.enrichTask(updated)
+    return this.withTx(() => {
+      this.repo.update(updated)
+      if (dto.tags !== undefined) {
+        this.tagRepo.setTaskTags(id, nextTags, ts)
+      }
+      if (reminderInputs !== undefined) {
+        this.reminderRepo.replaceForTask(id, reminderInputs, ts)
+      } else if (dto.dueAt !== undefined && dueAt && existing.reminders?.length) {
+        // 截止变更时，按 offset 重算相对提醒
+        this.reminderRepo.rebuildOffsetsForTask(id, dueAt)
+      }
+      this.enqueueTaskUpsert(updated)
+      this.recordActivities(
+        this.activityRecorder?.buildUpdateEvents(existing, updated, dto) ?? []
+      )
+      return this.enrichTask(updated)
+    })
   }
 
   delete(id: string, options?: { cascadeChildren?: boolean }): void {
@@ -313,8 +357,12 @@ export class TaskService {
       return
     }
 
-    this.recordDelete(task, ts)
-    this.repo.softDelete(id, ts)
+    this.withTx(() => {
+      const syncVersion = task.syncVersion + 1
+      this.recordDelete(task, ts)
+      this.repo.softDelete(id, ts, syncVersion)
+      this.enqueueTaskDelete(task, ts, syncVersion)
+    })
   }
 
   private recordDelete(task: Task, ts: string): void {
@@ -330,11 +378,19 @@ export class TaskService {
   }
 
   private softDeleteSubtree(task: Task, ts: string): void {
+    this.withTx(() => {
+      this.softDeleteSubtreeInTx(task, ts)
+    })
+  }
+
+  private softDeleteSubtreeInTx(task: Task, ts: string): void {
     for (const child of this.repo.findChildrenByParentId(task.id)) {
-      this.softDeleteSubtree(child, ts)
+      this.softDeleteSubtreeInTx(child, ts)
     }
+    const syncVersion = task.syncVersion + 1
     this.recordDelete(task, ts)
-    this.repo.softDelete(task.id, ts)
+    this.repo.softDelete(task.id, ts, syncVersion)
+    this.enqueueTaskDelete(task, ts, syncVersion)
   }
 
   restore(id: string): Task {
@@ -351,11 +407,17 @@ export class TaskService {
       }
     }
     const ts = nowIso()
-    this.repo.restore(id, ts)
-    if (this.activityRecorder) {
-      this.recordActivities([this.activityRecorder.buildRestoreEvent(id, ts)])
-    }
-    return this.get(id)
+    return this.withTx(() => {
+      this.repo.restore(id, ts)
+      if (this.activityRecorder) {
+        this.recordActivities([this.activityRecorder.buildRestoreEvent(id, ts)])
+      }
+      const restored = this.get(id)
+      const withVersion: Task = { ...restored, syncVersion: restored.syncVersion + 1, updatedAt: ts }
+      this.repo.update(withVersion)
+      this.enqueueTaskUpsert(withVersion)
+      return this.enrichTask(withVersion)
+    })
   }
 
   permanentDelete(id: string, options?: { cascadeChildren?: boolean }): void {

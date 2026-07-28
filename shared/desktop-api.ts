@@ -44,6 +44,18 @@ import type {
 import type { AiParseCategoryRef } from './ai-task-parser'
 import type { ParseTaskInputResult } from './llm-task-parse'
 import type { SavedAttachment } from './attachment'
+import type {
+  DesktopSyncStatus,
+  SyncLoginRequest,
+  SyncLoginResponse,
+  SyncTestServerResult
+} from './sync-protocol'
+import type { SyncPreferences } from './sync-preferences'
+import type {
+  NotificationConfig,
+  NotifyDeliveryRecord,
+  PendingNotifyItem
+} from './notification-config'
 
 /**
  * Preload 暴露给渲染进程的 API 形状。
@@ -192,5 +204,27 @@ export interface DesktopApi {
     onMessagePush(callback: (message: AppMessage) => void): () => void
     /** 主进程请求导航（如挂件打开完整整理页） */
     onNavigate(callback: (route: string) => void): () => void
+  }
+  sync: {
+    login(dto: SyncLoginRequest): Promise<IpcResult<SyncLoginResponse>>
+    logout(): Promise<IpcResult<void>>
+    getStatus(): Promise<IpcResult<DesktopSyncStatus>>
+    trigger(): Promise<IpcResult<DesktopSyncStatus>>
+    setServerUrl(url: string): Promise<IpcResult<string>>
+    setPreferences(partial: Partial<SyncPreferences>): Promise<IpcResult<SyncPreferences>>
+    testServerUrl(url?: string): Promise<IpcResult<SyncTestServerResult>>
+    reportUiPreferences(prefs: Record<string, string>): Promise<IpcResult<void>>
+    onUiPreferencesApplied(callback: (prefs: Record<string, string>) => void): () => void
+  }
+  notify: {
+    getConfig(): Promise<IpcResult<NotificationConfig>>
+    setConfig(config: NotificationConfig): Promise<IpcResult<NotificationConfig>>
+    testIyuu(token?: string): Promise<IpcResult<{ ok: boolean; message: string }>>
+    testWebhook(
+      url: string,
+      headers?: Record<string, string>
+    ): Promise<IpcResult<{ ok: boolean; message: string }>>
+    listDeliveries(): Promise<IpcResult<NotifyDeliveryRecord[]>>
+    listPending(): Promise<IpcResult<PendingNotifyItem[]>>
   }
 }

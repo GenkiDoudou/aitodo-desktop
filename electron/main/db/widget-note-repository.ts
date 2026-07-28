@@ -158,4 +158,43 @@ export class WidgetNoteRepository {
       throw new AppError('NOT_FOUND', '便签不存在')
     }
   }
+
+  /** 远程同步写入：保留服务端时间戳 */
+  upsertFromSync(note: WidgetNote): void {
+    const color = WIDGET_NOTE_COLORS.includes(note.color) ? note.color : 'yellow'
+    const existing = this.findNote(note.id)
+    if (existing) {
+      this.db
+        .prepare(
+          `UPDATE widget_notes SET content = @content, color = @color, pinned = @pinned,
+           created_at = @createdAt, updated_at = @updatedAt WHERE id = @id`
+        )
+        .run({
+          id: note.id,
+          content: note.content,
+          color,
+          pinned: note.pinned ? 1 : 0,
+          createdAt: note.createdAt,
+          updatedAt: note.updatedAt
+        })
+      return
+    }
+    this.db
+      .prepare(
+        `INSERT INTO widget_notes (id, content, color, pinned, created_at, updated_at)
+         VALUES (@id, @content, @color, @pinned, @createdAt, @updatedAt)`
+      )
+      .run({
+        id: note.id,
+        content: note.content,
+        color,
+        pinned: note.pinned ? 1 : 0,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt
+      })
+  }
+
+  deleteIfExists(id: string): void {
+    this.db.prepare(`DELETE FROM widget_notes WHERE id = ?`).run(id)
+  }
 }

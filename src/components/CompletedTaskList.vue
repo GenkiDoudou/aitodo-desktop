@@ -20,36 +20,58 @@
         </button>
 
         <ul v-show="isGroupOpen(group.key)" class="completed-list__ul">
-          <li
-            v-for="task in group.tasks"
-            :key="task.id"
-            class="completed-list__row"
-            :class="{ 'is-selected': selectedId === task.id }"
-            @click="emit('select', task.id)"
+          <template
+            v-for="(item, idx) in layoutItemsForGroup(group.tasks)"
+            :key="itemKey(group.key, item, idx)"
           >
-            <el-checkbox
-              :model-value="true"
-              @click.stop
-              @change="() => emit('toggle-status', task)"
-            />
-            <div class="completed-list__body">
-              <div class="completed-list__title-row">
-                <span class="completed-list__title">{{ displayTitle(task) }}</span>
-                <span class="completed-list__category">{{ categoryName(task) }}</span>
+            <li
+              v-if="item.type === 'task' && isRowVisible(item.task, item.depth)"
+              class="completed-list__row"
+              :class="{ 'is-selected': selectedId === item.task.id }"
+              :style="{ paddingLeft: `${8 + item.depth * 20}px` }"
+              @click="emit('select', item.task.id)"
+            >
+              <button
+                v-if="hasChildrenInGroup(group.tasks, item.task.id)"
+                type="button"
+                class="completed-list__expand"
+                @click="toggleExpand(item.task.id, $event)"
+              >
+                <el-icon>
+                  <ArrowDown v-if="isExpanded(item.task.id)" />
+                  <ArrowRight v-else />
+                </el-icon>
+              </button>
+              <span v-else class="completed-list__expand-placeholder" />
+
+              <el-checkbox
+                :model-value="true"
+                @click.stop
+                @change="() => emit('toggle-status', item.task)"
+              />
+              <div class="completed-list__body">
+                <div class="completed-list__title-row">
+                  <span class="completed-list__title">{{ displayTitle(item.task) }}</span>
+                  <span class="completed-list__category">{{ categoryName(item.task) }}</span>
+                </div>
+                <div class="completed-list__meta">
+                  <span v-if="item.task.createdAt" class="completed-list__meta-item" title="创建时间">
+                    创建 {{ formatTaskCreatedAt(item.task.createdAt) }}
+                  </span>
+                  <span
+                    v-if="item.task.completedAt"
+                    class="completed-list__meta-item"
+                    title="完成时间"
+                  >
+                    完成 {{ formatTaskListTime(item.task.completedAt) }}
+                  </span>
+                  <span v-if="item.task.dueAt" class="completed-list__meta-item" title="截止时间">
+                    截止 {{ formatTaskListTime(item.task.dueAt) }}
+                  </span>
+                </div>
               </div>
-              <div class="completed-list__meta">
-                <span v-if="task.createdAt" class="completed-list__meta-item" title="创建时间">
-                  创建 {{ formatTaskCreatedAt(task.createdAt) }}
-                </span>
-                <span v-if="task.completedAt" class="completed-list__meta-item" title="完成时间">
-                  完成 {{ formatTaskListTime(task.completedAt) }}
-                </span>
-                <span v-if="task.dueAt" class="completed-list__meta-item" title="截止时间">
-                  截止 {{ formatTaskListTime(task.dueAt) }}
-                </span>
-              </div>
-            </div>
-          </li>
+            </li>
+          </template>
         </ul>
       </section>
     </div>
@@ -58,9 +80,10 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight } from '@element-plus/icons-vue'
 import type { Category, Task } from '@shared/types'
 import { groupCompletedTasksByDate, completedTaskDisplayTitle } from '@shared/completed-task-groups'
+import { buildTaskListLayout, type TaskListLayoutItem } from '@shared/task-list-layout'
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
 import { unwrapIpc } from '@/ipc/client'
 
@@ -79,6 +102,7 @@ const emit = defineEmits<{
 }>()
 
 const groupOpen = reactive<Record<string, boolean>>({})
+const expandedIds = ref<Set<string>>(new Set())
 const parentCache = ref<Map<string, Task>>(new Map())
 
 const groups = computed(() =>
@@ -124,6 +148,43 @@ const categoryMap = computed(() => {
   }
   return map
 })
+
+function layoutItemsForGroup(tasks: Task[]) {
+  return buildTaskListLayout(tasks, 'none', 'completedAt')
+}
+
+function itemKey(groupKey: string, item: TaskListLayoutItem, idx: number) {
+  if (item.type === 'task') return `${groupKey}-${item.task.id}`
+  return `${groupKey}-g-${idx}`
+}
+
+function hasChildrenInGroup(groupTasks: Task[], taskId: string) {
+  return groupTasks.some((t) => t.parentId === taskId)
+}
+
+function isExpanded(taskId: string) {
+  return expandedIds.value.has(taskId)
+}
+
+function toggleExpand(taskId: string, e: Event) {
+  e.stopPropagation()
+  const next = new Set(expandedIds.value)
+  if (next.has(taskId)) next.delete(taskId)
+  else next.add(taskId)
+  expandedIds.value = next
+}
+
+function isRowVisible(task: Task, depth: number) {
+  if (depth === 0) return true
+  let parentId = task.parentId
+  while (parentId) {
+    if (!expandedIds.value.has(parentId)) return false
+    const parent = taskById.value.get(parentId)
+    if (!parent) break
+    parentId = parent.parentId
+  }
+  return true
+}
 
 function displayTitle(task: Task) {
   return completedTaskDisplayTitle(task, taskById.value)
@@ -216,14 +277,14 @@ function toggleGroup(key: string) {
 .completed-list__ul {
   list-style: none;
   margin: 0;
-  padding: 0 0 8px 28px;
+  padding: 0 0 8px 8px;
 }
 
 .completed-list__row {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 10px 12px 10px 0;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
@@ -237,6 +298,25 @@ function toggleGroup(key: string) {
     background: var(--desktop-active);
     border-left-color: var(--el-color-primary);
   }
+}
+
+.completed-list__expand,
+.completed-list__expand-placeholder {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.completed-list__expand {
+  border: none;
+  background: transparent;
+  color: var(--desktop-muted);
+  cursor: pointer;
+  padding: 0;
 }
 
 .completed-list__body {

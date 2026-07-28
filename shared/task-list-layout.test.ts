@@ -42,6 +42,25 @@ describe('task-list-layout', () => {
     expect(titles).toEqual(['高', '低'])
   })
 
+  it('groups by status with headers in TODO → IN_PROGRESS → DONE order', () => {
+    const items = buildTaskListLayout(
+      [
+        task({ id: '1', title: '完成', status: 'DONE' }),
+        task({ id: '2', title: '进行', status: 'IN_PROGRESS' }),
+        task({ id: '3', title: '待办A', status: 'TODO' })
+      ],
+      'status',
+      'title'
+    )
+    expect(items.filter((i) => i.type === 'group').map((g) => g.label)).toEqual([
+      '待办',
+      '进行中',
+      '已完成'
+    ])
+    const titles = items.filter((i) => i.type === 'task').map((i) => i.task.title)
+    expect(titles).toEqual(['待办A', '进行', '完成'])
+  })
+
   it('sorts by title within flat list', () => {
     const items = buildTaskListLayout(
       [task({ id: '1', title: 'B' }), task({ id: '2', title: 'A' })],

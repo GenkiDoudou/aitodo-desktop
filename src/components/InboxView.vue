@@ -6,13 +6,20 @@
         <span class="inbox-view__section-count">{{ notes.length }}</span>
       </header>
       <ul class="inbox-view__note-list">
-        <li v-for="note in notes" :key="note.id" class="inbox-view__note" :class="`is-${note.color}`">
-          <p class="inbox-view__note-text">{{ notePreview(note.content) }}</p>
+        <li
+          v-for="note in notes"
+          :key="note.id"
+          class="inbox-view__note"
+          :class="[`is-${note.color}`, { 'is-selected': note.id === selectedNoteId }]"
+        >
+          <button type="button" class="inbox-view__note-body" @click="emit('select-note', note.id)">
+            <p class="inbox-view__note-text">{{ notePreview(note.content) }}</p>
+          </button>
           <div class="inbox-view__note-actions">
-            <el-button size="small" type="primary" plain @click="emit('convert-note', note)">
+            <el-button size="small" type="primary" plain @click.stop="emit('convert-note', note)">
               转任务
             </el-button>
-            <el-button size="small" type="danger" plain @click="emit('delete-note', note.id)">
+            <el-button size="small" type="danger" plain @click.stop="emit('delete-note', note.id)">
               删除
             </el-button>
           </div>
@@ -54,18 +61,25 @@ import TaskPriorityFlagMenu from '@/components/TaskPriorityFlagMenu.vue'
 defineProps<{
   notes: WidgetNote[]
   tasks: Task[]
+  selectedNoteId?: string | null
 }>()
 
 const emit = defineEmits<{
   'convert-note': [WidgetNote]
   'delete-note': [string]
+  'select-note': [string]
   'select-task': [string]
   'triage-task': [string, TaskPriority]
 }>()
 
 function notePreview(content: string): string {
-  const line = content.split(/\r?\n/).find((s) => s.trim())
-  return (line ?? '空白便签').slice(0, 120)
+  const text = content.replace(/\r\n/g, '\n').trim()
+  if (!text) return '空白便签'
+  const lines = text.split('\n').slice(0, 4)
+  let preview = lines.join('\n')
+  if (preview.length > 160) preview = `${preview.slice(0, 160)}…`
+  else if (text.split('\n').length > 4 || text.length > preview.length) preview = `${preview}…`
+  return preview
 }
 </script>
 
@@ -109,6 +123,11 @@ function notePreview(content: string): string {
   border-radius: 8px;
   padding: 10px 12px;
   border: 1px solid var(--el-border-color-lighter);
+
+  &.is-selected {
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 1px var(--el-color-primary-light-7);
+  }
 }
 
 .inbox-view__note.is-yellow { background: #fff9db; }
@@ -117,12 +136,27 @@ function notePreview(content: string): string {
 .inbox-view__note.is-pink { background: #ffe8f0; }
 .inbox-view__note.is-gray { background: #f2f3f5; }
 
-.inbox-view__note-text {
+.inbox-view__note-body {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
   margin: 0 0 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inbox-view__note-text {
+  margin: 0;
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .inbox-view__note-actions {

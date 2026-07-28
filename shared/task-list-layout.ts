@@ -6,7 +6,7 @@ import { primaryTaskTag } from './task-tags'
 import { startOfWeekMonday, endOfWeekSunday } from './smart-list'
 
 /** 分组方式（与产品参考图一致） */
-export type TaskGroupBy = 'custom' | 'time' | 'tag' | 'priority' | 'none'
+export type TaskGroupBy = 'custom' | 'time' | 'tag' | 'priority' | 'status' | 'none'
 
 /** 排序方式 */
 export type TaskSortBy =
@@ -24,6 +24,7 @@ export const TASK_GROUP_BY_LABELS: Record<TaskGroupBy, string> = {
   time: '时间',
   tag: '标签',
   priority: '任务级别',
+  status: '任务状态',
   none: '无'
 }
 
@@ -160,6 +161,17 @@ function tagGroup(task: Task): { key: string; label: string; order: number } {
   return { key: tag, label: `#${tag}`, order: 0 }
 }
 
+/** 状态分组：待办 → 进行中 → 已完成 */
+function statusGroup(task: Task): { key: string; label: string; order: number } {
+  if (task.status === 'IN_PROGRESS') {
+    return { key: 'IN_PROGRESS', label: '进行中', order: 1 }
+  }
+  if (task.status === 'DONE') {
+    return { key: 'DONE', label: '已完成', order: 2 }
+  }
+  return { key: 'TODO', label: '待办', order: 0 }
+}
+
 function sortTaskList(tasks: Task[], sortBy: TaskSortBy): Task[] {
   return [...tasks].sort((a, b) => compareTasks(a, b, sortBy))
 }
@@ -178,6 +190,7 @@ function bucketRoots(roots: Task[], groupBy: TaskGroupBy, base = dayjs()): Group
     if (groupBy === 'time') meta = timeGroupKey(task, base)
     else if (groupBy === 'priority') meta = priorityGroup(task)
     else if (groupBy === 'tag') meta = tagGroup(task)
+    else if (groupBy === 'status') meta = statusGroup(task)
     else continue
     if (!map.has(meta.key)) {
       map.set(meta.key, { key: meta.key, label: meta.label, order: meta.order, tasks: [] })
@@ -222,7 +235,8 @@ export function buildTaskListLayout(
     }
   }
 
-  const shouldGroup = groupBy === 'time' || groupBy === 'tag' || groupBy === 'priority'
+  const shouldGroup =
+    groupBy === 'time' || groupBy === 'tag' || groupBy === 'priority' || groupBy === 'status'
 
   if (!shouldGroup) {
     const sortedRoots = sortTaskList(roots, sortBy)

@@ -42,7 +42,8 @@
       <section
         class="home__list-pane"
         :class="{
-          'is-detail-open': detailOpen && taskDetailStyle === 'sidebar',
+          'is-detail-open':
+            (detailOpen && taskDetailStyle === 'sidebar') || noteDetailOpen,
           'is-detail-expanded': detailPanelExpanded && taskDetailStyle === 'sidebar'
         }"
       >
@@ -53,7 +54,9 @@
 
             <h1 class="home__view-title">{{ viewTitle }}</h1>
 
-            <span v-if="!isSpecialListView" class="home__view-count">{{ listDisplayCount }} 项</span>
+            <span v-if="!isSpecialListView" class="home__view-count">
+              ({{ headerTaskCounts.incomplete }}/{{ headerTaskCounts.total }})
+            </span>
 
             <el-select
               v-if="showSmartDateFieldFilter"
@@ -129,6 +132,7 @@
               v-model:meta-visibility="taskListMetaVisibility"
               v-model:group-by="taskGroupBy"
               v-model:sort-by="taskSortBy"
+              v-model:view-mode="gearViewMode"
             />
             <el-button
               v-if="isTrashView"
@@ -198,8 +202,10 @@
           v-else-if="isInboxView"
           :notes="widgetNotes"
           :tasks="inboxTasks"
+          :selected-note-id="activeNoteId"
           @convert-note="openInboxConvertNote"
           @delete-note="onInboxDeleteNote"
+          @select-note="openInboxNote"
           @select-task="openTask"
           @triage-task="onInboxTriageTask"
         />
@@ -226,7 +232,7 @@
         <TaskKanbanView
           v-else-if="listViewMode === 'kanban'"
           v-model:selected-column-id="kanbanSelectedColumnId"
-          :board-mode="kanbanBoardMode"
+          :board-mode="effectiveKanbanBoardMode"
           :sort-by="taskSortBy"
           :scope-key="kanbanScopeKeyValue"
           :tasks="kanbanDisplayTasks"
@@ -272,9 +278,20 @@
 
 
       <div
-        v-if="detailOpen && taskDetailStyle === 'sidebar'"
+        v-if="(detailOpen && taskDetailStyle === 'sidebar') || noteDetailOpen"
         class="home__detail-scrim"
-        @click="closeDetail"
+        @click="onDetailScrimClick"
+      />
+
+      <InboxNotePanel
+        v-if="isInboxView"
+        class="home__detail"
+        :visible="noteDetailOpen"
+        :note="activeNote"
+        @close="closeNoteDetail"
+        @changed="onInboxNoteChanged"
+        @convert="openInboxConvertNote"
+        @delete="onInboxDeleteNote"
       />
 
       <TaskDetailPanel
@@ -365,6 +382,7 @@ import CompletedTaskList from '@/components/CompletedTaskList.vue'
 import TrashTaskList from '@/components/TrashTaskList.vue'
 
 import InboxView from '@/components/InboxView.vue'
+import InboxNotePanel from '@/components/InboxNotePanel.vue'
 import QuadrantMatrixView from '@/components/QuadrantMatrixView.vue'
 import QuadrantMatrixMenu from '@/components/QuadrantMatrixMenu.vue'
 import TaskListViewMenu from '@/components/TaskListViewMenu.vue'
@@ -390,6 +408,7 @@ import {
 } from '@shared/timeline-range'
 import { deriveAppliedViewState, isFilterRuleActive } from '@shared/apply-task-view'
 import type { KanbanBoardMode } from '@shared/kanban-config'
+import { groupByToKanbanBoardMode } from '@shared/kanban-group-columns'
 
 import type { TaskPriority } from '@shared/task-priority'
 
@@ -435,6 +454,12 @@ import {
   persistTaskListMetaVisibility,
   persistTaskListViewMode
 } from '@/utils/list-view-preferences'
+import {
+  navListPrefsScopeKey,
+  persistNavListPrefs,
+  readNavListPrefs,
+  type NavListPrefs
+} from '@/utils/nav-list-preferences'
 import { readKanbanBoardMode, persistKanbanBoardMode } from '@/utils/kanban-preferences'
 import {
   defaultViewDisplayPreferences,
@@ -462,10 +487,11 @@ const pendingTimelineDateKey = ref<string | null>(null)
 const quickAddInputRef = ref<InstanceType<typeof QuickAddInput>>()
 
 const detailOpen = ref(false)
+const noteDetailOpen = ref(false)
+const activeNoteId = ref<string | null>(null)
+const activeTaskId = ref<string | null>(null)
 
 const detailPanelExpanded = ref(false)
-
-const activeTaskId = ref<string | null>(null)
 
 const defaultPriorityForCreate = ref<TaskPriority>(DEFAULT_TASK_PRIORITY)
 
@@ -529,13 +555,14 @@ const showListViewSettingsMenu = computed(
     !isSpecialListView.value &&
     !isMatrixView.value &&
     !isInboxView.value &&
-    !isQuadrantViewLayout.value
+    !isQuadrantViewLayout.value &&
+    !navViewId.value
 )
 
 const listHideDone = computed({
   get: () => taskStore.filter.hideDone,
   set: (value: boolean) => {
-    void taskStore.setHideDone(value)
+    void taskStore.setHideDone(value).then(() => saveCurrentNavListPrefs())
   }
 })
 
@@ -543,9 +570,18 @@ const listViewMode = ref<TaskListViewMode>(readTaskListViewMode())
 const taskDetailStyle = ref<TaskDetailStyle>(readTaskDetailStyle())
 const taskListMetaVisibility = ref<TaskListMetaVisibility>(readTaskListMetaVisibility())
 
-watch(listViewMode, (v) => persistTaskListViewMode(v))
-watch(taskDetailStyle, (v) => persistTaskDetailStyle(v))
-watch(taskListMetaVisibility, (v) => persistTaskListMetaVisibility(v), { deep: true })
+watch(listViewMode, (v) => {
+  persistTaskListViewMode(v)
+  saveCurrentNavListPrefs()
+})
+watch(taskDetailStyle, (v) => {
+  persistTaskDetailStyle(v)
+  saveCurrentNavListPrefs()
+})
+watch(taskListMetaVisibility, (v) => {
+  persistTaskListMetaVisibility(v)
+  saveCurrentNavListPrefs()
+}, { deep: true })
 
 const taskGroupBy = ref<TaskGroupBy>(readTaskGroupBy())
 const taskSortBy = ref<TaskSortBy>(readTaskSortBy())
@@ -568,8 +604,10 @@ function onQuadrantPrefsChange(prefs: QuadrantViewPreferences) {
   quadrantPrefs.value = prefs
 }
 
-watch(taskGroupBy, (v) => persistTaskGroupBy(v))
-watch(taskSortBy, (v) => persistTaskSortBy(v))
+watch(taskSortBy, (v) => {
+  persistTaskSortBy(v)
+  saveCurrentNavListPrefs()
+})
 
 /** 应用分组/排序后的列表行（含分组标题） */
 const taskListLayout = computed(() =>
@@ -601,13 +639,45 @@ const kanbanDefaultCategoryId = computed(() => {
 const kanbanSelectedColumnId = ref<string | null>(null)
 const kanbanBoardMode = ref(readKanbanBoardMode())
 
+/** 齿轮展示模式：仅 list/kanban（时间线仍仅命名视图） */
+const gearViewMode = computed({
+  get: (): 'list' | 'kanban' => (listViewMode.value === 'kanban' ? 'kanban' : 'list'),
+  set: (mode: 'list' | 'kanban') => {
+    listViewMode.value = mode
+    if (mode === 'kanban') {
+      const allowed: TaskGroupBy[] = ['time', 'tag', 'priority', 'status']
+      if (!allowed.includes(taskGroupBy.value)) {
+        taskGroupBy.value = 'status'
+      }
+      kanbanBoardMode.value = groupByToKanbanBoardMode(taskGroupBy.value)
+    }
+  }
+})
+
+/** 非命名视图：看板列跟分组条件；命名视图：用视图配置的 boardMode */
+const effectiveKanbanBoardMode = computed<KanbanBoardMode>(() => {
+  if (navViewId.value) return kanbanBoardMode.value
+  return groupByToKanbanBoardMode(taskGroupBy.value)
+})
+
 watch(kanbanBoardMode, (mode) => {
   persistKanbanBoardMode(mode)
   kanbanSelectedColumnId.value = null
 })
 
+watch(
+  taskGroupBy,
+  (groupBy) => {
+    persistTaskGroupBy(groupBy)
+    if (!navViewId.value && listViewMode.value === 'kanban') {
+      kanbanBoardMode.value = groupByToKanbanBoardMode(groupBy)
+    }
+    saveCurrentNavListPrefs()
+  }
+)
+
 watch(kanbanSelectedColumnId, (colId) => {
-  if (listViewMode.value !== 'kanban' || kanbanBoardMode.value !== 'priority') return
+  if (listViewMode.value !== 'kanban' || effectiveKanbanBoardMode.value !== 'priority') return
   const n = colId != null ? Number(colId) : NaN
   if (n === 1 || n === 2 || n === 3 || n === 4) {
     quickAddPriority.value = n
@@ -620,7 +690,7 @@ watch(kanbanScopeKeyValue, () => {
 
 /** 看板模式下顶栏快捷添加的目标分组（仅分组看板） */
 function kanbanGroupIdForQuickAdd(): string | null | undefined {
-  if (listViewMode.value !== 'kanban' || kanbanBoardMode.value !== 'group') return undefined
+  if (listViewMode.value !== 'kanban' || effectiveKanbanBoardMode.value !== 'group') return undefined
   const sel = kanbanSelectedColumnId.value
   if (!sel || sel === '__DONE__') return null
   if (sel === KANBAN_UNGROUPED_ID) return null
@@ -629,7 +699,7 @@ function kanbanGroupIdForQuickAdd(): string | null | undefined {
 
 /** 看板模式下顶栏快捷添加的初始状态（仅状态看板） */
 function kanbanStatusForQuickAdd(): import('@shared/types').TaskStatus | undefined {
-  if (listViewMode.value !== 'kanban' || kanbanBoardMode.value !== 'status') return undefined
+  if (listViewMode.value !== 'kanban' || effectiveKanbanBoardMode.value !== 'status') return undefined
   const sel = kanbanSelectedColumnId.value
   if (sel === 'IN_PROGRESS' || sel === 'DONE') return sel
   return 'TODO'
@@ -637,7 +707,7 @@ function kanbanStatusForQuickAdd(): import('@shared/types').TaskStatus | undefin
 
 /** 看板级别列选中时，顶栏快捷添加使用该级别；否则用快捷栏选择的级别 */
 function priorityForQuickAdd(): TaskPriority {
-  if (listViewMode.value === 'kanban' && kanbanBoardMode.value === 'priority') {
+  if (listViewMode.value === 'kanban' && effectiveKanbanBoardMode.value === 'priority') {
     const sel = kanbanSelectedColumnId.value
     const n = sel != null ? Number(sel) : NaN
     if (n === 1 || n === 2 || n === 3 || n === 4) return n
@@ -927,7 +997,54 @@ const visibleTasks = computed(() => {
 
 })
 
-/** 列表标题旁计数 */
+/** 列表标题旁计数：(未完成/全部)，顶层；分母不受 hideDone 影响 */
+const headerTaskCounts = ref({ incomplete: 0, total: 0 })
+let headerCountSeq = 0
+
+function countRootTasks(tasks: Task[]): Task[] {
+  const idSet = new Set(tasks.map((t) => t.id))
+  return tasks.filter((t) => !t.parentId || !idSet.has(t.parentId))
+}
+
+async function refreshHeaderTaskCounts() {
+  if (
+    isSpecialListView.value ||
+    isMatrixView.value ||
+    isQuadrantViewLayout.value ||
+    isSummaryView.value
+  ) {
+    return
+  }
+  const seq = ++headerCountSeq
+  try {
+    const filter = { ...taskStore.filter, hideDone: false }
+    const res = await window.api.tasks.list(filter)
+    if (!res.ok || seq !== headerCountSeq) return
+    let tasks = res.data
+    const rule = activeNavView.value?.filterRule ?? null
+    if (isFilterRuleActive(rule)) {
+      const hasSubtasksById = buildHasSubtasksMap(tasks)
+      const matchedIds = new Set(
+        tasks
+          .filter((t) => !t.parentId && matchTask(t, rule!, { hasSubtasksById }))
+          .map((t) => t.id)
+      )
+      tasks = tasks.filter(
+        (t) => matchedIds.has(t.id) || (t.parentId != null && matchedIds.has(t.parentId))
+      )
+    }
+    const roots = countRootTasks(tasks)
+    if (seq !== headerCountSeq) return
+    headerTaskCounts.value = {
+      incomplete: roots.filter((t) => t.status !== 'DONE').length,
+      total: roots.length
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 列表标题旁计数（特殊页仍可能用到） */
 const listDisplayCount = computed(() => {
   if (isDoneView.value) {
     return taskStore.tasks.filter((t) => t.status === 'DONE').length
@@ -941,7 +1058,7 @@ const listDisplayCount = computed(() => {
   if (isInboxView.value) {
     return inboxBadgeCount(widgetNotes.value, taskStore.tasks)
   }
-  return visibleTasks.value.filter(({ depth }) => depth === 0).length
+  return headerTaskCounts.value.total
 })
 
 function syncNavFromFilter() {
@@ -1012,11 +1129,60 @@ function smartListToNav(smart?: SmartList): 'all' | 'today' | 'week' | 'last7day
 
 
 
+let applyingNavListPrefs = false
+
+function currentNavListPrefsKey(): string | null {
+  if (navViewId.value) return null
+  if (navSummaryActive.value) return null
+  if (navCategoryId.value !== undefined) {
+    return navListPrefsScopeKey({ categoryId: navCategoryId.value })
+  }
+  if (navSmart.value === 'all' || navSmart.value === 'last7days') {
+    return navListPrefsScopeKey({ smart: navSmart.value })
+  }
+  return null
+}
+
+function applyNavListPrefs() {
+  const key = currentNavListPrefsKey()
+  if (!key) return
+  const prefs = readNavListPrefs(key)
+  applyingNavListPrefs = true
+  listViewMode.value = prefs.viewMode
+  taskGroupBy.value = prefs.groupBy
+  taskSortBy.value = prefs.sortBy
+  taskDetailStyle.value = prefs.detailStyle
+  taskListMetaVisibility.value = { ...prefs.metaVisibility }
+  if (prefs.viewMode === 'kanban') {
+    kanbanBoardMode.value = groupByToKanbanBoardMode(prefs.groupBy)
+  }
+  void taskStore.setHideDone(prefs.hideDone)
+  applyingNavListPrefs = false
+}
+
+function saveCurrentNavListPrefs() {
+  if (applyingNavListPrefs) return
+  const key = currentNavListPrefsKey()
+  if (!key) return
+  const prefs: NavListPrefs = {
+    viewMode: listViewMode.value === 'kanban' ? 'kanban' : 'list',
+    groupBy: taskGroupBy.value,
+    sortBy: taskSortBy.value,
+    hideDone: taskStore.filter.hideDone,
+    detailStyle: taskDetailStyle.value,
+    metaVisibility: { ...taskListMetaVisibility.value }
+  }
+  persistNavListPrefs(key, prefs)
+  persistTaskListViewMode(prefs.viewMode)
+  persistTaskGroupBy(prefs.groupBy)
+  persistTaskSortBy(prefs.sortBy)
+  persistTaskDetailStyle(prefs.detailStyle)
+  persistTaskListMetaVisibility(prefs.metaVisibility)
+}
+
+/** @deprecated 用 applyNavListPrefs；保留给命名视图离开时的兜底 */
 function restoreListPrefsFromStorage() {
-  listViewMode.value = readTaskListViewMode()
-  taskGroupBy.value = readTaskGroupBy()
-  taskSortBy.value = readTaskSortBy()
-  kanbanBoardMode.value = readKanbanBoardMode()
+  applyNavListPrefs()
 }
 
 function applySelectedViewToUi() {
@@ -1144,18 +1310,11 @@ async function onViewEditorSaved(savedId?: string) {
 }
 
 async function onSmart(smart: 'all' | 'last7days') {
-  const wasOnView = Boolean(navViewId.value)
   navSummaryActive.value = false
   navViewId.value = null
   navSmart.value = smart
   navCategoryId.value = undefined
-  if (wasOnView || smart === 'all') {
-    restoreListPrefsFromStorage()
-  }
-  if (smart === 'all') {
-    taskSortBy.value = 'createdAt'
-    persistTaskSortBy('createdAt')
-  }
+  applyNavListPrefs()
   await taskStore.navigate({
     kind: 'smart',
     smart,
@@ -1175,6 +1334,7 @@ async function onInbox() {
   navSmart.value = 'inbox'
   navCategoryId.value = undefined
   detailOpen.value = false
+  closeNoteDetail()
   await loadWidgetNotes()
   await taskStore.load({ smartList: 'all', hideDone: false })
   void router.replace({ path: '/', query: { view: 'inbox' } })
@@ -1193,6 +1353,7 @@ async function openInboxConvertNote(note: WidgetNote) {
     ElMessage.error(res.error.message)
     return
   }
+  if (activeNoteId.value === note.id) closeNoteDetail()
   ElMessage.success(`已加入收件箱：${res.data.title}`)
   await loadWidgetNotes()
   await taskStore.load()
@@ -1204,6 +1365,7 @@ async function onInboxDeleteNote(noteId: string) {
     ElMessage.error(res.error.message)
     return
   }
+  if (activeNoteId.value === noteId) closeNoteDetail()
   await loadWidgetNotes()
 }
 
@@ -1428,6 +1590,7 @@ async function onCategory(id: string | null) {
   navSummaryActive.value = false
   navViewId.value = null
   navCategoryId.value = id
+  applyNavListPrefs()
 
   if (id === null) {
     await taskStore.navigate({ kind: 'uncategorized' })
@@ -1469,7 +1632,7 @@ async function onQuickAdd() {
       ...(timelineDay ? { dueAt: `${timelineDay}T18:00:00` } : {})
     }
 
-    if (listViewMode.value === 'kanban' && kanbanBoardMode.value === 'priority') {
+    if (listViewMode.value === 'kanban' && effectiveKanbanBoardMode.value === 'priority') {
       const sel = kanbanSelectedColumnId.value
       const n = sel != null ? Number(sel) : NaN
       if (n === 1 || n === 2 || n === 3 || n === 4) {
@@ -1485,7 +1648,7 @@ async function onQuickAdd() {
     quickAddText.value = ''
 
     // 级别看板：选中目标列，方便确认任务落在哪一列
-    if (listViewMode.value === 'kanban' && kanbanBoardMode.value === 'priority' && created?.priority) {
+    if (listViewMode.value === 'kanban' && effectiveKanbanBoardMode.value === 'priority' && created?.priority) {
       kanbanSelectedColumnId.value = String(created.priority)
       quickAddPriority.value = created.priority
     } else {
@@ -1494,9 +1657,9 @@ async function onQuickAdd() {
 
     ElMessage.success('任务已添加')
 
-  } catch {
+  } catch (err) {
 
-    /* store 内 unwrapIpc 已 Toast */
+    ElMessage.error(err instanceof Error ? err.message : '添加任务失败')
 
   }
 
@@ -1631,19 +1794,42 @@ async function onQuadrantQuickCreate(priority: TaskPriority) {
 
 
 function openTask(id: string) {
-
+  closeNoteDetail()
   activeTaskId.value = id
-
   detailOpen.value = true
-
 }
-
-
 
 function closeDetail() {
   detailOpen.value = false
   activeTaskId.value = null
   void taskStore.fetchWithCurrentFilter()
+}
+
+const activeNote = computed(() =>
+  activeNoteId.value ? widgetNotes.value.find((n) => n.id === activeNoteId.value) ?? null : null
+)
+
+function openInboxNote(noteId: string) {
+  closeDetail()
+  activeNoteId.value = noteId
+  noteDetailOpen.value = true
+}
+
+function closeNoteDetail() {
+  noteDetailOpen.value = false
+  activeNoteId.value = null
+}
+
+function onDetailScrimClick() {
+  if (noteDetailOpen.value) {
+    closeNoteDetail()
+    return
+  }
+  closeDetail()
+}
+
+async function onInboxNoteChanged() {
+  await loadWidgetNotes()
 }
 
 function onDetailDialogVisible(visible: boolean) {
@@ -1727,14 +1913,30 @@ onMounted(async () => {
     await syncHomeFromRoute()
   } else {
     navViewId.value = null
-    await taskStore.load()
+    applyNavListPrefs()
+    await taskStore.load({ smartList: 'all', hideDone: taskStore.filter.hideDone })
     syncNavFromFilter()
   }
   await taskStore.refreshSidebarCounts()
   await loadWidgetNotes()
+  void refreshHeaderTaskCounts()
   window.addEventListener('desktop:new-task', openNewTask)
   window.addEventListener('desktop:focus-search', onFocusQuickAdd)
 })
+
+watch(
+  [
+    () => taskStore.tasks,
+    () => taskStore.filter,
+    () => navViewId.value,
+    () => navCategoryId.value,
+    () => navSmart.value,
+    () => activeNavView.value?.id
+  ],
+  () => {
+    void refreshHeaderTaskCounts()
+  }
+)
 
 /**
  * 从路由恢复首页视图（日历等页跳回时会带 query）。

@@ -14,6 +14,7 @@ import { useDesktopActions } from '@/composables/useDesktopActions'
 import { useShortcutStore } from '@/stores/shortcut-store'
 import { unwrapIpc } from '@/ipc/client'
 import { initDesktopTheme } from '@/utils/theme-preferences'
+import { applyUiPreferences, collectUiPreferences } from '@/utils/ui-preferences-export'
 
 const router = useRouter()
 const shortcutStore = useShortcutStore()
@@ -64,6 +65,7 @@ let cleanupNewTask: (() => void) | undefined
 let cleanupAction: (() => void) | undefined
 let cleanupNavigate: (() => void) | undefined
 let cleanupCloseRequest: (() => void) | undefined
+let cleanupUiPrefs: (() => void) | undefined
 
 onMounted(async () => {
   initDesktopTheme()
@@ -75,6 +77,14 @@ onMounted(async () => {
   cleanupAction = window.api.app.onAction(onMainAction)
   cleanupNavigate = window.api.app.onNavigate(onNavigate)
   cleanupCloseRequest = window.api.app.onCloseRequest(onCloseRequest)
+  cleanupUiPrefs = window.api.sync.onUiPreferencesApplied((prefs) => {
+    applyUiPreferences(prefs)
+  })
+  try {
+    unwrapIpc(await window.api.sync.reportUiPreferences(collectUiPreferences()))
+  } catch {
+    /* ignore */
+  }
 })
 
 onUnmounted(() => {
@@ -83,6 +93,7 @@ onUnmounted(() => {
   cleanupAction?.()
   cleanupNavigate?.()
   cleanupCloseRequest?.()
+  cleanupUiPrefs?.()
 })
 </script>
 

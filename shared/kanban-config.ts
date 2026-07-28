@@ -1,7 +1,7 @@
 import type { TaskStatus } from './types'
 
-/** 看板列组织方式：自定义分组 / 任务状态 / 任务级别 */
-export type KanbanBoardMode = 'group' | 'status' | 'priority'
+/** 看板列组织方式：自定义分组 / 状态 / 级别 / 时间 / 标签 */
+export type KanbanBoardMode = 'group' | 'status' | 'priority' | 'time' | 'tag'
 
 export interface KanbanStatusColumnLabels {
   todo: string
@@ -32,7 +32,7 @@ export function mergeKanbanConfig(partial?: Partial<KanbanConfig> | null): Kanba
   const labels = partial?.statusColumnLabels ?? {}
   const mode = partial?.defaultMode
   let defaultMode: KanbanBoardMode = 'group'
-  if (mode === 'status' || mode === 'priority') {
+  if (mode === 'status' || mode === 'priority' || mode === 'time' || mode === 'tag') {
     defaultMode = mode
   }
   return {

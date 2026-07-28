@@ -34,6 +34,8 @@ import { CategoryService } from '../services/category-service'
 import { AppMessageService } from '../services/app-message-service'
 import { KanbanGroupService } from '../services/kanban-group-service'
 import { TaskService } from '../services/task-service'
+import { SyncOutbox } from '../db/sync-outbox'
+import { getSyncEngine, notifyAppSettingsChanged } from '../sync/sync-engine'
 import { TaskViewService } from '../services/task-view-service'
 import { TaskActivityService } from '../services/task-activity-service'
 import { TaskActivityRecorder } from '../services/task-activity-recorder'
@@ -81,7 +83,9 @@ import { WidgetNoteService } from '../services/widget-note-service'
 import { getWidgetWindowManager } from '../widget-window-manager'
 import { getQuickCaptureWindowManager } from '../quick-capture-window-manager'
 import { markQuitting, toggleMainWindow } from '../tray'
-import { showSystemNotification } from '../services/system-notification'
+import { getNotifyRuntime } from '../notify/notify-runtime'
+import { readNotificationConfig } from '../db/notification-config-store'
+import { buildTaskReminderExternalCopy, type NotificationConfig, type NotifyEvent } from '@shared/notification-config'
 import { parseTaskInputWithConfig } from '../services/task-parse-service'
 import type { AiParseCategoryRef } from '@shared/ai-task-parser'
 
@@ -99,34 +103,83 @@ function services() {
   const activityService = new TaskActivityService(activityRepo)
   const activityRecorder = new TaskActivityRecorder(categoryRepo, kanbanRepo)
   const widgetNoteRepo = new WidgetNoteRepository(db)
-  const taskService = new TaskService(taskRepo, reminderRepo, tagRepo, activityService, activityRecorder)
+  const syncOutbox = new SyncOutbox(db)
+  const taskService = new TaskService(
+    taskRepo,
+    reminderRepo,
+    tagRepo,
+    activityService,
+    activityRecorder,
+    syncOutbox
+  )
   return {
     tasks: taskService,
     tags: tagRepo,
-    categories: new CategoryService(categoryRepo),
+    categories: new CategoryService(categoryRepo, syncOutbox),
     kanbanGroups: new KanbanGroupService(kanbanRepo),
     messages: new AppMessageService(messageRepo),
-    scheduledSummaries: new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo),
-    taskViews: new TaskViewService(viewRepo, taskRepo),
+    scheduledSummaries: new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo, syncOutbox),
+    taskViews: new TaskViewService(viewRepo, taskRepo, syncOutbox),
     taskActivities: activityService,
-    widgetNotes: new WidgetNoteService(widgetNoteRepo, taskService, categoryRepo),
-    widgetSettings: widgetNoteRepo
+    widgetNotes: new WidgetNoteService(widgetNoteRepo, taskService, categoryRepo, syncOutbox),
+    widgetSettings: widgetNoteRepo,
+    syncOutbox
   }
 }
 
 let getMainWindowRef: () => BrowserWindow | null = () => null
 
 /** 主进程写入消息后推送给渲染进程（侧栏角标与列表刷新） */
-export function pushAppMessageToRenderer(message: AppMessage): void {
+export function pushAppMessageToRenderer(
+  message: AppMessage,
+  opts?: { skipExternalNotify?: boolean }
+): void {
   getMainWindowRef()?.webContents.send(IPC.APP_MESSAGE_PUSH, message)
+  if (opts?.skipExternalNotify) return
   if (message.kind !== 'notification') return
-  const body = (message.body ?? message.title).trim()
-  if (message.source === 'task_reminder') {
-    showSystemNotification('任务提醒', body)
-  } else if (message.source === 'scheduled_summary') {
-    const title = message.title.replace(/^定时汇总：/, '').trim() || '定时汇总'
-    showSystemNotification(title, body.slice(0, 240))
+
+  const event: NotifyEvent | null =
+    message.source === 'task_reminder'
+      ? 'task_reminder'
+      : message.source === 'scheduled_summary'
+        ? 'scheduled_summary'
+        : null
+  if (!event) return
+
+  let title =
+    event === 'task_reminder'
+      ? '任务提醒'
+      : message.title.replace(/^定时汇总：/, '').trim() || '定时汇总'
+  let body = (message.body ?? message.title).trim()
+
+  if (event === 'task_reminder' && message.taskId) {
+    try {
+      const task = new TaskRepository(getDatabase()).findById(message.taskId)
+      if (task) {
+        const copy = buildTaskReminderExternalCopy(task)
+        title = copy.title
+        body = copy.body
+      } else if (message.body) {
+        title = message.body.trim()
+        body = message.body.trim()
+      }
+    } catch {
+      /* ignore */
+    }
   }
+
+  void getNotifyRuntime(
+    () => getDatabase(),
+    () => getActiveDataDir()
+  )
+    .dispatcher()
+    .dispatch({
+      event,
+      title,
+      body,
+      entityId: message.taskId ?? message.id
+    })
+    .catch((err) => console.error('[notify] dispatch failed', err))
 }
 
 /** 由 index 注入，供「立即生成」复用调度器发送链路 */
@@ -325,6 +378,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
         )
       }
       saveShortcutBindings(bindings)
+      notifyAppSettingsChanged()
       const win = getMainWindow()
       if (win) {
         registerGlobalShortcuts(win, createDefaultShortcutHandlers(getMainWindow), bindings)
@@ -338,6 +392,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.APP_SET_LLM_CONFIG, (_e, config: LlmConfig) =>
     wrapIpc(() => {
       saveLlmConfig(config)
+      notifyAppSettingsChanged()
       return readLlmConfig()
     })
   )
@@ -347,6 +402,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.APP_SET_AI_PROMPT, (_e, config: AiPromptConfig) =>
     wrapIpc(() => {
       saveAiPromptConfig(config)
+      notifyAppSettingsChanged()
       return readAiPromptConfig()
     })
   )
@@ -362,6 +418,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.APP_SET_CLOSE_BEHAVIOR, (_e, behavior: CloseBehavior) =>
     wrapIpc(() => {
       saveCloseBehavior(behavior)
+      notifyAppSettingsChanged()
       return readCloseBehavior()
     })
   )
@@ -493,7 +550,11 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     wrapIpc(() => services().taskActivities.getRetentionPolicy())
   )
   ipcMain.handle(IPC.TASK_ACTIVITY_RETENTION_SET, (_e, policy: TaskActivityRetentionPolicy) =>
-    wrapIpc(() => services().taskActivities.updateRetentionPolicy(policy))
+    wrapIpc(() => {
+      const next = services().taskActivities.updateRetentionPolicy(policy)
+      notifyAppSettingsChanged()
+      return next
+    })
   )
 
   const widgetManager = () => getWidgetWindowManager()
@@ -550,9 +611,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       widgetManager().toggle(id)
     })
   )
-  ipcMain.handle(IPC.WIDGET_INSTANCE_EXPAND, (_e, id: string) =>
+  ipcMain.handle(IPC.WIDGET_INSTANCE_EXPAND, (_e, id: string, options?: { peek?: boolean }) =>
     wrapIpc(() => {
-      widgetManager().expand(id)
+      widgetManager().expand(id, options)
     })
   )
   ipcMain.handle(IPC.WIDGET_INSTANCE_COLLAPSE, (_e, id: string) =>
@@ -586,7 +647,11 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
 
   ipcMain.handle(IPC.WIDGET_GET_SETTINGS, () => wrapIpc(() => widgetManager().getSettings()))
   ipcMain.handle(IPC.WIDGET_UPDATE_SETTINGS, (_e, dto: UpdateWidgetSettingsDto) =>
-    wrapIpc(() => widgetManager().updateSettings(dto))
+    wrapIpc(() => {
+      const next = widgetManager().updateSettings(dto)
+      notifyAppSettingsChanged()
+      return next
+    })
   )
 
   ipcMain.handle(IPC.WIDGET_NOTES_LIST, () => wrapIpc(() => services().widgetNotes.list()))
@@ -615,5 +680,77 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
         win.webContents.send(IPC.APP_NAVIGATE, route.trim())
       }
     })
+  )
+
+  // sync IPC → SyncEngine
+  const syncEngine = () =>
+    getSyncEngine(
+      () => getDatabase(),
+      () => getActiveDataDir()
+    )
+  ipcMain.handle(IPC.SYNC_LOGIN, (_e, dto: import('@shared/sync-protocol').SyncLoginRequest) =>
+    wrapIpcAsync(() => syncEngine().login(dto))
+  )
+  ipcMain.handle(IPC.SYNC_LOGOUT, () =>
+    wrapIpc(() => {
+      syncEngine().logout()
+    })
+  )
+  ipcMain.handle(IPC.SYNC_GET_STATUS, () => wrapIpc(() => syncEngine().getStatus()))
+  ipcMain.handle(IPC.SYNC_TRIGGER, () =>
+    wrapIpcAsync(() => syncEngine().trigger({ fullReconcile: true }))
+  )
+  ipcMain.handle(IPC.SYNC_SET_SERVER_URL, (_e, url: string) =>
+    wrapIpc(() => syncEngine().setServerUrl(typeof url === 'string' ? url : ''))
+  )
+  ipcMain.handle(
+    IPC.SYNC_SET_PREFERENCES,
+    (_e, partial: Partial<import('@shared/sync-preferences').SyncPreferences>) =>
+      wrapIpc(() => syncEngine().setPreferences(partial ?? {}))
+  )
+  ipcMain.handle(IPC.SYNC_TEST_SERVER_URL, (_e, url?: string) =>
+    wrapIpcAsync(() => syncEngine().testServerUrl(typeof url === 'string' ? url : undefined))
+  )
+  ipcMain.handle(IPC.SYNC_REPORT_UI_PREFERENCES, (_e, prefs: Record<string, string>) =>
+    wrapIpc(() => {
+      syncEngine().reportUiPreferences(
+        prefs && typeof prefs === 'object' ? prefs : {}
+      )
+    })
+  )
+
+  // notify IPC
+  const notifyRuntime = () =>
+    getNotifyRuntime(
+      () => getDatabase(),
+      () => getActiveDataDir()
+    )
+  ipcMain.handle(IPC.NOTIFY_GET_CONFIG, () =>
+    wrapIpc(() => readNotificationConfig(getActiveDataDir()))
+  )
+  ipcMain.handle(IPC.NOTIFY_SET_CONFIG, (_e, config: NotificationConfig) =>
+    wrapIpcAsync(() => notifyRuntime().saveConfig(config))
+  )
+  ipcMain.handle(IPC.NOTIFY_TEST_IYUU, (_e, token?: string) =>
+    wrapIpcAsync(() =>
+      notifyRuntime()
+        .dispatcher()
+        .testIyuu(typeof token === 'string' ? token : undefined)
+    )
+  )
+  ipcMain.handle(
+    IPC.NOTIFY_TEST_WEBHOOK,
+    (_e, url: string, headers?: Record<string, string>) =>
+      wrapIpcAsync(() =>
+        notifyRuntime()
+          .dispatcher()
+          .testWebhook(typeof url === 'string' ? url : '', headers)
+      )
+  )
+  ipcMain.handle(IPC.NOTIFY_LIST_DELIVERIES, () =>
+    wrapIpcAsync(() => notifyRuntime().listDeliveries())
+  )
+  ipcMain.handle(IPC.NOTIFY_LIST_PENDING, () =>
+    wrapIpcAsync(() => notifyRuntime().listPending())
   )
 }

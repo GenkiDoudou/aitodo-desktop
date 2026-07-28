@@ -1,6 +1,6 @@
 # aiTodo 桌面客户端
 
-纯本地 Electron 待办应用（Vue3 + Element Plus + better-sqlite3），**无需网络**。
+纯本地 Electron 待办应用（Vue3 + Element Plus + better-sqlite3），**默认无需网络**。可选接入自建 Sync Server 做多设备同步（见下方「云同步」）。
 
 ## 环境要求
 
@@ -77,8 +77,19 @@ npm run build:mac    # macOS dmg（需在 macOS 上执行）
 - **大模型（可配置）**：设置中可切换是否用 LLM 解析，并编辑「任务提示词」（`systemPrompt` + `userTemplate`）。LLM 失败时回落本地解析。
 - **定时汇总**：可选用 LLM 润色（独立于任务解析开关）。
 
+## 云同步（可选）
+
+默认仍为纯本地。若要多设备同步：
+
+1. 启动仓库根目录 `todo-service/`（JDK 17，默认 H2 `MODE=MySQL`，端口 `8088`，演示账号 `demo` / `demo1234`，由 Flyway 种子写入）。
+2. 桌面端「设置 → 账号与同步」填写服务器地址并登录。
+3. 未登录时行为与纯本地一致；退出登录后停止自动同步。
+4. 「设置 → 通知管理」：托盘、互斥外部渠道（IYUU/Webhook 二选一）、在线/离线代发、每日免打扰；待发送列表与消息中心「待发送」同源。未登录本机直连；已登录代发+租约；关端可到点外发。
+
+详情见 `openspec/需求规格说明书/2026-07-20-desktop-cloud-sync-技术方案.md`。
+
 ## 明确不包含（当前）
 
-- 登录 / JWT / 后端 HTTP API（云同步方案另见需求规格，尚未落地）
-- 云端数据同步（规划中，桌面端仍以本地 SQLite 为主）
+- 附件 blob、视图/看板/挂件便签的云同步（后续 Phase）
+- 字段级冲突合并 UI / 实时 WebSocket
 - 桌面文件整理 / 桌面围栏（已永久废弃）

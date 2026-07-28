@@ -41,11 +41,11 @@ export const VIEW_TEMPLATES: ViewTemplateDefinition[] = [
   {
     id: 'team-planning',
     title: 'Team planning',
-    description: '列表按时间分组，隐藏已完成',
+    description: '列表视图，隐藏已完成',
     preset: {
       name: 'Team planning',
       layout: 'list',
-      groupBy: 'time',
+      groupBy: 'none',
       sortBy: 'time',
       filterRule: EXCLUDE_DONE
     }
@@ -66,11 +66,11 @@ export const VIEW_TEMPLATES: ViewTemplateDefinition[] = [
   {
     id: 'feature-release',
     title: 'Feature release',
-    description: '按优先级分组排序',
+    description: '列表按优先级排序',
     preset: {
       name: 'Feature release',
       layout: 'list',
-      groupBy: 'priority',
+      groupBy: 'none',
       sortBy: 'priority',
       filterRule: null
     }

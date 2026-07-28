@@ -18,7 +18,8 @@ const widgetApi: WidgetApi = {
     updateInstance: (id: string, dto: UpdateWidgetInstanceDto) =>
       ipcRenderer.invoke(IPC.WIDGET_INSTANCES_UPDATE, id, dto),
     collapse: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCE_COLLAPSE, id),
-    expand: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCE_EXPAND, id),
+    expand: (id: string, options?: { peek?: boolean }) =>
+      ipcRenderer.invoke(IPC.WIDGET_INSTANCE_EXPAND, id, options),
     hide: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCE_HIDE, id),
     setDisplayMode: (id: string, mode: WidgetDisplayMode) =>
       ipcRenderer.invoke(IPC.WIDGET_INSTANCE_SET_DISPLAY_MODE, id, mode),

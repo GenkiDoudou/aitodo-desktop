@@ -12,12 +12,43 @@ import type {
 } from '@shared/types'
 import { AppError } from '@shared/types'
 import type { CategoryRepository } from '../db/category-repository'
+import type { SyncOutbox } from '../db/sync-outbox'
+
+function categoryPayload(category: Category): Record<string, unknown> {
+  return {
+    id: category.id,
+    name: category.name,
+    color: category.color,
+    sortOrder: category.sortOrder,
+    keywords: category.keywords,
+    createdAt: category.createdAt,
+    updatedAt: category.updatedAt,
+    deletedAt: category.deletedAt
+  }
+}
 
 export class CategoryService {
-  constructor(private readonly repo: CategoryRepository) {}
+  constructor(
+    private readonly repo: CategoryRepository,
+    private readonly outbox?: SyncOutbox
+  ) {}
 
   list(): Category[] {
     return this.repo.list()
+  }
+
+  private withTx<T>(fn: () => T): T {
+    return this.outbox ? this.outbox.runInTransaction(fn) : fn()
+  }
+
+  private enqueueUpsert(category: Category, syncVersion: number): void {
+    this.outbox?.record({
+      entityType: 'category',
+      entityId: category.id,
+      operation: 'upsert',
+      payload: categoryPayload(category),
+      clientSyncVersion: syncVersion
+    })
   }
 
   private assertKeywords(keywords: string[], excludeCategoryId?: string): string[] {
@@ -51,8 +82,11 @@ export class CategoryService {
       updatedAt: ts,
       deletedAt: null
     }
-    this.repo.insert(category)
-    return category
+    return this.withTx(() => {
+      this.repo.insert(category)
+      this.enqueueUpsert(category, 1)
+      return category
+    })
   }
 
   update(id: string, dto: UpdateCategoryDto): Category {
@@ -63,14 +97,18 @@ export class CategoryService {
     const keywords =
       dto.keywords !== undefined ? this.assertKeywords(dto.keywords, id) : existing.keywords
     const ts = nowIso()
-    this.repo.update(id, {
-      name: dto.name?.trim() ?? existing.name,
-      color: dto.color !== undefined ? dto.color : existing.color,
-      sortOrder: dto.sortOrder ?? existing.sortOrder,
-      keywords,
-      updatedAt: ts
+    return this.withTx(() => {
+      this.repo.update(id, {
+        name: dto.name?.trim() ?? existing.name,
+        color: dto.color !== undefined ? dto.color : existing.color,
+        sortOrder: dto.sortOrder ?? existing.sortOrder,
+        keywords,
+        updatedAt: ts
+      })
+      const updated = this.repo.findById(id)!
+      this.enqueueUpsert(updated, 1)
+      return updated
     })
-    return this.repo.findById(id)!
   }
 
   delete(id: string): void {
@@ -79,7 +117,20 @@ export class CategoryService {
       throw new AppError('NOT_FOUND', '分类不存在')
     }
     const ts = nowIso()
-    this.repo.clearTaskCategoryReferences(id, ts)
-    this.repo.softDelete(id, ts)
+    this.withTx(() => {
+      this.repo.clearTaskCategoryReferences(id, ts)
+      this.repo.softDelete(id, ts)
+      this.outbox?.record({
+        entityType: 'category',
+        entityId: id,
+        operation: 'delete',
+        payload: {
+          id,
+          deletedAt: ts,
+          updatedAt: ts
+        },
+        clientSyncVersion: 1
+      })
+    })
   }
 }

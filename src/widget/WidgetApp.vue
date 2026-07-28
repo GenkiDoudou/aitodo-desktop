@@ -3,7 +3,8 @@
     class="widget-app"
     :class="[
       `widget-app--${displayMode}`,
-      edgeAnchorClass
+      edgeAnchorClass,
+      { 'is-peek': peekFromHover }
     ]"
     @click="onShellClick"
   >
@@ -14,6 +15,7 @@
         :class="{ 'is-horizontal-edge': isHorizontalEdge }"
         :title="compactHint"
         @mouseenter="onCompactHover"
+        @mouseleave="onCompactMouseLeave"
       >
         <span class="widget-app__compact-dot" :class="kindDotClass" />
         <span
@@ -62,6 +64,8 @@ import WidgetViewsPanel from './WidgetViewsPanel.vue'
 const instance = ref<WidgetInstance | null>(null)
 const loading = ref(true)
 const instanceId = ref('')
+/** 由贴边细条悬停临时展开：鼠标移出窗口后应再收起 */
+const peekFromHover = ref(false)
 
 const displayMode = computed<WidgetDisplayMode>(() => instance.value?.displayMode ?? 'expanded')
 const isCompactMode = computed(() => displayMode.value === 'edge_tab' || displayMode.value === 'mini')
@@ -87,7 +91,9 @@ const kindDotClass = computed(() => {
 })
 
 const compactHint = computed(() =>
-  displayMode.value === 'edge_tab' ? '悬停或点击展开挂件' : '点击展开查看内容'
+  displayMode.value === 'edge_tab'
+    ? '悬停临时展开，移开即收起；点击细条或拖动可固定展开'
+    : '点击展开查看内容'
 )
 
 let hoverExpandTimer: ReturnType<typeof setTimeout> | null = null
@@ -100,6 +106,10 @@ function resolveInstanceId(): string {
 
 function applyInstance(next: WidgetInstance) {
   instance.value = next
+  // 外部切回细条时清掉 peek 标记
+  if (next.displayMode === 'edge_tab' || next.displayMode === 'mini' || next.displayMode === 'hidden') {
+    peekFromHover.value = false
+  }
 }
 
 async function loadInstance() {
@@ -117,21 +127,41 @@ async function loadInstance() {
   applyInstance(res.data)
 }
 
+function clearHoverExpandTimer() {
+  if (hoverExpandTimer) {
+    clearTimeout(hoverExpandTimer)
+    hoverExpandTimer = null
+  }
+}
+
+/** 贴边细条：悬停延迟临时展开（就地 peek；收起由主进程按光标是否在窗内决定） */
 function onCompactHover() {
   if (!instanceId.value || displayMode.value !== 'edge_tab') return
-  if (hoverExpandTimer) clearTimeout(hoverExpandTimer)
+  clearHoverExpandTimer()
   hoverExpandTimer = setTimeout(() => {
-    void window.widgetApi.widget.expand(instanceId.value)
+    hoverExpandTimer = null
+    peekFromHover.value = true
+    void window.widgetApi.widget.expand(instanceId.value, { peek: true })
   }, 300)
 }
 
+/** 尚未展开时离开细条：取消悬停展开 */
+function onCompactMouseLeave() {
+  clearHoverExpandTimer()
+}
+
 function onShellClick() {
-  if (!isCompactMode.value || !instanceId.value) return
+  if (!instanceId.value) return
+  // 仅细条/迷你点击 → 正式展开；peek 中点内容不固定（移出窗口仍应收起）
+  if (!isCompactMode.value) return
+  clearHoverExpandTimer()
+  peekFromHover.value = false
   void window.widgetApi.widget.expand(instanceId.value)
 }
 
 async function onCollapseClick() {
   if (!instanceId.value || !instance.value) return
+  peekFromHover.value = false
   const mode = instance.value.displayMode
   if (mode === 'expanded') {
     await window.widgetApi.widget.collapse(instanceId.value)
@@ -143,6 +173,7 @@ async function onCollapseClick() {
 }
 
 async function openMain() {
+  peekFromHover.value = false
   await window.widgetApi.app.openMain('/')
 }
 
@@ -158,7 +189,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (hoverExpandTimer) clearTimeout(hoverExpandTimer)
+  clearHoverExpandTimer()
   cleanupModeListener?.()
 })
 </script>

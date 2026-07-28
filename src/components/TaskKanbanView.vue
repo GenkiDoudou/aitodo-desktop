@@ -11,7 +11,7 @@
     </header>
 
     <div
-      v-if="!loading && rootTasks.length === 0 && (boardMode === 'status' || boardMode === 'priority' || customGroups.length === 0)"
+      v-if="!loading && rootTasks.length === 0 && (boardMode === 'status' || boardMode === 'priority' || boardMode === 'time' || boardMode === 'tag' || customGroups.length === 0)"
       class="task-kanban__empty"
     >
       暂无任务，点击列头 + 或「新分组」开始
@@ -47,9 +47,13 @@
                   ? selectedColumnId === col.id
                     ? '再次点击取消选中'
                     : '选中后，顶栏添加的任务将使用此级别'
-                  : selectedColumnId === col.id
-                    ? '再次点击取消选中'
-                    : '选中后，顶栏添加的任务将进入此分组'
+                  : boardMode === 'time' || boardMode === 'tag'
+                    ? selectedColumnId === col.id
+                      ? '再次点击取消选中'
+                      : '选中后，顶栏添加的任务将进入此列'
+                    : selectedColumnId === col.id
+                      ? '再次点击取消选中'
+                      : '选中后，顶栏添加的任务将进入此分组'
             "
             @click="toggleColumnSelection(col.id)"
             @keydown.enter.prevent="toggleColumnSelection(col.id)"
@@ -86,7 +90,10 @@
               </template>
             </el-dropdown>
           </div>
-          <div v-else-if="boardMode === 'status' || boardMode === 'priority'" class="task-kanban__col-actions">
+          <div
+            v-else-if="boardMode === 'status' || boardMode === 'priority' || boardMode === 'time' || boardMode === 'tag'"
+            class="task-kanban__col-actions"
+          >
             <button
               type="button"
               class="task-kanban__icon-btn"
@@ -212,11 +219,21 @@ import type { KanbanGroup, Task, TaskStatus } from '@shared/types'
 import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
 import type { KanbanBoardMode } from '@shared/kanban-config'
 import { KANBAN_STATUS_COLUMNS, statusLabelFor } from '@shared/kanban-config'
+import {
+  KANBAN_TIME_COLUMNS,
+  KANBAN_UNTAGGED_ID,
+  dueAtForTimeColumn,
+  isKanbanTimeColumnId,
+  tagColumnIdForTask,
+  tagColumnsForTasks,
+  tagsForTagColumn,
+  timeColumnIdForTask
+} from '@shared/kanban-group-columns'
 import { TASK_PRIORITIES, DEFAULT_TASK_PRIORITY, isValidTaskPriority, type TaskPriority } from '@shared/task-priority'
 import { KANBAN_DONE_COLUMN_ID, KANBAN_UNGROUPED_ID } from '@shared/kanban-scope'
 import { readKanbanConfig } from '@/utils/kanban-preferences'
 import { taskDescriptionPreview } from '@shared/task-description'
-import { buildQuickCreateTaskDtoFromDraft } from '@shared/quick-create-task'
+import { buildQuickCreateTaskDtoFromDraft, toParseCategories } from '@shared/quick-create-task'
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
 import QuickAddInput from '@/components/QuickAddInput.vue'
@@ -315,6 +332,12 @@ const displayColumns = computed<DisplayColumn[]>(() => {
       name: `${p.code} · ${p.label}`
     }))
   }
+  if (boardMode.value === 'time') {
+    return KANBAN_TIME_COLUMNS.map((col) => ({ id: col.id, name: col.label }))
+  }
+  if (boardMode.value === 'tag') {
+    return tagColumnsForTasks(rootTasks.value)
+  }
   const cols: DisplayColumn[] = [{ id: KANBAN_UNGROUPED_ID, name: ungroupedName.value }]
   for (const g of customGroups.value) {
     cols.push({ id: g.id, name: g.name })
@@ -388,6 +411,12 @@ function tasksInColumn(columnId: string): Task[] {
       return (Number.isFinite(p) ? p : 4) === priority
     })
   }
+  if (boardMode.value === 'time') {
+    return rootTasks.value.filter((t) => timeColumnIdForTask(t) === columnId)
+  }
+  if (boardMode.value === 'tag') {
+    return rootTasks.value.filter((t) => tagColumnIdForTask(t) === columnId)
+  }
   if (columnId === DONE_COLUMN_ID) {
     return doneTasks()
   }
@@ -413,7 +442,14 @@ function columnRows(columnId: string): KanbanCardRow[] {
 }
 
 function isCardDraggable(columnId: string, task: Task): boolean {
-  if (boardMode.value === 'status' || boardMode.value === 'priority') return true
+  if (
+    boardMode.value === 'status' ||
+    boardMode.value === 'priority' ||
+    boardMode.value === 'time' ||
+    boardMode.value === 'tag'
+  ) {
+    return true
+  }
   return columnId !== DONE_COLUMN_ID && task.status !== 'DONE'
 }
 
@@ -591,6 +627,29 @@ async function onDrop(columnId: string, e: DragEvent) {
     return
   }
 
+  if (boardMode.value === 'time') {
+    if (!isKanbanTimeColumnId(columnId)) return
+    if (timeColumnIdForTask(task) === columnId) return
+    try {
+      unwrapIpc(await window.api.tasks.update(taskId, { dueAt: dueAtForTimeColumn(columnId) }))
+      emit('changed')
+    } catch {
+      /* unwrapIpc 已提示 */
+    }
+    return
+  }
+
+  if (boardMode.value === 'tag') {
+    if (tagColumnIdForTask(task) === columnId) return
+    try {
+      unwrapIpc(await window.api.tasks.update(taskId, { tags: tagsForTagColumn(task, columnId) }))
+      emit('changed')
+    } catch {
+      /* unwrapIpc 已提示 */
+    }
+    return
+  }
+
   if (task.status === 'DONE') return
   if (resolveColumnId(task) === columnId) return
   const nextGroupId = columnId === KANBAN_UNGROUPED_ID ? null : columnId
@@ -729,7 +788,7 @@ async function submitQuickAdd(columnId: string) {
     return
   }
   try {
-    const cats = props.parseCategories ?? []
+    const cats = toParseCategories(props.parseCategories ?? [])
     const parsed = unwrapIpc(await window.api.app.parseTaskInput(title, cats))
     const baseOverrides =
       boardMode.value === 'status' && isStatusColumn(columnId)
@@ -743,11 +802,23 @@ async function submitQuickAdd(columnId: string) {
               categoryId: props.defaultCategoryId ?? null,
               priority: Number(columnId) as TaskPriority
             }
-          : {
-              categoryId: props.defaultCategoryId ?? null,
-              kanbanGroupId: columnId === KANBAN_UNGROUPED_ID ? null : columnId,
-              priority: quickAddPriority.value
-            }
+          : boardMode.value === 'time' && isKanbanTimeColumnId(columnId)
+            ? {
+                categoryId: props.defaultCategoryId ?? null,
+                dueAt: dueAtForTimeColumn(columnId),
+                priority: quickAddPriority.value
+              }
+            : boardMode.value === 'tag'
+              ? {
+                  categoryId: props.defaultCategoryId ?? null,
+                  tags: columnId === KANBAN_UNTAGGED_ID ? [] : [columnId],
+                  priority: quickAddPriority.value
+                }
+              : {
+                  categoryId: props.defaultCategoryId ?? null,
+                  kanbanGroupId: columnId === KANBAN_UNGROUPED_ID ? null : columnId,
+                  priority: quickAddPriority.value
+                }
     const dto = buildQuickCreateTaskDtoFromDraft(parsed.draft, title, cats, baseOverrides)
     unwrapIpc(await window.api.tasks.create(dto))
     cancelQuickAdd()

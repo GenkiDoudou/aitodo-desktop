@@ -2,7 +2,7 @@
   <section class="settings-section widget-settings">
     <h2 class="settings-section__title">桌面挂件</h2>
     <p class="settings-section__hint">
-      将挂件拖到屏幕边缘会自动收成贴边细条，细条会显示挂件名称并停留在你拖放的位置；多个挂件贴在同一边时会自动错开避免重叠。悬停、点击细条或按 Mod+Shift+W 可展开。
+      将挂件拖到屏幕边缘会自动收成贴边细条，细条会显示挂件名称并停留在你拖放的位置；多个挂件贴在同一边时会自动错开避免重叠。悬停细条可临时展开（移开鼠标即收起），点击细条或按 Mod+Shift+W 可固定展开。
     </p>
 
     <div class="widget-settings__rows">

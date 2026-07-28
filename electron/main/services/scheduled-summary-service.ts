@@ -24,15 +24,50 @@ import { AppError } from '@shared/types'
 import type { ScheduledSummaryRepository } from '../db/scheduled-summary-repository'
 import type { TaskRepository } from '../db/task-repository'
 import type { CategoryRepository } from '../db/category-repository'
+import type { SyncOutbox } from '../db/sync-outbox'
 import { chatCompletion } from './llm-client'
 import { readLlmConfig } from '../data-path'
+
+function summarySyncPayload(summary: ScheduledSummary): Record<string, unknown> {
+  return {
+    id: summary.id,
+    name: summary.name,
+    categoryIds: summary.categoryIds,
+    scheduleType: summary.scheduleType,
+    sendTime: summary.sendTime,
+    sendWeekday: summary.sendWeekday,
+    sendDay: summary.sendDay,
+    useLlm: summary.useLlm,
+    promptText: summary.promptText,
+    reportConfig: summary.reportConfig,
+    enabled: summary.enabled,
+    lastSentAt: summary.lastSentAt,
+    createdAt: summary.createdAt,
+    updatedAt: summary.updatedAt
+  }
+}
 
 export class ScheduledSummaryService {
   constructor(
     private readonly repo: ScheduledSummaryRepository,
     private readonly taskRepo: TaskRepository,
-    private readonly categoryRepo: CategoryRepository
+    private readonly categoryRepo: CategoryRepository,
+    private readonly outbox?: SyncOutbox
   ) {}
+
+  private withTx<T>(fn: () => T): T {
+    return this.outbox ? this.outbox.runInTransaction(fn) : fn()
+  }
+
+  private enqueueUpsert(summary: ScheduledSummary): void {
+    this.outbox?.record({
+      entityType: 'scheduled_summary',
+      entityId: summary.id,
+      operation: 'upsert',
+      payload: summarySyncPayload(summary),
+      clientSyncVersion: 1
+    })
+  }
 
   list(): ScheduledSummary[] {
     return this.repo.list()
@@ -72,7 +107,10 @@ export class ScheduledSummaryService {
       createdAt: ts,
       updatedAt: ts
     }
-    this.repo.insert(summary)
+    this.withTx(() => {
+      this.repo.insert(summary)
+      this.enqueueUpsert(summary)
+    })
     return summary
   }
 
@@ -121,13 +159,25 @@ export class ScheduledSummaryService {
     if (!updated.name.trim()) {
       throw new AppError('VALIDATION_ERROR', '汇总名称不能为空')
     }
-    this.repo.update(updated)
+    this.withTx(() => {
+      this.repo.update(updated)
+      this.enqueueUpsert(updated)
+    })
     return updated
   }
 
   delete(id: string): void {
     this.get(id)
-    this.repo.delete(id)
+    this.withTx(() => {
+      this.repo.delete(id)
+      this.outbox?.record({
+        entityType: 'scheduled_summary',
+        entityId: id,
+        operation: 'delete',
+        payload: { id, updatedAt: nowIso() },
+        clientSyncVersion: 1
+      })
+    })
   }
 
   /** 生成并返回汇总正文（供调度器发送 / 预览） */
@@ -187,7 +237,11 @@ export class ScheduledSummaryService {
   }
 
   markSent(id: string, sentAt: string): void {
-    this.repo.markSent(id, sentAt)
+    this.withTx(() => {
+      this.repo.markSent(id, sentAt)
+      const updated = this.repo.findById(id)
+      if (updated) this.enqueueUpsert(updated)
+    })
   }
 
   private buildFormBody(

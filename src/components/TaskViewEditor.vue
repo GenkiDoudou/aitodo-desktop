@@ -247,7 +247,7 @@ const sortOptions: { value: TaskSortBy; label: string }[] = (
 ).map((value) => ({ value, label: TASK_SORT_BY_LABELS[value] }))
 
 const groupOptions: { value: TaskGroupBy; label: string }[] = (
-  ['none', 'time', 'priority', 'tag', 'custom'] as const
+  ['none', 'time', 'priority', 'tag', 'status', 'custom'] as const
 ).map((value) => ({ value, label: TASK_GROUP_BY_LABELS[value] }))
 
 const metaOptions: { key: keyof TaskListMetaVisibility; label: string }[] = [

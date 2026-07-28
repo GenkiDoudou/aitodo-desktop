@@ -523,6 +523,47 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       DROP TABLE IF EXISTS desktop_fence_layout;
       DROP TABLE IF EXISTS desktop_fence_settings;
     `
+  },
+  {
+    version: 30,
+    sql: `
+      CREATE TABLE IF NOT EXISTS local_changes (
+        id TEXT PRIMARY KEY,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        client_sync_version INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        pushed_at TEXT,
+        status TEXT NOT NULL DEFAULT 'pending'
+      );
+      CREATE INDEX IF NOT EXISTS idx_local_changes_pending
+        ON local_changes(status, created_at);
+
+      CREATE TABLE IF NOT EXISTS sync_state (
+        id TEXT PRIMARY KEY DEFAULT 'default',
+        device_id TEXT NOT NULL,
+        user_id TEXT,
+        server_base_url TEXT,
+        last_pulled_cursor TEXT,
+        last_pushed_at TEXT,
+        last_sync_at TEXT,
+        last_error TEXT,
+        auth_expires_at TEXT,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS sync_conflicts (
+        id TEXT PRIMARY KEY,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        local_payload_json TEXT,
+        server_payload_json TEXT,
+        resolved_at TEXT,
+        created_at TEXT NOT NULL
+      );
+    `
   }
 ]
 

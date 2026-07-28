@@ -117,5 +117,23 @@ export const IPC = {
   CAPTURE_FOCUS: 'capture:focus',
   APP_OPEN_MAIN: 'app:openMain',
   /** Main → Renderer：打开指定路由 */
-  APP_NAVIGATE: 'app:navigate'
+  APP_NAVIGATE: 'app:navigate',
+  /** 云同步：登录 / 登出 / 状态 / 触发 / 服务器地址 / 偏好 / 测连 */
+  SYNC_LOGIN: 'sync:login',
+  SYNC_LOGOUT: 'sync:logout',
+  SYNC_GET_STATUS: 'sync:getStatus',
+  SYNC_TRIGGER: 'sync:trigger',
+  SYNC_SET_SERVER_URL: 'sync:setServerUrl',
+  SYNC_SET_PREFERENCES: 'sync:setPreferences',
+  SYNC_TEST_SERVER_URL: 'sync:testServerUrl',
+  SYNC_REPORT_UI_PREFERENCES: 'sync:reportUiPreferences',
+  /** Main → Renderer：远端应用了 UI 偏好 */
+  SYNC_UI_PREFERENCES_APPLIED: 'sync:uiPreferencesApplied',
+  /** 通知管理 */
+  NOTIFY_GET_CONFIG: 'notify:getConfig',
+  NOTIFY_SET_CONFIG: 'notify:setConfig',
+  NOTIFY_TEST_IYUU: 'notify:testIyuu',
+  NOTIFY_TEST_WEBHOOK: 'notify:testWebhook',
+  NOTIFY_LIST_DELIVERIES: 'notify:listDeliveries',
+  NOTIFY_LIST_PENDING: 'notify:listPending'
 } as const

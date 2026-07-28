@@ -21,6 +21,8 @@
 
     <main class="settings-layout__main">
       <SettingsDataSection v-if="activeSection === 'data'" />
+      <SettingsSyncSection v-else-if="activeSection === 'sync'" />
+      <SettingsNotificationSection v-else-if="activeSection === 'notifications'" />
       <SettingsShortcutsSection v-else-if="activeSection === 'shortcuts'" />
       <SettingsLlmSection v-else-if="activeSection === 'llm'" />
       <SettingsPromptSection v-else-if="activeSection === 'prompt'" />
@@ -36,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Coin,
@@ -48,11 +50,14 @@ import {
   InfoFilled,
   Key,
   Monitor,
+  Connection,
+  Bell,
   SwitchButton,
   Timer
 } from '@element-plus/icons-vue'
-import type { Component } from 'vue'
 import SettingsDataSection from '@/components/settings/SettingsDataSection.vue'
+import SettingsSyncSection from '@/components/settings/SettingsSyncSection.vue'
+import SettingsNotificationSection from '@/components/settings/SettingsNotificationSection.vue'
 import SettingsShortcutsSection from '@/components/settings/SettingsShortcutsSection.vue'
 import SettingsLlmSection from '@/components/settings/SettingsLlmSection.vue'
 import SettingsPromptSection from '@/components/settings/SettingsPromptSection.vue'
@@ -66,6 +71,8 @@ import SettingsThemeSection from '@/components/settings/SettingsThemeSection.vue
 
 type SettingsSection =
   | 'data'
+  | 'sync'
+  | 'notifications'
   | 'shortcuts'
   | 'llm'
   | 'prompt'
@@ -86,6 +93,8 @@ watch(
   (section) => {
     if (
       section === 'data' ||
+      section === 'sync' ||
+      section === 'notifications' ||
       section === 'shortcuts' ||
       section === 'llm' ||
       section === 'prompt' ||
@@ -114,6 +123,8 @@ type MenuItem = {
 
 const menuItems: MenuItem[] = [
   { id: 'data', label: '数据存储', icon: Coin },
+  { id: 'sync', label: '账号与同步', icon: Connection },
+  { id: 'notifications', label: '通知管理', icon: Bell },
   { id: 'shortcuts', label: '快捷键', icon: Key },
   { id: 'llm', label: '大模型', icon: Cpu },
   { id: 'prompt', label: '提示词', icon: Document },

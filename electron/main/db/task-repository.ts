@@ -307,6 +307,7 @@ export class TaskRepository {
           priority = @priority, category_id = @categoryId, parent_id = @parentId,
           start_at = @startAt, due_at = @dueAt, remind_at = @remindAt, remind_fired_at = @remindFiredAt,
           completed_at = @completedAt, sort_order = @sortOrder, updated_at = @updatedAt,
+          sync_version = @syncVersion,
           kanban_group_id = @kanbanGroupId,
           recurrence_rule = @recurrenceRule, remind_continuous = @remindContinuous,
           completed_occurrence_dates = @completedOccurrenceDates, triaged_at = @triagedAt
@@ -328,6 +329,7 @@ export class TaskRepository {
           completedAt: task.completedAt,
           sortOrder: task.sortOrder,
           updatedAt: task.updatedAt,
+          syncVersion: task.syncVersion,
           kanbanGroupId: task.kanbanGroupId,
           recurrenceRule: serializeRecurrenceRule(task.recurrence),
           remindContinuous: task.remindContinuous ? 1 : 0,
@@ -337,7 +339,15 @@ export class TaskRepository {
       )
   }
 
-  softDelete(id: string, deletedAt: string): void {
+  softDelete(id: string, deletedAt: string, syncVersion?: number): void {
+    if (syncVersion !== undefined) {
+      this.db
+        .prepare(
+          `UPDATE tasks SET deleted_at = ?, updated_at = ?, sync_version = ? WHERE id = ?`
+        )
+        .run(deletedAt, deletedAt, syncVersion, id)
+      return
+    }
     this.db.prepare(`UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE id = ?`).run(deletedAt, deletedAt, id)
   }
 

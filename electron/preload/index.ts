@@ -196,6 +196,36 @@ const api: DesktopApi = {
       ipcRenderer.on(IPC.APP_NAVIGATE, listener)
       return () => ipcRenderer.removeListener(IPC.APP_NAVIGATE, listener)
     }
+  },
+  sync: {
+    login: (dto: import('@shared/sync-protocol').SyncLoginRequest) =>
+      ipcRenderer.invoke(IPC.SYNC_LOGIN, dto),
+    logout: () => ipcRenderer.invoke(IPC.SYNC_LOGOUT),
+    getStatus: () => ipcRenderer.invoke(IPC.SYNC_GET_STATUS),
+    trigger: () => ipcRenderer.invoke(IPC.SYNC_TRIGGER),
+    setServerUrl: (url: string) => ipcRenderer.invoke(IPC.SYNC_SET_SERVER_URL, url),
+    setPreferences: (partial: Partial<import('@shared/sync-preferences').SyncPreferences>) =>
+      ipcRenderer.invoke(IPC.SYNC_SET_PREFERENCES, partial),
+    testServerUrl: (url?: string) => ipcRenderer.invoke(IPC.SYNC_TEST_SERVER_URL, url),
+    reportUiPreferences: (prefs: Record<string, string>) =>
+      ipcRenderer.invoke(IPC.SYNC_REPORT_UI_PREFERENCES, prefs),
+    onUiPreferencesApplied: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, prefs: Record<string, string>) => {
+        callback(prefs)
+      }
+      ipcRenderer.on(IPC.SYNC_UI_PREFERENCES_APPLIED, listener)
+      return () => ipcRenderer.removeListener(IPC.SYNC_UI_PREFERENCES_APPLIED, listener)
+    }
+  },
+  notify: {
+    getConfig: () => ipcRenderer.invoke(IPC.NOTIFY_GET_CONFIG),
+    setConfig: (config: import('@shared/notification-config').NotificationConfig) =>
+      ipcRenderer.invoke(IPC.NOTIFY_SET_CONFIG, config),
+    testIyuu: (token?: string) => ipcRenderer.invoke(IPC.NOTIFY_TEST_IYUU, token),
+    testWebhook: (url: string, headers?: Record<string, string>) =>
+      ipcRenderer.invoke(IPC.NOTIFY_TEST_WEBHOOK, url, headers),
+    listDeliveries: () => ipcRenderer.invoke(IPC.NOTIFY_LIST_DELIVERIES),
+    listPending: () => ipcRenderer.invoke(IPC.NOTIFY_LIST_PENDING)
   }
 }
 

@@ -193,6 +193,52 @@ export function expandedWindowBounds(
   }
 }
 
+/**
+ * 贴边悬停预览：以细条所在边为锚点就地展开，使指针仍落在窗口内，
+ * 避免跳回历史 expanded 坐标导致「鼠标没动却 leave」。
+ */
+export function peekExpandedBoundsNearStrip(
+  anchor: WidgetEdgeAnchor,
+  strip: Rectangle,
+  expanded: WidgetExpandedBounds,
+  workArea: WorkAreaRect
+): Rectangle {
+  const width = expanded.width
+  const height = expanded.height
+
+  if (anchor === 'right') {
+    return {
+      x: clampX(strip.x + strip.width - width, width, workArea),
+      y: clampY(strip.y + Math.round((strip.height - height) / 2), height, workArea),
+      width,
+      height
+    }
+  }
+  if (anchor === 'left') {
+    return {
+      x: clampX(strip.x, width, workArea),
+      y: clampY(strip.y + Math.round((strip.height - height) / 2), height, workArea),
+      width,
+      height
+    }
+  }
+  if (anchor === 'top') {
+    return {
+      x: clampX(strip.x + Math.round((strip.width - width) / 2), width, workArea),
+      y: clampY(strip.y, height, workArea),
+      width,
+      height
+    }
+  }
+  // bottom
+  return {
+    x: clampX(strip.x + Math.round((strip.width - width) / 2), width, workArea),
+    y: clampY(strip.y + strip.height - height, height, workArea),
+    width,
+    height
+  }
+}
+
 /** 根据展示状态计算窗口 bounds；hidden 返回 null */
 export function boundsForDisplayMode(
   mode: WidgetDisplayMode,

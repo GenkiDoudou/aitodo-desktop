@@ -14,6 +14,7 @@ import {
   desiredStripAlongFromBounds,
   expandedBoundsFromInstance,
   expandedWindowBounds,
+  peekExpandedBoundsNearStrip,
   resolveStripAlongEdge,
   stripAlongFromInstance,
   stripBoundsForEdge,
@@ -29,6 +30,10 @@ export class WidgetWindowManager {
   private readonly saveBoundsTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly edgeSnapTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly applyingBounds = new Set<string>()
+  /** 贴边悬停临时展开的实例：收起时不把 peek 坐标写入 expandedX/Y */
+  private readonly peekingIds = new Set<string>()
+  /** peek 期间按光标是否仍在窗内决定收起（避免 drag 标题栏误触 mouseleave） */
+  private readonly peekWatchTimers = new Map<string, ReturnType<typeof setInterval>>()
   private taskToggleCursor = 0
 
   private get instanceRepo(): WidgetInstanceRepository {
@@ -124,14 +129,38 @@ export class WidgetWindowManager {
     this.toggleTaskWidgets()
   }
 
-  expand(id: string): void {
+  /**
+   * 展开挂件。
+   * @param options.peek 贴边悬停预览：就地展开，移开后应收起且不污染记忆位置
+   */
+  expand(id: string, options?: { peek?: boolean }): void {
     const instance = this.instanceRepo.find(id)
     if (!instance) return
 
     const win = this.ensureWindow(id)
+
+    // 已展开且非 peek：固定当前位置（用于悬停预览后点击固定，避免跳回记忆坐标）
+    if (instance.displayMode === 'expanded' && !options?.peek) {
+      this.clearPeekState(id)
+      win.show()
+      win.focus()
+      this.notifyDisplayMode(id, instance)
+      return
+    }
+
     const workArea = screen.getDisplayMatching(win.getBounds()).workArea
     const expanded = expandedBoundsFromInstance(instance)
-    const bounds = expandedWindowBounds(expanded, workArea)
+
+    let bounds: Electron.Rectangle
+    if (options?.peek && instance.displayMode === 'edge_tab') {
+      const strip = win.getBounds()
+      bounds = peekExpandedBoundsNearStrip(instance.edgeAnchor, strip, expanded, workArea)
+      this.peekingIds.add(id)
+      this.startPeekPointerWatch(id)
+    } else {
+      this.clearPeekState(id)
+      bounds = expandedWindowBounds(expanded, workArea)
+    }
 
     const updated = this.instanceRepo.update(id, {
       displayMode: 'expanded',
@@ -139,6 +168,7 @@ export class WidgetWindowManager {
       y: bounds.y,
       width: bounds.width,
       height: bounds.height
+      // peek 不改 expandedX/Y；正式展开也不在此处改记忆宽高，仅改当前窗位
     })
 
     this.applyWindowBounds(id, win, bounds, true)
@@ -151,13 +181,15 @@ export class WidgetWindowManager {
     const instance = this.instanceRepo.find(id)
     const win = this.windows.get(id)
     if (!instance || !win || win.isDestroyed() || instance.displayMode !== 'expanded') {
+      this.clearPeekState(id)
       return
     }
 
+    const wasPeeking = this.clearPeekState(id)
     const bounds = win.getBounds()
     const workArea = screen.getDisplayMatching(bounds).workArea
     const edge = detectNearestDockEdge(bounds, workArea) ?? instance.edgeAnchor
-    this.dockToEdge(id, edge, bounds)
+    this.dockToEdge(id, edge, bounds, { preserveExpandedMemory: wasPeeking })
   }
 
   setDisplayMode(id: string, mode: WidgetDisplayMode, options?: { focus?: boolean }): WidgetInstance {
@@ -226,7 +258,8 @@ export class WidgetWindowManager {
   private dockToEdge(
     instanceId: string,
     anchor: WidgetEdgeAnchor,
-    fromBounds: Electron.Rectangle
+    fromBounds: Electron.Rectangle,
+    options?: { preserveExpandedMemory?: boolean }
   ): WidgetInstance {
     const instance = this.instanceRepo.find(instanceId)
     const win = this.windows.get(instanceId)
@@ -238,12 +271,15 @@ export class WidgetWindowManager {
     const expanded = expandedBoundsFromInstance(instance)
 
     // 贴边前只同步展开位置，不改变用户设定的展开宽高
-    const expandedPosition = {
-      x: fromBounds.x,
-      y: fromBounds.y,
-      width: expanded.width,
-      height: expanded.height
-    }
+    // peek 收起时保留原记忆位置，避免把临时贴边展开坐标写进去
+    const expandedPosition = options?.preserveExpandedMemory
+      ? { x: expanded.x, y: expanded.y, width: expanded.width, height: expanded.height }
+      : {
+          x: fromBounds.x,
+          y: fromBounds.y,
+          width: expanded.width,
+          height: expanded.height
+        }
 
     const label = widgetInstanceDisplayName(instance)
     const dims = stripDimensionsForLabel(anchor, label)
@@ -271,6 +307,7 @@ export class WidgetWindowManager {
   }
 
   private hideInstance(instanceId: string): WidgetInstance {
+    this.clearPeekState(instanceId)
     const win = this.windows.get(instanceId)
     if (win && !win.isDestroyed()) {
       win.hide()
@@ -368,6 +405,7 @@ export class WidgetWindowManager {
   }
 
   private destroyWindow(id: string): void {
+    this.clearPeekState(id)
     for (const map of [this.saveBoundsTimers, this.edgeSnapTimers]) {
       const timer = map.get(id)
       if (timer) {
@@ -381,6 +419,72 @@ export class WidgetWindowManager {
       win.destroy()
     }
     this.windows.delete(id)
+  }
+
+  /** 结束 peek：停止光标监听并返回是否曾在 peek */
+  private clearPeekState(id: string): boolean {
+    this.stopPeekPointerWatch(id)
+    return this.peekingIds.delete(id)
+  }
+
+  /**
+   * peek 收起以屏幕光标相对窗口 bounds 为准。
+   * 标题栏 -webkit-app-region:drag 会让渲染进程误报 mouseleave，不能依赖 DOM leave。
+   */
+  private startPeekPointerWatch(id: string): void {
+    this.stopPeekPointerWatch(id)
+    const startedAt = Date.now()
+    let outsideSince: number | null = null
+
+    this.peekWatchTimers.set(
+      id,
+      setInterval(() => {
+        if (!this.peekingIds.has(id)) {
+          this.stopPeekPointerWatch(id)
+          return
+        }
+        // 展开瞬间给 DOM/窗口尺寸一点稳定时间
+        if (Date.now() - startedAt < 400) return
+
+        const win = this.windows.get(id)
+        if (!win || win.isDestroyed()) {
+          this.clearPeekState(id)
+          return
+        }
+
+        if (this.isCursorInsideWindow(win)) {
+          outsideSince = null
+          return
+        }
+
+        if (outsideSince == null) {
+          outsideSince = Date.now()
+          return
+        }
+        if (Date.now() - outsideSince >= 180) {
+          this.collapse(id)
+        }
+      }, 80)
+    )
+  }
+
+  private stopPeekPointerWatch(id: string): void {
+    const timer = this.peekWatchTimers.get(id)
+    if (timer) {
+      clearInterval(timer)
+      this.peekWatchTimers.delete(id)
+    }
+  }
+
+  private isCursorInsideWindow(win: BrowserWindow): boolean {
+    const cursor = screen.getCursorScreenPoint()
+    const bounds = win.getBounds()
+    return (
+      cursor.x >= bounds.x &&
+      cursor.x < bounds.x + bounds.width &&
+      cursor.y >= bounds.y &&
+      cursor.y < bounds.y + bounds.height
+    )
   }
 
   private scheduleEdgeSnapCheck(instanceId: string, win: BrowserWindow): void {
@@ -454,6 +558,8 @@ export class WidgetWindowManager {
         this.scheduleSaveStripPosition(instanceId, win)
         return
       }
+      // 悬停预览中用户开始拖动 → 视为固定展开，之后收起应记住新位置
+      this.clearPeekState(instanceId)
       this.scheduleSavePosition(instanceId, win)
       this.scheduleEdgeSnapCheck(instanceId, win)
     })

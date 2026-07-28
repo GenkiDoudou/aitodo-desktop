@@ -10,7 +10,7 @@ import { isDueSmartList } from '@shared/smart-list'
 import type { CreateTaskDto, DeleteTaskOptions, Task, TaskListFilter } from '@shared/types'
 import type { TaskPriority } from '@shared/task-priority'
 import type { AiParseCategoryRef } from '@shared/ai-task-parser'
-import { buildQuickCreateTaskDtoFromDraft } from '@shared/quick-create-task'
+import { buildQuickCreateTaskDtoFromDraft, toParseCategories } from '@shared/quick-create-task'
 import { cloneTaskListFilter, isMatrixListFilter } from '@shared/task-list-filter'
 import { unwrapIpc } from '@/ipc/client'
 
@@ -307,7 +307,7 @@ export const useTaskStore = defineStore('tasks', () => {
     if (!trimmed) {
       throw new Error('title required')
     }
-    const cats = options?.parseCategories ?? []
+    const cats = toParseCategories(options?.parseCategories ?? [])
     const parsed = unwrapIpc(await window.api.app.parseTaskInput(trimmed, cats))
     const dto = buildQuickCreateTaskDtoFromDraft(parsed.draft, trimmed, cats, {
       categoryId: options?.categoryId ?? null,

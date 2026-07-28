@@ -19,9 +19,11 @@ import type { QuadrantLayoutOptions } from '@shared/quadrant-layout'
 import { AppError } from '@shared/types'
 import type { TaskViewRepository } from '../db/task-view-repository'
 import type { TaskRepository } from '../db/task-repository'
+import type { SyncOutbox } from '../db/sync-outbox'
+import { taskViewToSyncPayload } from '../sync/sync-apply'
 
 const LAYOUTS: TaskViewLayout[] = ['list', 'kanban', 'timeline', 'quadrant']
-const GROUP_BY: TaskGroupBy[] = ['custom', 'time', 'tag', 'priority', 'none']
+const GROUP_BY: TaskGroupBy[] = ['custom', 'time', 'tag', 'priority', 'status', 'none']
 const SORT_BY: TaskSortBy[] = [
   'custom',
   'time',
@@ -36,11 +38,26 @@ const SORT_BY: TaskSortBy[] = [
 export class TaskViewService {
   constructor(
     private readonly repo: TaskViewRepository,
-    private readonly taskRepo?: TaskRepository
+    private readonly taskRepo?: TaskRepository,
+    private readonly outbox?: SyncOutbox
   ) {}
 
   list(): TaskView[] {
     return this.repo.list()
+  }
+
+  private withTx<T>(fn: () => T): T {
+    return this.outbox ? this.outbox.runInTransaction(fn) : fn()
+  }
+
+  private enqueueUpsert(view: TaskView): void {
+    this.outbox?.record({
+      entityType: 'task_view',
+      entityId: view.id,
+      operation: 'upsert',
+      payload: taskViewToSyncPayload(view),
+      clientSyncVersion: 1
+    })
   }
 
   get(id: string): TaskView {
@@ -80,7 +97,10 @@ export class TaskViewService {
       createdAt: ts,
       updatedAt: ts
     }
-    this.repo.insert(view)
+    this.withTx(() => {
+      this.repo.insert(view)
+      this.enqueueUpsert(view)
+    })
     return this.get(view.id)
   }
 
@@ -121,13 +141,25 @@ export class TaskViewService {
       sortOrder: dto.sortOrder ?? existing.sortOrder,
       updatedAt: nowIso()
     }
-    this.repo.update(updated)
+    this.withTx(() => {
+      this.repo.update(updated)
+      this.enqueueUpsert(updated)
+    })
     return this.get(id)
   }
 
   delete(id: string): void {
     this.get(id)
-    this.repo.delete(id)
+    this.withTx(() => {
+      this.repo.delete(id)
+      this.outbox?.record({
+        entityType: 'task_view',
+        entityId: id,
+        operation: 'delete',
+        payload: { id, updatedAt: nowIso() },
+        clientSyncVersion: 1
+      })
+    })
   }
 
   /** 按模板名插入；重名则后缀 (2)、(3)... */
@@ -169,7 +201,7 @@ function normalizeKanbanMode(
   mode?: KanbanBoardMode | null
 ): KanbanBoardMode | null {
   if (layout !== 'kanban') return null
-  if (mode === 'status' || mode === 'priority') return mode
+  if (mode === 'status' || mode === 'priority' || mode === 'time' || mode === 'tag') return mode
   return 'group'
 }
 

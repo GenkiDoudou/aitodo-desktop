@@ -1,12 +1,14 @@
 import { app, BrowserWindow, dialog, Menu } from 'electron'
 import { join } from 'path'
-import { getDatabase, closeDatabase, DatabaseNotWritableError } from './db/database'
+import { getDatabase, closeDatabase, DatabaseNotWritableError, getActiveDataDir } from './db/database'
 import {
   registerIpcHandlers,
   pushAppMessageToRenderer,
   setSummarySchedulerService,
   setHolidayService
 } from './ipc/handlers'
+import { getSyncEngine } from './sync/sync-engine'
+import { getNotifyRuntime } from './notify/notify-runtime'
 import { TaskRepository } from './db/task-repository'
 import { AppMessageRepository } from './db/app-message-repository'
 import { TaskReminderRepository } from './db/task-reminder-repository'
@@ -17,6 +19,7 @@ import { ScheduledSummaryRepository } from './db/scheduled-summary-repository'
 import { ScheduledSummaryService } from './services/scheduled-summary-service'
 import { CategoryRepository } from './db/category-repository'
 import { TaskActivityRepository } from './db/task-activity-repository'
+import { SyncOutbox } from './db/sync-outbox'
 import { HolidayService } from './services/holiday-service'
 import { TaskActivityService } from './services/task-activity-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting } from './tray'
@@ -92,6 +95,20 @@ app.whenReady().then(() => {
   registerAttachmentProtocol()
   registerIpcHandlers(() => mainWindow)
   try {
+    const notify = getNotifyRuntime(
+      () => getDatabase(),
+      () => getActiveDataDir()
+    )
+    notify.setOnInAppPush(pushAppMessageToRenderer)
+    notify.ensureDeferredFlush()
+    getSyncEngine(
+      () => getDatabase(),
+      () => getActiveDataDir()
+    ).start()
+  } catch {
+    /* 同步引擎启动失败不阻塞应用 */
+  }
+  try {
     const db = getDatabase()
     new TaskActivityService(new TaskActivityRepository(db)).purgeByCurrentPolicy()
   } catch {
@@ -117,9 +134,10 @@ app.whenReady().then(() => {
 
   const summaryRepo = new ScheduledSummaryRepository(db)
   const categoryRepo = new CategoryRepository(db)
+  const syncOutbox = new SyncOutbox(db)
   summarySchedulerService = new SummarySchedulerService(
     summaryRepo,
-    new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo),
+    new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo, syncOutbox),
     messageService,
     pushAppMessageToRenderer
   )

@@ -3,6 +3,7 @@ import {
   detectNearestDockEdge,
   desiredStripAlongFromBounds,
   expandedWindowBounds,
+  peekExpandedBoundsNearStrip,
   resolveStripAlongEdge,
   stripBoundsForEdge,
   stripDimensionsForLabel,
@@ -70,6 +71,24 @@ describe('expandedWindowBounds', () => {
     const bounds = expandedWindowBounds({ x: 400, y: 300, width: 392, height: 520 }, workArea)
     expect(bounds.width).toBe(392)
     expect(bounds.height).toBe(520)
+  })
+})
+
+describe('peekExpandedBoundsNearStrip', () => {
+  const expanded = { x: 100, y: 100, width: 320, height: 420 }
+
+  it('anchors right-edge strip so window stays under the cursor', () => {
+    const strip = { x: 1904, y: 400, width: 16, height: 120 }
+    const bounds = peekExpandedBoundsNearStrip('right', strip, expanded, workArea)
+    expect(bounds.x + bounds.width).toBe(strip.x + strip.width)
+    expect(bounds.width).toBe(320)
+    expect(bounds.height).toBe(420)
+  })
+
+  it('anchors left-edge strip from outer edge', () => {
+    const strip = { x: 0, y: 400, width: 16, height: 120 }
+    const bounds = peekExpandedBoundsNearStrip('left', strip, expanded, workArea)
+    expect(bounds.x).toBe(strip.x)
   })
 })
 

@@ -7,6 +7,13 @@ describe('quick-create-task', () => {
     expect(refs[0]).toEqual({ id: '1', name: '工作', keywords: ['开会'] })
   })
 
+  it('toParseCategories returns structured-cloneable plain data', () => {
+    const reactiveLike = [{ id: '1', name: '工作', keywords: ['开会'] }]
+    const refs = toParseCategories(reactiveLike)
+    expect(() => structuredClone(refs)).not.toThrow()
+    expect(refs[0].keywords).not.toBe(reactiveLike[0].keywords)
+  })
+
   it('matches category by keyword', () => {
     const cats = [{ id: '1', name: '工作', keywords: ['开会'] }]
     const dto = buildQuickCreateTaskDto('下午开会', cats)

@@ -22,7 +22,7 @@ export interface WidgetApi {
     getInstance(id: string): Promise<IpcResult<WidgetInstance>>
     updateInstance(id: string, dto: UpdateWidgetInstanceDto): Promise<IpcResult<WidgetInstance>>
     hide(id: string): Promise<IpcResult<void>>
-    expand(id: string): Promise<IpcResult<void>>
+    expand(id: string, options?: { peek?: boolean }): Promise<IpcResult<void>>
     collapse(id: string): Promise<IpcResult<void>>
     onDisplayModeChanged(callback: (instance: WidgetInstance) => void): () => void
   }
