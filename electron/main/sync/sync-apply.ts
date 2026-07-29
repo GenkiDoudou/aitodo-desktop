@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3'
 import type { SyncPullChange, SyncEntityType } from '@shared/sync-protocol'
-import type { Category, Task, TaskView } from '@shared/types'
+import type { AppMessage, AppMessageKind, Category, Task, TaskView } from '@shared/types'
 import type { WidgetNote, WidgetNoteColor } from '@shared/widget-notes'
 import { WIDGET_NOTE_COLORS } from '@shared/widget-notes'
 import { CategoryRepository } from '../db/category-repository'
@@ -10,6 +10,7 @@ import { TaskReminderRepository } from '../db/task-reminder-repository'
 import { WidgetNoteRepository } from '../db/widget-note-repository'
 import { TaskViewRepository } from '../db/task-view-repository'
 import { ScheduledSummaryRepository } from '../db/scheduled-summary-repository'
+import { AppMessageRepository } from '../db/app-message-repository'
 import type { TaskReminderInput } from '@shared/task-reminder'
 import { applyAppSettingsPayload } from './app-settings-sync'
 import { parseFilterAstJson } from '@shared/task-filter-ast'
@@ -26,6 +27,7 @@ const APPLY_ORDER: SyncEntityType[] = [
   'task_reminder',
   'task_view',
   'scheduled_summary',
+  'app_message',
   'app_settings',
   'widget_note'
 ]
@@ -61,6 +63,10 @@ export function applyRemoteChange(
   change: SyncPullChange,
   opts: ApplyRemoteChangeOpts
 ): boolean {
+  // Echo / LWW 过滤：
+  // - 当 change.originDeviceId === 本机，并且 localSyncVersion >= payload.syncVersion 时，
+  //   认为该变更是“本机刚推过的回声”，不重复应用，避免重复 UI 写入。
+  // - 各实体 apply 函数内部还会做 updatedAt 的 LWW（服务端胜）。
   if (
     change.originDeviceId &&
     change.originDeviceId === opts.deviceId &&
@@ -89,6 +95,9 @@ export function applyRemoteChange(
       return true
     case 'scheduled_summary':
       applyScheduledSummary(db, change)
+      return true
+    case 'app_message':
+      applyAppMessage(db, change)
       return true
     case 'tag':
     case 'task_tag':
@@ -201,6 +210,45 @@ function applyScheduledSummary(db: Database.Database, change: SyncPullChange): v
   } else {
     repo.insert(summary)
   }
+}
+
+function applyAppMessage(db: Database.Database, change: SyncPullChange): void {
+  const repo = new AppMessageRepository(db)
+  const p = change.payload
+  const id = String(p.id ?? change.entityId)
+
+  if (change.operation === 'delete') {
+    repo.deleteById(id)
+    return
+  }
+
+  const sourceRaw = p.source
+  const source =
+    sourceRaw === 'task_reminder' || sourceRaw === 'scheduled_summary' ? sourceRaw : null
+  // 仅接受定时汇总结果（source=schedule_summary）：
+  // 任务提醒等其它通知来源在 Phase A 不做跨端同步，避免把“本机提醒”误当“云结果”同步。
+  if (source !== 'scheduled_summary') return
+
+  const kind: AppMessageKind = p.kind === 'activity' ? 'activity' : 'notification'
+  const message: AppMessage = {
+    id,
+    kind,
+    title: String(p.title ?? '定时汇总'),
+    body: (p.body as string | null) ?? null,
+    taskId: (p.taskId as string | null) ?? null,
+    source,
+    readAt: (p.readAt as string | null) ?? null,
+    createdAt: String(p.createdAt ?? change.serverUpdatedAt)
+  }
+
+  // readAt 也参与比较：避免多端未读状态在“读/未读”上发生回退。
+  const remoteUpdatedAt = String(p.updatedAt ?? p.readAt ?? message.createdAt)
+  const existing = repo.findById(id)
+  if (existing) {
+    const localUpdatedAt = existing.readAt ?? existing.createdAt
+    if (localUpdatedAt > remoteUpdatedAt) return
+  }
+  repo.upsertFromSync(message)
 }
 
 function applyCategory(db: Database.Database, change: SyncPullChange): void {

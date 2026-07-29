@@ -237,6 +237,8 @@ export class SyncEngine {
       return this.getStatus()
     }
 
+    // trigger 是“主线程定时/手动拉起”的统一入口。
+    // running 作为进程内互斥锁，避免 push/pull 交错导致 outbox 状态与 cursor 更新错乱。
     this.running = true
     const db = this.getDb()
     const prefs = this.getPreferences()
@@ -247,16 +249,20 @@ export class SyncEngine {
         this.client.setBaseUrl(state.serverBaseUrl)
       }
 
+      // 将本地已有但从未成功入队/推送过的实体补进 outbox（仍然受 prefs 开关过滤）。
       enqueueMissingLocalEntities(db, prefs, this.getDataDir())
 
+      // 先 Push 再 Pull：减少“本机刚写入但对端尚未看到”的窗口。
       await this.pushPending(db, state.deviceId, prefs)
 
       const doFull = this.needsFullReconcile || Boolean(opts?.fullReconcile)
       if (doFull) {
+        // fullReconcile：从最早 cursor 开始重放，用于登录首次/异常风险下的纠偏。
         await this.pullChanges(db, state.deviceId, '0', prefs)
         this.needsFullReconcile = false
       } else {
         const cursor = ensureSyncState(db).lastPulledCursor || '0'
+        // 增量 Pull：从上次记录的 cursor 继续分页拉取。
         await this.pullChanges(db, state.deviceId, cursor, prefs)
       }
 
@@ -282,6 +288,7 @@ export class SyncEngine {
     prefs: SyncPreferences
   ): Promise<void> {
     const outbox = new SyncOutbox(db)
+    // 根据本机偏好开关筛出允许同步的实体类型，避免“关闭同步”但 still 推队列里旧数据。
     const enabledTypes = SYNC_ENTITY_TYPES.filter((t) =>
       isSyncEntityEnabled(t, prefs)
     ) as SyncEntityType[]
@@ -309,6 +316,8 @@ export class SyncEngine {
       }
 
       for (const conflict of result.conflicts) {
+        // 冲突处理策略：直接按服务端 payload 应用，并标记本地变更丢弃。
+        // 该做法可避免重复冲突来回导致的死循环。
         outbox.markStatus(conflict.clientChangeId, 'discarded')
         applyRemoteChange(
           db,
@@ -370,6 +379,7 @@ export class SyncEngine {
         if (!isSyncEntityEnabled(change.entityType, prefs)) {
           continue
         }
+        // task 可能需要包含 deletedAt / syncVersion：用于 applyRemoteChange 的 LWW 与 echo 过滤。
         const localTask =
           change.entityType === 'task'
             ? new TaskRepository(db).findByIdIncludingDeleted(change.entityId)
@@ -382,6 +392,7 @@ export class SyncEngine {
         })
         appliedInPage += 1
         if (appliedInPage % 8 === 0) {
+          // 分页内每 8 条让出一次主线程，避免长同步占死 IPC。
           await yieldToMain()
         }
       }

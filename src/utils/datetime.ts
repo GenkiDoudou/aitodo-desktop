@@ -1,7 +1,20 @@
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 /** 与后端约定：本地 ISO 字符串 yyyy-MM-ddTHH:mm:ss */
 export const ISO_FORMAT = 'YYYY-MM-DDTHH:mm:ss'
+
+/** 展示用：按中国时区格式化为 YYYY/MM/DD HH:mm */
+export function formatChinaDateTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = dayjs(iso)
+  if (!d.isValid()) return iso
+  return d.tz('Asia/Shanghai').format('YYYY/MM/DD HH:mm')
+}
 
 export function toIso(value: string | Date | null | undefined): string | null {
   if (value == null || value === '') return null

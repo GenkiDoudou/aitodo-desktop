@@ -127,7 +127,7 @@
         <el-table-column prop="title" label="标题" min-width="140" />
         <el-table-column label="计划时间" min-width="160">
           <template #default="{ row }">
-            {{ row.deferredTo || row.fireAt }}
+            {{ formatChinaDateTime(row.deferredTo || row.fireAt) }}
           </template>
         </el-table-column>
         <el-table-column prop="source" label="来源" width="70" />
@@ -137,7 +137,11 @@
     <div class="settings-section__field settings-section__field--stack">
       <span class="settings-section__label">最近投递</span>
       <el-table :data="deliveries" size="small" empty-text="暂无记录">
-        <el-table-column prop="at" label="时间" min-width="140" />
+        <el-table-column label="时间" min-width="140">
+          <template #default="{ row }">
+            {{ formatChinaDateTime(row.at) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="event" label="事件" min-width="100">
           <template #default="{ row }">
             {{ row.event === 'task_reminder' ? '任务提醒' : '定时汇总' }}
@@ -166,6 +170,7 @@ import {
   type PendingNotifyItem
 } from '@shared/notification-config'
 import { unwrapIpc } from '@/ipc/client'
+import { formatChinaDateTime } from '@/utils/datetime'
 
 const config = reactive<NotificationConfig>(mergeNotificationConfig())
 const deliveries = ref<NotifyDeliveryRecord[]>([])
@@ -193,6 +198,10 @@ const whSummary = computed({
 })
 
 function setChannelEvent(which: 'iyuu' | 'webhook', event: NotifyEvent, on: boolean) {
+  // 生效渠道配置中：
+  // - activeChannel 决定“对外推送”走 IYUU 还是 Webhook；
+  // - iyuu.events / webhook.events 用来控制哪些 event 允许从该渠道发出。
+  // 这里的逻辑只更新 events 数组（不是切换 activeChannel）。
   const target = which === 'iyuu' ? config.iyuu : config.webhook
   const set = new Set(target.events)
   if (on) set.add(event)

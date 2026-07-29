@@ -35,6 +35,7 @@ import { AppMessageService } from '../services/app-message-service'
 import { KanbanGroupService } from '../services/kanban-group-service'
 import { TaskService } from '../services/task-service'
 import { SyncOutbox } from '../db/sync-outbox'
+import { readSyncPreferences } from '../db/sync-preferences-store'
 import { getSyncEngine, notifyAppSettingsChanged } from '../sync/sync-engine'
 import { TaskViewService } from '../services/task-view-service'
 import { TaskActivityService } from '../services/task-activity-service'
@@ -117,7 +118,9 @@ function services() {
     tags: tagRepo,
     categories: new CategoryService(categoryRepo, syncOutbox),
     kanbanGroups: new KanbanGroupService(kanbanRepo),
-    messages: new AppMessageService(messageRepo),
+    messages: new AppMessageService(messageRepo, syncOutbox, () =>
+      readSyncPreferences(getActiveDataDir())
+    ),
     scheduledSummaries: new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo, syncOutbox),
     taskViews: new TaskViewService(viewRepo, taskRepo, syncOutbox),
     taskActivities: activityService,
@@ -244,6 +247,13 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     })
   )
 
+  /**
+   * 通知/站内消息 IPC：
+   * 渲染进程仅透过 IPC 读写“消息面板/角标”相关数据，不直连数据库。
+   *
+   * - MESSAGES_*：消息列表、未读计数、标读等
+   * - SCHEDULED_SUMMARIES_*：定时汇总配置管理（含预览与 runNow）
+   */
   ipcMain.handle(
     IPC.MESSAGES_LIST,
     (_e, kind?: AppMessageKind, source?: AppMessageSource) =>

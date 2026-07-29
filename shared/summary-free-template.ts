@@ -6,6 +6,7 @@ import {
   resolveSectionTimeBounds,
   type ResolvedTimeBounds
 } from './summary-report-config'
+import { layoutSummaryTaskTree, summaryTreeIndent } from './summary-task-tree'
 import type dayjs from 'dayjs'
 
 export class SummaryTemplateError extends Error {
@@ -262,8 +263,11 @@ function validateSectionAttrs(attrs: Record<string, string>, line: number): void
     const t = attrs.time
     if (
       t !== 'today' &&
+      t !== 'yesterday' &&
       t !== 'this_week' &&
+      t !== 'last_week' &&
       t !== 'this_month' &&
+      t !== 'last_month' &&
       t !== 'last_7_days' &&
       t !== 'last_30_days' &&
       t !== 'since_last'
@@ -316,6 +320,15 @@ export interface FreeTemplateRenderContext {
     categoryIds?: string[]
     dueBetween?: { from: string; to: string } | null
   }) => Task[]
+  /**
+   * 补齐未匹配祖先（父子结构锚点）。
+   *
+   * 解释：
+   * - `fetchTasks(...)` 仍然只负责“当前 section 命中筛选”的任务集合；
+   * - `layoutSummaryTaskTree(...)` 会调用该回调，把命中任务的祖先补齐成结构锚点行；
+   * - 锚点行只用于层级展示，不改变 count / limit 统计口径。
+   */
+  resolveById?: (id: string) => Task | null
 }
 
 function formatField(task: Task | null, name: string, extras: { count: number; sectionTitle: string; categoryNames: Map<string, string> }): string {
@@ -382,31 +395,55 @@ function renderNodes(
         categoryIds,
         dueBetween
       })
+      // hideEmpty：如果命中集合为空，则不输出 section（即使存在潜在祖先锚点）。
       if (!tasks.length && spec.hideEmpty) {
         continue
       }
-      const sectionScopeBase = { task: null as Task | null, count: tasks.length, sectionTitle: spec.title }
-      out += renderSectionBody(node.children, ctx, sectionScopeBase, tasks)
+      const { rows, matchedCount } = layoutSummaryTaskTree(tasks, {
+        resolveById: ctx.resolveById ?? (() => null)
+      })
+      // matchedCount/count 口径只基于命中任务；锚点父行不会占名额。
+      if (!matchedCount && spec.hideEmpty) {
+        continue
+      }
+      const sectionScopeBase = {
+        task: null as Task | null,
+        count: matchedCount,
+        sectionTitle: spec.title
+      }
+      out += renderSectionBody(node.children, ctx, sectionScopeBase, rows)
     }
   }
   return out
+}
+
+function prefixDepth(block: string, depth: number): string {
+  const pad = summaryTreeIndent(depth)
+  if (!pad || !block) return block
+  const endsWithNewline = block.endsWith('\n')
+  const lines = block.split('\n')
+  if (endsWithNewline) lines.pop()
+  const prefixed = lines.map((line) => (line.length ? pad + line : line)).join('\n')
+  return endsWithNewline ? `${prefixed}\n` : prefixed
 }
 
 function renderSectionBody(
   nodes: TemplateNode[],
   ctx: FreeTemplateRenderContext,
   scope: { task: Task | null; count: number; sectionTitle: string },
-  tasks: Task[]
+  rows: ReturnType<typeof layoutSummaryTaskTree>['rows']
 ): string {
   let out = ''
   for (const node of nodes) {
     if (node.type === 'tasks') {
-      for (const task of tasks) {
-        out += renderNodes(node.children, ctx, {
-          task,
+      // #tasks：按树形行序列展开；每行都要对自定义模板文本做“深度缩进前缀”。
+      for (const row of rows) {
+        const chunk = renderNodes(node.children, ctx, {
+          task: row.task,
           count: scope.count,
           sectionTitle: scope.sectionTitle
         })
+        out += prefixDepth(chunk, row.depth)
       }
       continue
     }

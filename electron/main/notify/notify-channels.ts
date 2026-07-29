@@ -5,8 +5,18 @@ export interface ChannelSendResult {
   message: string
 }
 
+/** 可注入 fetch，便于单测 mock，不依赖真实外网。 */
 export type FetchLike = typeof fetch
 
+/**
+ * IYUU 直连外发（本机或服务端代发最终都会落到类似路径）。
+ *
+ * 约定：
+ * - token 为空直接失败，不发请求；
+ * - 使用 form-urlencoded：`text`=标题、`desp`=正文；
+ * - 业务错误看 HTTP 状态或 JSON `errcode !== 0`；
+ * - 网络/超时一律映射为 `{ ok:false, message }`，由 Dispatcher 写本地投递日志。
+ */
 export async function sendIyuu(
   token: string,
   payload: NotifyDispatchPayload,
@@ -36,7 +46,7 @@ export async function sendIyuu(
       errcode = json.errcode
       if (json.errmsg) errmsg = json.errmsg
     } catch {
-      /* non-json */
+      /* IYUU 偶发非 JSON 文本；仍用原始 text 作为失败信息 */
     }
     if (!res.ok || (errcode !== undefined && errcode !== 0)) {
       return { ok: false, message: errmsg || `HTTP ${res.status}` }
@@ -50,6 +60,12 @@ export async function sendIyuu(
   }
 }
 
+/**
+ * Webhook 直连外发：固定 POST JSON。
+ *
+ * Body 字段与设置页说明一致：title / body / event / entityId / firedAt。
+ * 自定义 headers 由用户配置透传（勿在此写入 Authorization 之外的密钥硬编码）。
+ */
 export async function sendWebhook(
   url: string,
   headers: Record<string, string> | undefined,

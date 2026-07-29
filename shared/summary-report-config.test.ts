@@ -24,6 +24,21 @@ describe('summary-report-config', () => {
     expect(describeReportConfig(config)).toContain('本周已完成')
   })
 
+  it('resolveSectionTimeBounds for yesterday last_week last_month', () => {
+    const now = dayjs('2026-07-08T10:00:00') // Wednesday
+    const y = resolveSectionTimeBounds('yesterday', 'daily', now, null)
+    expect(y.from).toBe('2026-07-07T00:00:00')
+    expect(y.to).toBe('2026-07-07T23:59:59')
+
+    const lw = resolveSectionTimeBounds('last_week', 'daily', now, null)
+    expect(lw.from).toBe('2026-06-29T00:00:00')
+    expect(lw.to).toBe('2026-07-05T23:59:59')
+
+    const lm = resolveSectionTimeBounds('last_month', 'daily', now, null)
+    expect(lm.from).toBe('2026-06-01T00:00:00')
+    expect(lm.to).toBe('2026-06-30T23:59:59')
+  })
+
   it('resolveSectionTimeBounds for this_week uses monday start', () => {
     const now = dayjs('2026-07-03T10:00:00')
     const bounds = resolveSectionTimeBounds('this_week', 'daily', now, null)
@@ -138,5 +153,67 @@ describe('summary-report-config', () => {
     const bounds = localDayBounds(dayjs('2026-07-08T15:30:00'))
     expect(bounds.from).toBe('2026-07-08T00:00:00')
     expect(bounds.to).toBe('2026-07-08T23:59:59')
+  })
+
+  it('buildSectionTasksSummaryText indents child under unmatched parent', () => {
+    const parent: Task = {
+      id: 'p',
+      title: '父任务',
+      description: null,
+      status: 'TODO',
+      priority: 4,
+      categoryId: 'c1',
+      parentId: null,
+      startAt: null,
+      dueAt: null,
+      remindAt: null,
+      remindFiredAt: null,
+      completedAt: null,
+      sortOrder: 0,
+      createdAt: '2026-07-01T00:00:00',
+      updatedAt: '2026-07-01T00:00:00',
+      deletedAt: null,
+      syncVersion: 0,
+      kanbanGroupId: null,
+      triagedAt: null
+    }
+    const child: Task = {
+      ...parent,
+      id: 'c',
+      title: '子任务',
+      status: 'DONE',
+      parentId: 'p',
+      completedAt: '2026-07-07T08:00:00'
+    }
+    const section = createReportSectionV2({
+      title: '已完成',
+      taskFilter: 'completed',
+      timeScope: 'today',
+      render: {
+        style: 'bullets',
+        showCount: true,
+        showDueAt: false,
+        showCompletedAt: true,
+        limit: null,
+        hideEmptySection: false
+      },
+      group: { by: 'none', emptyGroups: 'hide' }
+    })
+    const text = buildReportSummaryText(
+      [
+        {
+          section,
+          bounds: { from: 'a', to: 'b', label: '今天' },
+          tasks: [child]
+        }
+      ],
+      new Map([['c1', '工作']]),
+      (id) => (id === 'p' ? parent : null)
+    )
+    expect(text).toContain('· 1 项')
+    expect(text).toMatch(/- 父任务/)
+    expect(text).toMatch(/ {4}- 子任务/)
+    expect(text).toContain('完成 2026-07-07 08:00')
+    expect(text.indexOf('父任务')).toBeLessThan(text.indexOf('子任务'))
   })
 })

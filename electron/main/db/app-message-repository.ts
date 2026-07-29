@@ -110,4 +110,34 @@ export class AppMessageRepository {
       .run(readAt)
     return result.changes
   }
+
+  upsertFromSync(message: AppMessage): void {
+    this.db
+      .prepare(
+        `INSERT INTO app_messages (id, kind, title, body, task_id, source, read_at, created_at)
+         VALUES (@id, @kind, @title, @body, @taskId, @source, @readAt, @createdAt)
+         ON CONFLICT(id) DO UPDATE SET
+           kind = excluded.kind,
+           title = excluded.title,
+           body = excluded.body,
+           task_id = excluded.task_id,
+           source = excluded.source,
+           read_at = excluded.read_at,
+           created_at = excluded.created_at`
+      )
+      .run({
+        id: message.id,
+        kind: message.kind,
+        title: message.title,
+        body: message.body,
+        taskId: message.taskId,
+        source: message.source,
+        readAt: message.readAt,
+        createdAt: message.createdAt
+      })
+  }
+
+  deleteById(id: string): void {
+    this.db.prepare(`DELETE FROM app_messages WHERE id = ?`).run(id)
+  }
 }

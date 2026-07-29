@@ -51,6 +51,13 @@ export interface SyncOutboxRecordInput {
 
 /**
  * 本地出站队列：与业务写同事务入队，供 SyncEngine Push。
+ *
+ * local_changes 表里保存的不是“最终业务数据”，而是“待推送的变更快照”。
+ * 状态含义：
+ * - pending：等待 push
+ * - pushed：服务端已接收
+ * - rejected：服务端显式拒绝（重试无意义）
+ * - discarded：冲突时丢弃本地变更
  */
 export class SyncOutbox {
   constructor(private readonly db: Database.Database) {}
@@ -60,6 +67,8 @@ export class SyncOutbox {
   }
 
   record(input: SyncOutboxRecordInput): string {
+    // record 由业务层/服务层在写入主库的同事务中调用，保证“数据写入 & outbox 入队”一致。
+    // 返回 id 仅用于上层追踪/冲突回写，不要求可读语义。
     const id = uuidv4()
     const ts = nowIso()
     this.db

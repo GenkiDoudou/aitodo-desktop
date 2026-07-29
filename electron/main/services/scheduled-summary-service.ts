@@ -29,6 +29,8 @@ import { chatCompletion } from './llm-client'
 import { readLlmConfig } from '../data-path'
 
 function summarySyncPayload(summary: ScheduledSummary): Record<string, unknown> {
+  // Sync outbox 里 payload 的字段命名需要与 shared/sync 协议约定一致（camelCase）。
+  // 本 payload 目前用于同步 `scheduled_summary` 配置与 lastSentAt 门禁相关字段。
   return {
     id: summary.id,
     name: summary.name,
@@ -56,10 +58,14 @@ export class ScheduledSummaryService {
   ) {}
 
   private withTx<T>(fn: () => T): T {
+    // Local-First：业务写入与 outbox 入队尽量保持同事务语义；
+    // 当 outbox 未注入（本机纯本地模式）时退化为普通函数调用。
     return this.outbox ? this.outbox.runInTransaction(fn) : fn()
   }
 
   private enqueueUpsert(summary: ScheduledSummary): void {
+    // 只有当 SyncEngine 最终判定该实体类型在 prefs 开关内时，
+    // 才会在 push 阶段真正发往服务端；这里仅把“需要同步的变化”入队。
     this.outbox?.record({
       entityType: 'scheduled_summary',
       entityId: summary.id,
@@ -183,6 +189,7 @@ export class ScheduledSummaryService {
   /** 生成并返回汇总正文（供调度器发送 / 预览） */
   async buildSummaryBody(summary: ScheduledSummary, now = dayjs()): Promise<string> {
     const reportConfig = normalizeReportConfigV2(summary.reportConfig)
+    // mode === 'template' 使用用户自由模板渲染；否则按表单区块（sections）逐段渲染。
     const raw =
       reportConfig.mode === 'template'
         ? this.buildTemplateBody(summary, reportConfig.freeTemplate.body, now)
@@ -195,10 +202,12 @@ export class ScheduledSummaryService {
     try {
       const llmConfig = readLlmConfig()
       const prompt = summary.promptText?.trim() || DEFAULT_SUMMARY_PROMPT
+      // LLM 仅做“润色/改写”，渲染输入永远来自本地 raw（含树形任务展示）。
       const userContent = `汇总名称：${summary.name}\n\n任务汇总数据：\n${raw}`
       return await chatCompletion(llmConfig, prompt, userContent)
     } catch (err) {
       console.error('[ScheduledSummaryService] LLM failed, fallback to raw', err)
+      // LLM 失败不影响业务：回退为本地 raw，保证至少有可读正文。
       return `${raw}\n\n（大模型优化失败，已展示原始列表）`
     }
   }
@@ -249,6 +258,11 @@ export class ScheduledSummaryService {
     reportConfig: ReturnType<typeof normalizeReportConfigV2>,
     now: dayjs.Dayjs
   ): string {
+    // 表单模式：对每个 enabled section：
+    // 1) 解析时间窗 bounds（受 lastSentAt 门禁影响）
+    // 2) 解析分类范围 categoryIds
+    // 3) 取命中任务 tasks
+    // 4) buildReportSummaryText 输出最终文本（内部会把 tasks 转为“树形行”，并补齐未命中祖先）
     const enabledSections = reportConfig.sections.filter((section) => section.enabled)
     if (!enabledSections.length) {
       return '未启用任何汇总区块，请在设置中配置报告内容。'
@@ -278,10 +292,16 @@ export class ScheduledSummaryService {
       return { section, bounds, tasks }
     })
 
-    return buildReportSummaryText(sectionResults, categoryNames)
+    return buildReportSummaryText(sectionResults, categoryNames, (id) =>
+      this.taskRepo.findById(id)
+    )
   }
 
   private buildTemplateBody(summary: ScheduledSummary, body: string, now: dayjs.Dayjs): string {
+    // 自由模板模式：把用户提供的 DSL 映射为：
+    // - #section -> resolveSectionTimeBounds + fetchTasks
+    // - #tasks -> layoutSummaryTaskTree 的树序行展开
+    // 并通过 resolveById 把命中任务的祖先补齐为结构锚点。
     if (!body.trim()) {
       throw new AppError('VALIDATION_ERROR', '自由模板内容为空')
     }
@@ -323,7 +343,9 @@ export class ScheduledSummaryService {
           return this.taskRepo.listForSummaryReport(status, bounds.from, bounds.to, ids, {
             dueBetween: dueBetween ?? null
           })
-        }
+        },
+        // 关键：提供 findById 供 layoutSummaryTaskTree 补齐未命中父任务锚点。
+        resolveById: (id) => this.taskRepo.findById(id)
       })
     } catch (err) {
       if (err instanceof SummaryTemplateError) {

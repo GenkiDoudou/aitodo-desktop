@@ -6,7 +6,16 @@ import { TaskRepository } from '../db/task-repository'
 import { ScheduledSummaryRepository } from '../db/scheduled-summary-repository'
 import { readDeferredNotifies } from '../db/notification-deferred-store'
 
-/** 本机即将触发 + 免打扰延后 */
+/**
+ * 本机「待发送」视图数据源（不依赖登录）。
+ *
+ * 三类：
+ * 1) upcoming 任务提醒：remindAt 仍在未来；
+ * 2) upcoming 定时汇总：今日/本周期尚未到点（且 shouldSendSummaryNow 为 false）；
+ * 3) deferred：免打扰延后队列（deferredTo 到达后由 NotifyRuntime.flushDeferred 冲刷）。
+ *
+ * 仅用于 UI 展示，不改变真实调度逻辑。
+ */
 export function listLocalPending(db: Database.Database, dataDir: string): PendingNotifyItem[] {
   const out: PendingNotifyItem[] = []
   const now = dayjs()
@@ -32,6 +41,7 @@ export function listLocalPending(db: Database.Database, dataDir: string): Pendin
 
   for (const s of new ScheduledSummaryRepository(db).list()) {
     if (!s.enabled) continue
+    // 已到点可发的汇总不进入「即将」列表（留给调度器真实发送）。
     if (shouldSendSummaryNow(s, now)) continue
     const [hh, mm] = s.sendTime.split(':').map(Number)
     if (!Number.isFinite(hh) || !Number.isFinite(mm)) continue
@@ -73,6 +83,12 @@ export function listLocalPending(db: Database.Database, dataDir: string): Pendin
   return out.sort((a, b) => a.fireAt.localeCompare(b.fireAt))
 }
 
+/**
+ * 合并本机 + 服务端 pending。
+ *
+ * 去重键：event|entityId|fireAt。
+ * 同键时后写入的 server 项会覆盖 local（已登录时优先展示服务端队列态）。
+ */
 export function mergePendingLists(
   local: PendingNotifyItem[],
   server: PendingNotifyItem[]

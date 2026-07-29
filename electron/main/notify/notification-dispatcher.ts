@@ -51,6 +51,14 @@ export class NotificationDispatcher {
   }
 
   async dispatch(input: NotifyDispatchInput): Promise<NotifyDeliveryRecord[]> {
+    // dispatch 的职责边界：
+    // - 先把“通知内容”构造成统一 payload（event/entityId/firedAt）。
+    // - 决策系统托盘是否展示（cfg.systemTrayEnabled）。
+    // - 若允许外发，则按：
+    //   1) 登录状态 relay（可选）
+    //   2) 免打扰（quiet hours）延后入 deferred queue
+    //   3) activeChannelReady 选择 IYUU / Webhook
+    //   4) 调用 sendIyuu / sendWebhook 并记录投递日志
     const cfg = this.getConfig()
     const fireAt = input.fireAt?.trim() || nowIso()
     const payload: NotifyDispatchPayload = {
@@ -80,6 +88,7 @@ export class NotificationDispatcher {
     if (inQuietHours(now, cfg.quietHours)) {
       const end = quietEnd(now, cfg.quietHours)
       if (end) {
+        // quiet hours 期间不直接投递：写 deferred 队列，等待到点再 flush。
         upsertDeferredNotify(this.deps.getDataDir(), {
           id: uuidv4(),
           event: input.event,
@@ -97,6 +106,7 @@ export class NotificationDispatcher {
       try {
         const handled = await this.deps.relayIfLoggedIn(payload)
         if (handled) {
+          // 已由 relay 走完外发：本机不再继续直连渠道。
           return records
         }
       } catch (err) {

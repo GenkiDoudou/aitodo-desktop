@@ -5,6 +5,7 @@ import { applyRemoteChange, sortPullChanges } from './sync-apply'
 import { isServerWinningConflict } from '@shared/sync-protocol'
 import { runMigrations } from '../db/migrations'
 import { WidgetNoteRepository } from '../db/widget-note-repository'
+import { AppMessageRepository } from '../db/app-message-repository'
 
 describe('sync-apply order and LWW', () => {
   it('sorts pull changes by entity dependency then revision', () => {
@@ -97,5 +98,69 @@ describe('applyRemoteChange widget_note', () => {
       { deviceId: 'dev-1' }
     )
     expect(repo.findNote('n1')).toBeNull()
+  })
+})
+
+describe('applyRemoteChange app_message', () => {
+  let db: Database.Database
+
+  beforeEach(() => {
+    db = new Database(':memory:')
+    runMigrations(db)
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('upserts scheduled_summary messages and ignores other sources', () => {
+    applyRemoteChange(
+      db,
+      {
+        revision: 1,
+        entityType: 'app_message',
+        entityId: 'm1',
+        operation: 'upsert',
+        payload: {
+          id: 'm1',
+          kind: 'notification',
+          title: '定时汇总：日报',
+          body: '正文A',
+          taskId: null,
+          source: 'scheduled_summary',
+          readAt: null,
+          createdAt: '2026-07-01T00:00:00',
+          updatedAt: '2026-07-01T00:00:00'
+        },
+        serverUpdatedAt: '2026-07-01T00:00:00Z',
+        originDeviceId: null
+      },
+      { deviceId: 'dev-1' }
+    )
+    const repo = new AppMessageRepository(db)
+    expect(repo.findById('m1')?.body).toBe('正文A')
+
+    applyRemoteChange(
+      db,
+      {
+        revision: 2,
+        entityType: 'app_message',
+        entityId: 'm2',
+        operation: 'upsert',
+        payload: {
+          id: 'm2',
+          kind: 'notification',
+          title: '任务提醒',
+          body: 'x',
+          source: 'task_reminder',
+          createdAt: '2026-07-01T00:00:00',
+          updatedAt: '2026-07-01T00:00:00'
+        },
+        serverUpdatedAt: '2026-07-01T00:00:00Z',
+        originDeviceId: null
+      },
+      { deviceId: 'dev-1' }
+    )
+    expect(repo.findById('m2')).toBeNull()
   })
 })

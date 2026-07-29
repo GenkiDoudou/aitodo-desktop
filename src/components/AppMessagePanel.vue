@@ -111,17 +111,21 @@
 import { computed, onMounted, ref } from 'vue'
 import { Bell, Timer } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import dayjs from 'dayjs'
 import type { AppMessage, AppMessageKind } from '@shared/types'
 import type { PendingNotifyItem } from '@shared/notification-config'
 import { useMessageStore } from '@/stores/message-store'
 import { unwrapIpc } from '@/ipc/client'
+import { formatChinaDateTime } from '@/utils/datetime'
 
 const emit = defineEmits<{
   'open-task': [string]
 }>()
 
 const messageStore = useMessageStore()
+// activeTab 控制当前面板渲染哪一类消息：
+// - notification：站内通知（kind=notification）
+// - activity：动态（kind=activity）
+// - pending：未最终确认/待投递列表（不来自 messageStore，而来自 notify IPC）
 const activeTab = ref<AppMessageKind | 'pending'>('notification')
 const pendingItems = ref<PendingNotifyItem[]>([])
 const pendingLoading = ref(false)
@@ -139,8 +143,7 @@ const panelLoading = computed(() =>
 )
 
 function formatDate(iso: string) {
-  const d = dayjs(iso)
-  return d.isValid() ? d.format('YYYY/MM/DD HH:mm') : iso
+  return formatChinaDateTime(iso) || iso
 }
 
 function pendingKindLabel(kind: string) {

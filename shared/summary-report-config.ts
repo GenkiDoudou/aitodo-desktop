@@ -3,6 +3,7 @@ import type { Task } from './types'
 import type { SummaryScheduleType } from './scheduled-summary'
 import { summaryPeriodBounds } from './scheduled-summary'
 import { endOfWeekSunday, startOfWeekMonday } from './smart-list'
+import { layoutSummaryTaskTree, summaryTreeIndent } from './summary-task-tree'
 
 /** 区块统计的任务范围（V1 / V2 status） */
 export type SummaryTaskFilter = 'completed' | 'pending' | 'overdue'
@@ -11,8 +12,11 @@ export type SummaryTaskFilter = 'completed' | 'pending' | 'overdue'
 export type SummaryTimeScope =
   | 'since_last'
   | 'today'
+  | 'yesterday'
   | 'this_week'
+  | 'last_week'
   | 'this_month'
+  | 'last_month'
   | 'last_7_days'
   | 'last_30_days'
 
@@ -113,8 +117,11 @@ export const SUMMARY_TASK_FILTER_LABELS: Record<SummaryTaskFilter, string> = {
 export const SUMMARY_TIME_SCOPE_LABELS: Record<SummaryTimeScope, string> = {
   since_last: '自上次发送以来',
   today: '今天',
+  yesterday: '昨天',
   this_week: '本周',
+  last_week: '上周',
   this_month: '本月',
+  last_month: '上月',
   last_7_days: '最近 7 天',
   last_30_days: '最近 30 天'
 }
@@ -320,8 +327,11 @@ function isTimeScope(value: unknown): value is SummaryTimeScope {
   return (
     value === 'since_last' ||
     value === 'today' ||
+    value === 'yesterday' ||
     value === 'this_week' ||
+    value === 'last_week' ||
     value === 'this_month' ||
+    value === 'last_month' ||
     value === 'last_7_days' ||
     value === 'last_30_days'
   )
@@ -512,18 +522,42 @@ export function resolveSectionTimeBounds(
         to,
         label: SUMMARY_TIME_SCOPE_LABELS.today
       }
+    case 'yesterday': {
+      const y = now.subtract(1, 'day')
+      return {
+        from: y.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+        to: y.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+        label: SUMMARY_TIME_SCOPE_LABELS.yesterday
+      }
+    }
     case 'this_week':
       return {
         from: startOfWeekMonday(now).format('YYYY-MM-DDTHH:mm:ss'),
         to,
         label: SUMMARY_TIME_SCOPE_LABELS.this_week
       }
+    case 'last_week': {
+      const lastMon = startOfWeekMonday(now).subtract(7, 'day')
+      return {
+        from: lastMon.format('YYYY-MM-DDTHH:mm:ss'),
+        to: lastMon.add(6, 'day').endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+        label: SUMMARY_TIME_SCOPE_LABELS.last_week
+      }
+    }
     case 'this_month':
       return {
         from: now.startOf('month').format('YYYY-MM-DDTHH:mm:ss'),
         to,
         label: SUMMARY_TIME_SCOPE_LABELS.this_month
       }
+    case 'last_month': {
+      const prev = now.subtract(1, 'month')
+      return {
+        from: prev.startOf('month').format('YYYY-MM-DDTHH:mm:ss'),
+        to: prev.endOf('month').format('YYYY-MM-DDTHH:mm:ss'),
+        label: SUMMARY_TIME_SCOPE_LABELS.last_month
+      }
+    }
     case 'last_7_days':
       return {
         from: now.subtract(7, 'day').startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
@@ -611,34 +645,77 @@ export function buildSectionTasksSummaryText(
   section: SummaryReportSectionV2,
   tasks: Task[],
   categoryNames: Map<string, string>,
-  bounds: ResolvedTimeBounds
+  bounds: ResolvedTimeBounds,
+  /**
+   * 用于补齐“未命中父任务”的锚点信息。
+   * 只有父子结构需要时才会被调用；如果不传，默认不补齐。
+   */
+  resolveById: (id: string) => Task | null = () => null
 ): string | null {
   const sorted = sortSectionTasks(tasks, section.sort)
-  const limited =
-    section.render.limit != null && section.render.limit > 0
-      ? sorted.slice(0, section.render.limit)
-      : sorted
+  const limit =
+    section.render.limit != null && section.render.limit > 0 ? section.render.limit : null
 
-  if (!limited.length && section.render.hideEmptySection) {
+  if (!sorted.length && section.render.hideEmptySection) {
     return null
   }
 
-  const countPart = section.render.showCount ? ` · ${limited.length} 项` : ''
-  const header = `【${section.title}】${bounds.label} · ${SUMMARY_TASK_FILTER_LABELS[section.query.status]}${countPart}`
-  if (!limited.length) {
-    return `${header}\n暂无相关任务。`
+  /**
+   * 分组含义：
+   * - group.by === 'none'：不按分类/清单分桶，直接在同一层展示树；
+   * - group.by === 'category' | 'list'：先按 matched 任务分桶（不含锚点），再在每个桶内树形排布；
+   *   对于父锚点：会被注入到“包含其命中子任务的桶”里，避免父任务落空导致阅读断裂。
+   */
+  const groupBy = section.group.by
+  const lines: string[] = []
+
+  /**
+   * 把 layoutSummaryTaskTree 的行序列渲染为最终文案行。
+   *
+   * matched=true 的行：
+   * - 使用 formatTaskLineV2，保留完成时间/截止等“命中后缀”。
+   *
+   * matched=false 的行（祖先锚点）：
+   * - 只输出标题 task.title，不带后缀，避免将“父任务未命中”误读为命中结果。
+   */
+  const pushRows = (rows: ReturnType<typeof layoutSummaryTaskTree>['rows'], basePad: string) => {
+    rows.forEach((row, index) => {
+      const indent = `${basePad}${summaryTreeIndent(row.depth)}`
+      const prefix = bulletPrefix(section.render.style, index + 1)
+      if (row.matched) {
+        lines.push(`${indent}${prefix} ${formatTaskLineV2(row.task, section.render)}`)
+      } else {
+        lines.push(`${indent}${prefix} ${row.task.title}`)
+      }
+    })
   }
 
-  const lines: string[] = [header]
-  const groupBy = section.group.by
-
   if (groupBy === 'none') {
-    limited.forEach((task, index) => {
-      lines.push(`  ${bulletPrefix(section.render.style, index + 1)} ${formatTaskLineV2(task, section.render)}`)
-    })
+    // count / limit 的统计口径只基于 matched（命中集合），layoutSummaryTaskTree 内部已处理“锚点不占名额”。
+    const { rows, matchedCount } = layoutSummaryTaskTree(sorted, { limit, resolveById })
+    const countPart = section.render.showCount ? ` · ${matchedCount} 项` : ''
+    const header = `【${section.title}】${bounds.label} · ${SUMMARY_TASK_FILTER_LABELS[section.query.status]}${countPart}`
+    if (!matchedCount) {
+      if (section.render.hideEmptySection) return null
+      return `${header}\n暂无相关任务。`
+    }
+    lines.push(header)
+    pushRows(rows, '  ')
     return lines.join('\n')
   }
 
+  // 先按排序后的 matched 任务截断 limit，再按分类/清单分桶；分桶后组内树形排布。
+  const limited =
+    limit != null ? sorted.slice(0, limit) : sorted
+  const matchedCount = limited.length
+  const countPart = section.render.showCount ? ` · ${matchedCount} 项` : ''
+  const header = `【${section.title}】${bounds.label} · ${SUMMARY_TASK_FILTER_LABELS[section.query.status]}${countPart}`
+  if (!matchedCount) {
+    if (section.render.hideEmptySection) return null
+    return `${header}\n暂无相关任务。`
+  }
+
+  lines.push(header)
   const byCategory = new Map<string, Task[]>()
   for (const task of limited) {
     const key = task.categoryId ?? '__none__'
@@ -651,18 +728,16 @@ export function buildSectionTasksSummaryText(
     const label = catKey === '__none__' ? '未分类' : categoryNames.get(catKey) ?? '未分类'
     const countLabel = section.render.showCount ? `（${list.length}）` : ''
     lines.push(`  · ${label}${countLabel}`)
-    list.forEach((task, index) => {
-      lines.push(
-        `    ${bulletPrefix(section.render.style, index + 1)} ${formatTaskLineV2(task, section.render)}`
-      )
-    })
+    const { rows } = layoutSummaryTaskTree(list, { resolveById })
+    pushRows(rows, '    ')
   }
   return lines.join('\n')
 }
 
 export function buildReportSummaryText(
   sections: Array<{ section: SummaryReportSectionV2; bounds: ResolvedTimeBounds; tasks: Task[] }>,
-  categoryNames: Map<string, string>
+  categoryNames: Map<string, string>,
+  resolveById: (id: string) => Task | null = () => null
 ): string {
   const enabled = sections.filter((item) => item.section.enabled)
   if (!enabled.length) {
@@ -671,7 +746,7 @@ export function buildReportSummaryText(
 
   const parts = enabled
     .map(({ section, bounds, tasks }) =>
-      buildSectionTasksSummaryText(section, tasks, categoryNames, bounds)
+      buildSectionTasksSummaryText(section, tasks, categoryNames, bounds, resolveById)
     )
     .filter((part): part is string => part != null)
 

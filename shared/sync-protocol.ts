@@ -1,4 +1,13 @@
-/** 桌面 ↔ Sync Server 增量同步契约（方案 A Outbox） */
+/**
+ * 桌面 ↔ Sync Server 增量同步契约（方案 A：本地 Outbox）。
+ *
+ * 流程概览：
+ * 1) 业务写库时同事务写入 local_changes（pending）；
+ * 2) SyncEngine.push 批量上传，按 accepted/rejected/conflicts 更新状态；
+ * 3) SyncEngine.pull 按 cursor 拉 changelog，经 sync-apply 写入本机。
+ *
+ * 实体类型与设置页开关的映射见 sync-entity-filter.ts。
+ */
 
 export const SYNC_ENTITY_TYPES = [
   'category',
@@ -9,13 +18,15 @@ export const SYNC_ENTITY_TYPES = [
   'widget_note',
   'app_settings',
   'task_view',
-  'scheduled_summary'
+  'scheduled_summary',
+  'app_message'
 ] as const
 
 export type SyncEntityType = (typeof SYNC_ENTITY_TYPES)[number]
 
 export type SyncOperation = 'upsert' | 'delete'
 
+/** Outbox 行状态：见 SyncOutbox 类注释 */
 export type SyncOutboxStatus = 'pending' | 'pushed' | 'discarded' | 'rejected'
 
 export interface SyncChangeEnvelope {
@@ -64,6 +75,7 @@ export interface SyncPullChange {
   operation: SyncOperation
   payload: Record<string, unknown>
   serverUpdatedAt: string
+  /** 产生该变更的设备；与本机 deviceId 相同且版本不新时可作回声过滤 */
   originDeviceId: string | null
 }
 
@@ -92,7 +104,7 @@ export interface SyncLoginResponse {
 
 import type { SyncPreferences } from './sync-preferences'
 
-/** 设置页展示的同步状态（桌面侧） */
+/** 设置页展示的同步状态（桌面侧聚合，非服务端原样） */
 export interface DesktopSyncStatus {
   loggedIn: boolean
   username: string | null

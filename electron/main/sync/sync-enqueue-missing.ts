@@ -6,6 +6,7 @@ import { TaskRepository } from '../db/task-repository'
 import { WidgetNoteRepository } from '../db/widget-note-repository'
 import { TaskViewRepository } from '../db/task-view-repository'
 import { ScheduledSummaryRepository } from '../db/scheduled-summary-repository'
+import { AppMessageRepository } from '../db/app-message-repository'
 import { SyncOutbox } from '../db/sync-outbox'
 import { readUiPreferencesSnapshot } from '../db/ui-preferences-snapshot'
 import { enqueueAppSettingsUpsert, APP_SETTINGS_ENTITY_ID } from './app-settings-sync'
@@ -125,6 +126,37 @@ export function enqueueMissingLocalEntities(
             lastSentAt: s.lastSentAt,
             createdAt: s.createdAt,
             updatedAt: s.updatedAt
+          },
+          clientSyncVersion: 1
+        })
+        enqueued += 1
+      }
+    }
+
+    if (isSyncEntityEnabled('app_message', prefs)) {
+      // app_message 只同步“定时汇总的站内通知正文”，不同步任务提醒等其它消息来源。
+      // 这样做是为了保持 Phase A 的语义边界：结果同步而非全量消息流同步。
+      const messages = new AppMessageRepository(db).list(
+        'notification',
+        500,
+        'scheduled_summary'
+      )
+      for (const m of messages) {
+        if (outbox.hasPendingOrPushed('app_message', m.id)) continue
+        outbox.record({
+          entityType: 'app_message',
+          entityId: m.id,
+          operation: 'upsert',
+          payload: {
+            id: m.id,
+            kind: m.kind,
+            title: m.title,
+            body: m.body,
+            taskId: m.taskId,
+            source: m.source,
+            readAt: m.readAt,
+            createdAt: m.createdAt,
+            updatedAt: m.readAt ?? m.createdAt
           },
           clientSyncVersion: 1
         })

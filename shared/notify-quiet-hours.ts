@@ -1,4 +1,10 @@
-/** 每日免打扰时段（可跨午夜），时区由调用方传入的 Date 本地分量决定 */
+/**
+ * 每日免打扰时段判定（可跨午夜）。
+ *
+ * 时区：使用传入 Date 的本地时分（桌面端一般为 Asia/Shanghai 系统时区）。
+ * 被 NotificationDispatcher 用于：命中窗口则写入 deferred 队列，不立刻外发；
+ * 站内消息 / 托盘仍可由上层决定是否展示。
+ */
 
 export function parseHm(hm: string): { hour: number; minute: number } | null {
   const m = hm.trim().match(/^(\d{1,2}):(\d{2})$/)
@@ -37,7 +43,10 @@ export function inQuietHours(
   return nowM >= startM || nowM < endM
 }
 
-/** 免打扰结束时刻（若当前不在窗口内，返回 null） */
+/**
+ * 免打扰结束时刻（若当前不在窗口内，返回 null）。
+ * Dispatcher 用该时刻作为 deferredTo，到点由 flushDeferred 补发外发。
+ */
 export function quietEnd(now: Date, quiet: { enabled: boolean; start: string; end: string }): Date | null {
   if (!inQuietHours(now, quiet)) return null
   const e = parseHm(quiet.end)

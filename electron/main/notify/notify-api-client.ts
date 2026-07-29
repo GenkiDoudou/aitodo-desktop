@@ -60,6 +60,7 @@ export class NotifyApiClient {
   }
 
   async dispatch(payload: NotifyDispatchPayload, idempotencyKey: string): Promise<void> {
+    // dispatch 使用 idempotencyKey：服务端通过该键去重，避免 relay/心跳重试导致重复外发。
     await this.request('POST', '/api/notify/dispatch', {
       idempotencyKey,
       event: payload.event,

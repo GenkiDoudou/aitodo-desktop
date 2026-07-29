@@ -20,6 +20,7 @@ import { ScheduledSummaryService } from './services/scheduled-summary-service'
 import { CategoryRepository } from './db/category-repository'
 import { TaskActivityRepository } from './db/task-activity-repository'
 import { SyncOutbox } from './db/sync-outbox'
+import { readSyncPreferences } from './db/sync-preferences-store'
 import { HolidayService } from './services/holiday-service'
 import { TaskActivityService } from './services/task-activity-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting } from './tray'
@@ -119,7 +120,12 @@ app.whenReady().then(() => {
 
   const db = getDatabase()
   const taskRepo = new TaskRepository(db)
-  const messageService = new AppMessageService(new AppMessageRepository(db))
+  const syncOutbox = new SyncOutbox(db)
+  const messageService = new AppMessageService(
+    new AppMessageRepository(db),
+    syncOutbox,
+    () => readSyncPreferences(getActiveDataDir())
+  )
   const reminderRepo = new TaskReminderRepository(db)
   const holidayService = new HolidayService()
   setHolidayService(holidayService)
@@ -134,7 +140,6 @@ app.whenReady().then(() => {
 
   const summaryRepo = new ScheduledSummaryRepository(db)
   const categoryRepo = new CategoryRepository(db)
-  const syncOutbox = new SyncOutbox(db)
   summarySchedulerService = new SummarySchedulerService(
     summaryRepo,
     new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo, syncOutbox),

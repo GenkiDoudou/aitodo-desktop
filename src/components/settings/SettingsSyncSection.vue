@@ -29,18 +29,32 @@
     <div class="settings-section__field settings-section__field--stack">
       <span class="settings-section__label">同步范围</span>
       <div class="settings-section__toggles">
+        <!--
+          同步范围与服务端实体类型的对应关系在 desktop/shared/sync-entity-filter.ts 中定义：
+          - syncTasks -> task / category / tag 等（取决于实现阶段）
+          - syncConfig -> app_settings / task_view / scheduled_summary 配置
+          - syncSummaryResults -> app_message（仅定时汇总结果：source=scheduled_summary）
+          - syncNotes -> widget_note
+        -->
         <el-checkbox v-model="prefs.syncTasks" :disabled="loading || saving" @change="savePrefs">
           任务（分类）
         </el-checkbox>
         <el-checkbox v-model="prefs.syncConfig" :disabled="loading || saving" @change="savePrefs">
           配置
         </el-checkbox>
+        <el-checkbox
+          v-model="prefs.syncSummaryResults"
+          :disabled="loading || saving"
+          @change="savePrefs"
+        >
+          定时汇总结果
+        </el-checkbox>
         <el-checkbox v-model="prefs.syncNotes" :disabled="loading || saving" @change="savePrefs">
           便签
         </el-checkbox>
       </div>
       <p class="settings-section__subhint">
-        配置含快捷键、LLM（含 API Key）、提示词、关闭行为、动态保留、挂件启动项、界面偏好与自定义视图。
+        配置含快捷键、LLM（含 API Key）、提示词、关闭行为、动态保留、挂件启动项、界面偏好、自定义视图与定时汇总配置。定时汇总结果为站内「定时汇总」消息正文。
       </p>
     </div>
 
@@ -168,6 +182,7 @@ async function savePrefs() {
       await window.api.sync.setPreferences({
         syncTasks: prefs.syncTasks,
         syncConfig: prefs.syncConfig,
+        syncSummaryResults: prefs.syncSummaryResults,
         syncNotes: prefs.syncNotes,
         syncIntervalMs: prefs.syncIntervalMs
       })

@@ -78,6 +78,8 @@ watch(
 )
 
 function scheduleSave() {
+  // textarea 输入会触发频繁保存请求；这里做了 500ms 防抖，
+  // 只在用户暂停输入后再调用 flushSave，降低 IPC/写库压力。
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
     void flushSave()

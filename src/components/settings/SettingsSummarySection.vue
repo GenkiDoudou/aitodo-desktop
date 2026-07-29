@@ -29,6 +29,7 @@
         <p v-if="item.lastSentAt" class="summary-card__last">上次发送：{{ formatTime(item.lastSentAt) }}</p>
         <div class="summary-card__actions">
           <el-button size="small" type="primary" plain :loading="runningId === item.id" @click="onRunNow(item)">
+            <!-- onRunNow：立即生成一条/多条站内“定时汇总”消息，不写 lastSentAt，用来不占自动门禁名额 -->
             立即生成
           </el-button>
           <el-button size="small" @click="openEdit(item)">编辑</el-button>
@@ -207,9 +208,30 @@
           <el-form-item label="自由模板">
             <div class="free-template">
               <div class="free-template__toolbar">
-                <el-button size="small" @click="insertSnippet('section')">插入 section</el-button>
-                <el-button size="small" @click="insertSnippet('tasks')">插入 tasks</el-button>
-                <el-button size="small" @click="insertSnippet('fields')">插入字段</el-button>
+                <el-dropdown trigger="click" @command="insertPreset">
+                  <el-button size="small">插入场景块</el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item
+                        v-for="p in freeTemplatePresets"
+                        :key="p.key"
+                        :command="p.key"
+                      >
+                        {{ p.label }}
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+                <el-button size="small" @click="insertSnippet('section')">section 骨架</el-button>
+                <el-button size="small" @click="insertSnippet('tasks')">tasks 循环</el-button>
+                <el-button
+                  v-for="f in fieldChips"
+                  :key="f"
+                  size="small"
+                  @click="insertText(`{{${f}}}`)"
+                >
+                  {{ f }}
+                </el-button>
                 <el-button size="small" link @click="showSyntaxHelp = !showSyntaxHelp">
                   {{ showSyntaxHelp ? '隐藏语法速查' : '语法速查' }}
                 </el-button>
@@ -223,7 +245,8 @@
                 type="textarea"
                 :rows="14"
                 resize="vertical"
-                placeholder="在此编写自由模板..."
+                placeholder="在此编写自由模板… 可用「插入场景块」或语法速查"
+                @input="templateError = ''"
               />
               <p v-if="templateError" class="free-template__error">{{ templateError }}</p>
             </div>
@@ -288,7 +311,16 @@
 
         <el-form-item label="预览">
           <div class="preview-box">
-            <el-button :loading="previewing" @click="preview">生成预览（不发送）</el-button>
+            <div class="preview-box__actions">
+              <el-button :loading="previewing" @click="preview">生成预览（不发送）</el-button>
+              <el-button
+                v-if="previewText"
+                :disabled="!previewText"
+                @click="copyPreview"
+              >
+                复制预览
+              </el-button>
+            </div>
             <pre v-if="previewText" class="preview-box__text">{{ previewText }}</pre>
           </div>
         </el-form-item>
@@ -366,15 +398,86 @@ const form = reactive({
   reportConfig: cloneReportConfig(applySummaryReportTemplate('daily_completed'))
 })
 
-const syntaxHelp = `可用语法（syntaxVersion=1）：
-{{#section status="pending" due="today" list="工作" title="今日" time="today" hideEmpty="true"}}
+const syntaxHelp = `自由模板语法（syntaxVersion=1）
+
+【区块】{{#section ...}} ... {{/section}}
+  status   必填 completed | pending | overdue
+  time     可选 today | yesterday | this_week | last_week | this_month | last_month
+           | last_7_days | last_30_days | since_last
+           （completed 默认 since_last；pending/overdue 默认 today）
+  due      可选 today（只看今天到期）
+  list     可选，清单名称（按名称匹配）
+  title    可选，区块标题（默认用 status）
+  hideEmpty 可选 true|false（空区块是否隐藏）
+
+【任务循环】{{#tasks}} ... {{/tasks}}（须在 section 内）
+【条件】{{#if dueAt}} ... {{/if}}
+【字段】{{title}} {{dueAt}} {{completedAt}} {{categoryName}} {{status}} {{count}} {{sectionTitle}}
+
+—— 示例：昨天已完成 ——
+{{#section status="completed" time="yesterday" title="昨天已完成" hideEmpty="true"}}
+【{{sectionTitle}}】共 {{count}} 项
+{{#tasks}}
+- {{title}}{{#if completedAt}}（完成于 {{completedAt}}）{{/if}}
+{{/tasks}}
+{{/section}}
+
+—— 示例：本周待办 ——
+{{#section status="pending" time="this_week" title="本周待办" hideEmpty="true"}}
+【{{sectionTitle}}】{{count}} 项
+{{#tasks}}
+- {{title}}{{#if dueAt}}（截止 {{dueAt}}）{{/if}}
+{{/tasks}}
+{{/section}}`
+
+const fieldChips = ['title', 'dueAt', 'completedAt', 'categoryName', 'count', 'sectionTitle'] as const
+
+const freeTemplatePresets: Array<{ key: string; label: string; body: string }> = [
+  {
+    key: 'today_done',
+    label: '今日已完成',
+    body: `{{#section status="completed" time="today" title="今日已完成" hideEmpty="true"}}
+【{{sectionTitle}}】共 {{count}} 项
+{{#tasks}}
+- {{title}}
+{{/tasks}}
+{{/section}}
+`
+  },
+  {
+    key: 'yesterday_done',
+    label: '昨天已完成',
+    body: `{{#section status="completed" time="yesterday" title="昨天已完成" hideEmpty="true"}}
+【{{sectionTitle}}】共 {{count}} 项
+{{#tasks}}
+- {{title}}
+{{/tasks}}
+{{/section}}
+`
+  },
+  {
+    key: 'week_pending',
+    label: '本周待办',
+    body: `{{#section status="pending" time="this_week" title="本周待办" hideEmpty="true"}}
 【{{sectionTitle}}】{{count}} 项
 {{#tasks}}
 - {{title}}{{#if dueAt}}（截止 {{dueAt}}）{{/if}}
 {{/tasks}}
 {{/section}}
-
-字段：title / dueAt / completedAt / categoryName / status / count / sectionTitle`
+`
+  },
+  {
+    key: 'last_week_done',
+    label: '上周已完成',
+    body: `{{#section status="completed" time="last_week" title="上周已完成" hideEmpty="true"}}
+【{{sectionTitle}}】共 {{count}} 项
+{{#tasks}}
+- {{title}}
+{{/tasks}}
+{{/section}}
+`
+  }
+]
 
 const SNIPPETS = {
   section: `{{#section status="pending" due="today" title="今日待办" hideEmpty="true"}}
@@ -391,11 +494,31 @@ const SNIPPETS = {
   fields: `{{title}} {{dueAt}} {{completedAt}} {{categoryName}} {{count}} {{sectionTitle}}`
 } as const
 
-function insertSnippet(kind: keyof typeof SNIPPETS) {
-  const text = SNIPPETS[kind]
+function insertText(text: string) {
   const body = form.reportConfig.freeTemplate.body || ''
-  form.reportConfig.freeTemplate.body = body.trim() ? `${body.replace(/\s*$/, '')}\n${text}` : text
+  form.reportConfig.freeTemplate.body = body.trim()
+    ? `${body.replace(/\s*$/, '')}\n${text}`
+    : text
   templateError.value = ''
+}
+
+function insertSnippet(kind: keyof typeof SNIPPETS) {
+  insertText(SNIPPETS[kind])
+}
+
+function insertPreset(key: string) {
+  const p = freeTemplatePresets.find((x) => x.key === key)
+  if (p) insertText(p.body)
+}
+
+async function copyPreview() {
+  if (!previewText.value) return
+  try {
+    await navigator.clipboard.writeText(previewText.value)
+    ElMessage.success('已复制预览')
+  } catch {
+    ElMessage.error('复制失败')
+  }
 }
 
 const reportTemplates = SUMMARY_REPORT_TEMPLATES
@@ -903,6 +1026,12 @@ onMounted(async () => {
   flex-direction: column;
   gap: 10px;
   width: 100%;
+}
+
+.preview-box__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .preview-box__text {

@@ -4,6 +4,11 @@ import type Database from 'better-sqlite3'
 import { v4 as uuidv4 } from 'uuid'
 import { nowIso } from '@shared/datetime'
 
+/**
+ * 登录凭证落盘文件（与 SQLite sync_state 分离）：
+ * - Token 不进库表，降低被业务备份/导出误带走的风险；
+ * - mode 0o600（Unix）尽量限制其它用户读。
+ */
 export interface SyncCredentialsFile {
   accessToken: string
   userId: string
@@ -11,6 +16,12 @@ export interface SyncCredentialsFile {
   savedAt: string
 }
 
+/**
+ * 本机同步运行态（SQLite sync_state 单行 id='default'）：
+ * - deviceId：首次 ensure 时生成，push/pull/租约都用它标识本机；
+ * - lastPulledCursor：增量 pull 水位；
+ * - lastError：最近一次 trigger 失败文案（设置页展示）。
+ */
 export interface SyncStateRow {
   id: string
   deviceId: string
@@ -46,6 +57,7 @@ export function writeSyncCredentials(dataDir: string, creds: SyncCredentialsFile
   writeFileSync(path, JSON.stringify(creds, null, 2), { encoding: 'utf8', mode: 0o600 })
 }
 
+/** 退出登录：删凭证文件；sync_state 行保留（deviceId / serverUrl 可复用）。 */
 export function clearSyncCredentials(dataDir: string): void {
   const path = credentialsPath(dataDir)
   if (existsSync(path)) {
@@ -81,7 +93,7 @@ function mapState(row: SyncStateDbRow): SyncStateRow {
   }
 }
 
-/** 确保存在默认 sync_state 行并返回 */
+/** 确保存在默认 sync_state 行并返回（首次安装会生成 deviceId）。 */
 export function ensureSyncState(db: Database.Database): SyncStateRow {
   const existing = db.prepare(`SELECT * FROM sync_state WHERE id = 'default'`).get() as
     | SyncStateDbRow
@@ -99,6 +111,7 @@ export function ensureSyncState(db: Database.Database): SyncStateRow {
   return ensureSyncState(db)
 }
 
+/** 局部更新同步运行态；未传字段保持原值。 */
 export function updateSyncState(
   db: Database.Database,
   patch: Partial<Omit<SyncStateRow, 'id' | 'updatedAt'>>

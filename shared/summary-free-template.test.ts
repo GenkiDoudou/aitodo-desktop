@@ -95,6 +95,34 @@ describe('summary-free-template', () => {
     )
     expect(text).toBe('')
   })
+
+  it('renders tasks in tree order with indent and count excludes anchors', () => {
+    const parent = sampleTask({ id: 'p', title: '父', status: 'TODO', parentId: null })
+    const child = sampleTask({
+      id: 'c',
+      title: '子',
+      status: 'DONE',
+      parentId: 'p',
+      completedAt: '2026-07-07T08:00:00'
+    })
+    const body = `{{#section status="completed" time="today" title="已完成"}}
+【{{sectionTitle}}】{{count}}
+{{#tasks}}- {{title}}
+{{/tasks}}{{/section}}`
+    const text = renderSummaryFreeTemplate(body, {
+      scheduleType: 'daily',
+      now: dayjs('2026-07-08T12:00:00'),
+      lastSentAt: null,
+      categoryNames: new Map([['c1', '工作']]),
+      resolveListId: () => undefined,
+      fetchTasks: () => [child],
+      resolveById: (id) => (id === 'p' ? parent : null)
+    })
+    expect(text).toContain('】1')
+    expect(text).toMatch(/- 父/)
+    expect(text).toMatch(/ {2}- 子/)
+    expect(text.indexOf('父')).toBeLessThan(text.indexOf('子'))
+  })
 })
 
 describe('normalizeReportConfigV2 dual mode', () => {

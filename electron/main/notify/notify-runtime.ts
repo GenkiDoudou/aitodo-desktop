@@ -5,6 +5,8 @@ import type { AppMessage, AppMessageSource } from '@shared/types'
 import type Database from 'better-sqlite3'
 import { AppMessageRepository } from '../db/app-message-repository'
 import { AppMessageService } from '../services/app-message-service'
+import { SyncOutbox } from '../db/sync-outbox'
+import { readSyncPreferences } from '../db/sync-preferences-store'
 import { NotifyApiClient } from './notify-api-client'
 import { NotifyLeaseHeartbeat } from './notify-lease-heartbeat'
 import {
@@ -84,13 +86,20 @@ export class NotifyRuntime {
 
     const groups = new Map<string, typeof rows>()
     for (const row of rows) {
+      // 同一条投递在不同端可能会“重复未 ack”。用 event/entityId/title/body
+      // 做幂等分组，保证只补写一次站内消息。
       const key = `${row.event}|${row.entityId}|${row.title}|${row.body}`
       const list = groups.get(key) ?? []
       list.push(row)
       groups.set(key, list)
     }
 
-    const messages = new AppMessageService(new AppMessageRepository(this.getDb()))
+    const db = this.getDb()
+    const messages = new AppMessageService(
+      new AppMessageRepository(db),
+      new SyncOutbox(db),
+      () => readSyncPreferences(this.getDataDir())
+    )
     const ackIds: string[] = []
 
     for (const group of groups.values()) {
@@ -108,6 +117,7 @@ export class NotifyRuntime {
         taskId: sample.event === 'task_reminder' ? sample.entityId || null : null,
         source
       })
+      // skipExternalNotify：只补站内，不再次向外发渠道发送。
       this.onInAppPush(msg, { skipExternalNotify: true })
       for (const r of group) ackIds.push(r.id)
     }

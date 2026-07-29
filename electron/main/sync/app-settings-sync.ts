@@ -21,8 +21,16 @@ import {
 import type { WidgetNoteRepository } from '../db/widget-note-repository'
 import { writeUiPreferencesSnapshot } from '../db/ui-preferences-snapshot'
 
+/**
+ * 个人配置在同步协议中的单实体 id。
+ * 本机只有一份「默认配置袋」，多设备互相覆盖时靠 updatedAt / 服务端冲突策略。
+ */
 export const APP_SETTINGS_ENTITY_ID = 'default'
 
+/**
+ * app_settings 载荷：把分散在本机文件/SQLite 的配置打成一份可 push/pull 的快照。
+ * 注意：含 LLM API Key，仅在用户开启 syncConfig 且已登录时入队。
+ */
 export interface AppSettingsSyncPayload {
   id: typeof APP_SETTINGS_ENTITY_ID
   updatedAt: string
@@ -36,6 +44,7 @@ export interface AppSettingsSyncPayload {
   uiPreferences?: Record<string, string>
 }
 
+/** 从本机各配置源组装 push 载荷。 */
 export function buildAppSettingsPayload(
   widgetNoteRepo: WidgetNoteRepository,
   uiPreferences?: Record<string, string>
@@ -54,6 +63,7 @@ export function buildAppSettingsPayload(
   }
 }
 
+/** 将当前本机配置 upsert 进 outbox（由 SyncEngine / 配置变更钩子调用）。 */
 export function enqueueAppSettingsUpsert(
   outbox: SyncOutbox,
   widgetNoteRepo: WidgetNoteRepository,
@@ -69,6 +79,11 @@ export function enqueueAppSettingsUpsert(
   })
 }
 
+/**
+ * 应用远端 app_settings：字段缺失则跳过，避免半包覆盖。
+ * 各子配置经 merge* 与默认值合并后再落盘。
+ * @returns 若写入了 uiPreferences，返回该 map 供渲染进程广播；否则 null。
+ */
 export function applyAppSettingsPayload(
   payload: Record<string, unknown>,
   widgetNoteRepo: WidgetNoteRepository,

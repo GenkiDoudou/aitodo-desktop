@@ -16,6 +16,7 @@ const SCAN_INTERVAL_MS = 60_000
 export class SummarySchedulerService {
   private timer: NodeJS.Timeout | null = null
   private ticking = false
+  // 防并发：同一个 summary 在同一时刻只能生成/发送一次。
   private readonly runningIds = new Set<string>()
 
   constructor(
@@ -27,6 +28,7 @@ export class SummarySchedulerService {
 
   start(): void {
     if (this.timer) return
+    // 启动后立即触发一次 tick，之后按 SCAN_INTERVAL_MS 扫描是否到点。
     void this.tick()
     this.timer = setInterval(() => void this.tick(), SCAN_INTERVAL_MS)
   }
@@ -39,8 +41,8 @@ export class SummarySchedulerService {
   }
 
   /**
-   * 立即生成并发送一条汇总（写消息 + 系统通知 + 更新 lastSentAt）。
-   * 不等待计划时刻；禁用的汇总也可手动触发。
+   * 立即生成并发送一条汇总（写消息 + 通知外发）。
+   * 不更新 lastSentAt，避免占用自动到点名额。
    */
   async runNow(id: string): Promise<ScheduledSummary> {
     if (this.runningIds.has(id)) {
@@ -53,7 +55,10 @@ export class SummarySchedulerService {
 
     this.runningIds.add(id)
     try {
-      await this.dispatch(summary, dayjs())
+      // runNow：
+      // - 生成正文并写 in-app 消息（以及系统通知外发）；
+      // - 不写 lastSentAt，因此不会影响当天/本周期自动门禁逻辑。
+      await this.dispatch(summary, dayjs(), { updateLastSentAt: false })
       const updated = this.summaryRepo.findById(id)
       if (!updated) {
         throw new AppError('NOT_FOUND', '汇总任务不存在')
@@ -70,12 +75,15 @@ export class SummarySchedulerService {
     try {
       const now = dayjs()
       for (const summary of this.summaryRepo.list()) {
+        // shouldSendSummaryNow 决定是否满足周期门禁（daily/weekly/monthly + lastSentAt）。
         if (!shouldSendSummaryNow(summary, now)) continue
         if (this.runningIds.has(summary.id)) continue
 
         this.runningIds.add(summary.id)
         try {
-          await this.dispatch(summary, now)
+          // tick 自动发送：
+          // - 成功后写 lastSentAt，让同一周期不重复发送。
+          await this.dispatch(summary, now, { updateLastSentAt: true })
         } catch (err) {
           console.error('[SummarySchedulerService] send failed', summary.id, err)
         } finally {
@@ -87,7 +95,11 @@ export class SummarySchedulerService {
     }
   }
 
-  private async dispatch(summary: ScheduledSummary, now: dayjs.Dayjs): Promise<void> {
+  private async dispatch(
+    summary: ScheduledSummary,
+    now: dayjs.Dayjs,
+    opts: { updateLastSentAt: boolean }
+  ): Promise<void> {
     const body = await this.summaryService.buildSummaryBody(summary, now)
     const inApp = this.messageService.create({
       kind: 'notification',
@@ -97,6 +109,8 @@ export class SummarySchedulerService {
       source: 'scheduled_summary'
     })
     this.onInAppMessage?.(inApp)
-    this.summaryService.markSent(summary.id, nowIso())
+    if (opts.updateLastSentAt) {
+      this.summaryService.markSent(summary.id, nowIso())
+    }
   }
 }

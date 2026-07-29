@@ -67,6 +67,8 @@ export class SyncApiClient {
     body?: unknown,
     auth = true
   ): Promise<T> {
+    // auth=true 表示该请求需要 Authorization（未登录会直接抛错）。
+    // auth=false 用于登录态探测/状态查询等不依赖 token 的场景。
     const url = `${this.baseUrl.replace(/\/+$/, '')}${path}`
     const headers: Record<string, string> = {
       Accept: 'application/json'
@@ -90,6 +92,7 @@ export class SyncApiClient {
         signal: AbortSignal.timeout(30_000)
       })
     } catch (err) {
+      // 统一映射网络/超时错误为 SyncApiError，便于上层触发 logout 或展示。
       if (err instanceof Error && err.name === 'TimeoutError') {
         throw new SyncApiError('同步请求超时', 500)
       }
@@ -103,6 +106,7 @@ export class SyncApiClient {
     try {
       envelope = (await res.json()) as ApiEnvelope<T>
     } catch {
+      // 服务端返回非 JSON（或协议不一致）时，直接视为无效响应。
       throw new SyncApiError(`无效响应 HTTP ${res.status}`, res.status)
     }
 
