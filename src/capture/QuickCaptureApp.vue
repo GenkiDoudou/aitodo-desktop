@@ -66,13 +66,15 @@ async function onSubmit() {
   statusError.value = false
   try {
     await loadCategories()
-    const parsedRes = await window.captureApi.parseTaskInput(trimmed, categories.value)
+    // IPC 只能传纯对象：categories 在 ref 里是 Proxy，直接传会报 could not be cloned
+    const cats = toParseCategories(categories.value)
+    const parsedRes = await window.captureApi.parseTaskInput(trimmed, cats)
     if (!parsedRes.ok) {
       status.value = parsedRes.error.message
       statusError.value = true
       return
     }
-    const dto = buildQuickCreateTaskDtoFromDraft(parsedRes.data.draft, trimmed, categories.value, {
+    const dto = buildQuickCreateTaskDtoFromDraft(parsedRes.data.draft, trimmed, cats, {
       triagedAt: null,
       priority: priority.value
     })
@@ -97,6 +99,9 @@ async function onSubmit() {
     setTimeout(() => {
       void hideWindow()
     }, 180)
+  } catch (err) {
+    status.value = err instanceof Error ? err.message : '保存失败'
+    statusError.value = true
   } finally {
     submitting.value = false
   }
