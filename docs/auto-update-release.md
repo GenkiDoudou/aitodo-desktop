@@ -28,8 +28,16 @@
 
 同一 git tag / 版本号，将上表资产上传到 Gitee + GitHub Releases，**文件名必须一致**。
 
-- **GitHub**：可在公开仓打 `v*` tag，由 Actions（`.github/workflows/release.yml`）自动打包并上传 Release
-- **Gitee**：首版仍建议手工上传同一批 `dist/` 文件（或后续再加镜像脚本）
+- **GitHub**：在公开仓打 `v*` tag，由 Actions（`.github/workflows/release.yml`）打包并上传 Release
+- **Gitee**：同一 workflow 会：
+  1. 把 tag 推到 Gitee
+  2. 用 API 创建 Release 并上传 `dist/` 产物  
+
+需在 GitHub 仓库 **Settings → Secrets and variables → Actions** 配置：
+
+- `GITEE_TOKEN`：Gitee 私人令牌（勾选 **projects** 等仓库权限）
+
+生成令牌：Gitee → 设置 → 私人令牌。
 
 ## 无代码签名
 
@@ -39,6 +47,7 @@
 
 1. 在私有仓 bump `desktop/package.json` 的 `version` 并提交
 2. 运行 subtree 同步脚本，把 `desktop/` 推到两个公开仓
-3. 在公开仓打 tag（如 `v1.1.0`）触发 GitHub Actions，或本机 `npm run build:win` / `build:mac`
-4. 把产物补传到 Gitee Release（若 Actions 只写了 GitHub）
-5. 用旧版 NSIS / 免解压 / Mac 各测一遍检查更新
+3. 确认 GitHub 公开仓已配置 `GITEE_TOKEN` Secret
+4. 在公开仓打 tag（如 `v1.1.0`）并 `git push desktop-github v1.1.0`（可同时 `git push desktop-gitee v1.1.0`）
+5. 等待 Actions：GitHub Release + Gitee Release 均应出现产物
+6. 用旧版 NSIS / 免解压 / Mac 各测一遍检查更新

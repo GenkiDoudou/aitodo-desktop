@@ -1,5 +1,8 @@
-# 公开仓发版：打 v* tag 后在 GitHub Actions 打 Windows 包并上传 Release
+# 公开仓发版：打 v* tag 后打包，并上传到 GitHub + Gitee Releases
 # 工作流位于 desktop/.github，经 subtree 同步后会出现在公开仓根目录 .github/
+#
+# 仓库 Secrets 需配置：
+#   GITEE_TOKEN — Gitee 私人令牌（需 projects 权限，用于创建 Release / 上传附件 / 推送 tag）
 
 name: Release
 
@@ -17,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -42,3 +47,26 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push tag to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GITEE_TOKEN:-}" ]; then
+            echo "GITEE_TOKEN secret is empty; skip Gitee sync"
+            exit 1
+          fi
+          git remote remove gitee 2>/dev/null || true
+          git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/GenkiDoudou/aitodo-desktop.git"
+          git push gitee "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          git push gitee HEAD:main || true
+
+      - name: Upload Gitee Release assets
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_OWNER: GenkiDoudou
+          GITEE_REPO: aitodo-desktop
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/publish-gitee-release.cjs
