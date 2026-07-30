@@ -226,6 +226,21 @@ const api: DesktopApi = {
       ipcRenderer.invoke(IPC.NOTIFY_TEST_WEBHOOK, url, headers),
     listDeliveries: () => ipcRenderer.invoke(IPC.NOTIFY_LIST_DELIVERIES),
     listPending: () => ipcRenderer.invoke(IPC.NOTIFY_LIST_PENDING)
+  },
+  appUpdate: {
+    getStatus: () => ipcRenderer.invoke(IPC.APP_UPDATE_GET_STATUS),
+    check: () => ipcRenderer.invoke(IPC.APP_UPDATE_CHECK),
+    quitAndInstall: () => ipcRenderer.invoke(IPC.APP_UPDATE_QUIT_AND_INSTALL),
+    onStatus: (callback) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        status: import('@shared/app-update').AppUpdateStatus
+      ) => {
+        callback(status)
+      }
+      ipcRenderer.on(IPC.APP_UPDATE_STATUS, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_UPDATE_STATUS, listener)
+    }
   }
 }
 

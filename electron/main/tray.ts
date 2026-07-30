@@ -19,16 +19,16 @@ let tray: Tray | null = null
 
 
 export type TrayActions = {
-
   onShow: () => void
-
   onToggleWidget: () => void
-
   onNewTask: () => void
-
   onQuit: () => void
-
+  /** 更新已就绪时托盘「重启以更新」 */
+  onQuitAndInstallUpdate?: () => void
 }
+
+let trayActions: TrayActions | null = null
+let updateReady = false
 
 
 
@@ -93,81 +93,65 @@ async function loadTrayImage(): Promise<Electron.NativeImage> {
 
 
 /** 创建系统托盘；关闭窗口时最小化到托盘而非退出 */
-
 export async function createTray(mainWindow: BrowserWindow, actions: TrayActions): Promise<Tray> {
-
   const image = await loadTrayImage()
-
   if (image.isEmpty()) {
-
     console.warn('[aiTodo] 托盘图标加载失败，托盘可能不可见')
-
   }
-
-
 
   tray = new Tray(image)
-
   tray.setToolTip('小柒todo')
-
-
-
-  const contextMenu = Menu.buildFromTemplate([
-
-    { label: '显示主窗口', click: actions.onShow },
-
-    { label: '打开挂件', click: actions.onToggleWidget },
-
-    {
-
-      label: '新建任务',
-
-      click: () => {
-
-        actions.onShow()
-
-        mainWindow.webContents.send(IPC.APP_ACTION, 'newTask' satisfies ShortcutActionId)
-
-        actions.onNewTask()
-
-      }
-
-    },
-
-    { type: 'separator' },
-
-    { label: '退出', click: actions.onQuit }
-
-  ])
-
-  tray.setContextMenu(contextMenu)
-
+  trayActions = actions
+  rebuildTrayMenu(mainWindow)
   tray.on('double-click', actions.onShow)
-
   return tray
-
 }
 
+function rebuildTrayMenu(mainWindow: BrowserWindow): void {
+  if (!tray || !trayActions) return
+  const actions = trayActions
+  const template: Electron.MenuItemConstructorOptions[] = [
+    { label: '显示主窗口', click: actions.onShow },
+    { label: '打开挂件', click: actions.onToggleWidget },
+    {
+      label: '新建任务',
+      click: () => {
+        actions.onShow()
+        mainWindow.webContents.send(IPC.APP_ACTION, 'newTask' satisfies ShortcutActionId)
+        actions.onNewTask()
+      }
+    }
+  ]
+  if (updateReady && actions.onQuitAndInstallUpdate) {
+    template.push({ type: 'separator' })
+    template.push({
+      label: '重启以更新',
+      click: () => actions.onQuitAndInstallUpdate?.()
+    })
+  }
+  template.push({ type: 'separator' })
+  template.push({ label: '退出', click: actions.onQuit })
+  tray.setContextMenu(Menu.buildFromTemplate(template))
+  tray.setToolTip(updateReady ? '小柒todo（有更新可重启）' : '小柒todo')
+}
 
+/** 更新就绪时在托盘增加「重启以更新」 */
+export function setTrayUpdateReady(ready: boolean, mainWindow: BrowserWindow | null): void {
+  updateReady = ready
+  if (mainWindow) rebuildTrayMenu(mainWindow)
+}
 
 export function destroyTray(): void {
-
   if (tray) {
-
     tray.destroy()
-
     tray = null
-
   }
-
+  trayActions = null
+  updateReady = false
 }
 
-
-
 type CloseBehaviorDeps = {
-
   readCloseBehavior?: () => CloseBehavior
-
 }
 
 

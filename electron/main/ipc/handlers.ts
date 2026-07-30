@@ -89,6 +89,7 @@ import { readNotificationConfig } from '../db/notification-config-store'
 import { buildTaskReminderExternalCopy, type NotificationConfig, type NotifyEvent } from '@shared/notification-config'
 import { parseTaskInputWithConfig } from '../services/task-parse-service'
 import type { AiParseCategoryRef } from '@shared/ai-task-parser'
+import { getUpdateOrchestrator } from '../update/update-orchestrator'
 
 function services() {
   const db = getDatabase()
@@ -762,5 +763,16 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   )
   ipcMain.handle(IPC.NOTIFY_LIST_PENDING, () =>
     wrapIpcAsync(() => notifyRuntime().listPending())
+  )
+
+  // app update IPC
+  ipcMain.handle(IPC.APP_UPDATE_GET_STATUS, () => wrapIpc(() => getUpdateOrchestrator().getStatus()))
+  ipcMain.handle(IPC.APP_UPDATE_CHECK, () =>
+    wrapIpcAsync(() => getUpdateOrchestrator().checkForUpdates({ manual: true }))
+  )
+  ipcMain.handle(IPC.APP_UPDATE_QUIT_AND_INSTALL, () =>
+    wrapIpc(() => {
+      getUpdateOrchestrator().quitAndInstall()
+    })
   )
 }

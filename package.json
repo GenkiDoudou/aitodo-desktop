@@ -10,8 +10,9 @@
     "dev": "npm run rebuild:native && electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "build:win": "npm run build && electron-builder --win",
+    "build:win": "npm run build && electron-builder --win && node scripts/generate-portable-yml.cjs",
     "build:mac": "npm run build && electron-builder --mac",
+    "generate:portable-yml": "node scripts/generate-portable-yml.cjs",
     "test": "electron ./node_modules/vitest/vitest.mjs run",
     "postinstall": "npm run rebuild:native"
   },
@@ -28,7 +29,9 @@
     "@tiptap/vue-3": "^3.27.1",
     "better-sqlite3": "^11.7.0",
     "dayjs": "^1.11.21",
+    "electron-updater": "^6.3.9",
     "element-plus": "^2.9.1",
+    "extract-zip": "^2.0.1",
     "markdown-it": "^14.3.0",
     "markdown-it-mark": "^4.0.0",
     "markdown-it-task-lists": "^2.1.1",
@@ -74,15 +77,23 @@
         "to": "tray.png"
       }
     ],
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/GenkiDoudou/aitodo-desktop/releases/latest/download/"
+      }
+    ],
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "zip"
       ],
       "signAndEditExecutable": false
     },
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ]
     },
     "nsis": {

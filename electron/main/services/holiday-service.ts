@@ -3,13 +3,14 @@ import path from 'path'
 import {
   buildHolidayCalendarMap,
   findNextLegalHolidayDueAfter,
-  HOLIDAY_DATA_SOURCE,
-  HOLIDAY_DATA_SOURCE_LABEL,
+  HOLIDAY_DATA_SOURCE_TIMOR,
+  holidaySourceLabel,
   legalHolidayMapFromCalendar,
   normalizeHolidayYears,
   timorHolidayYearUrl,
   type HolidayCacheStatus,
   type HolidayCalendarDay,
+  type HolidayDataSourceId,
   type HolidayYearMeta,
   type TimorHolidayEntry,
   type TimorYearHolidayResponse
@@ -18,9 +19,27 @@ import { resolveDataDir } from '../data-path'
 
 const CACHE_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000
 const CACHE_FILE_SUFFIX = '-calendar-v2.json'
+const ORIGIN_FILE_SUFFIX = '-origin-v2.json'
+
+export type HolidayAuthResolver = () => { baseUrl: string; accessToken: string } | null
+
+interface HolidayOriginFile {
+  source: HolidayDataSourceId
+  fetchedAt: string
+}
+
+interface ServerHolidayYearEnvelope {
+  code: number
+  message?: string
+  data?: {
+    year: number
+    source?: string
+    days?: Record<string, HolidayCalendarDay>
+  }
+}
 
 /**
- * 从 [timor.tech 免费节假日 API](http://timor.tech/api/holiday/) 拉取并缓存节假日数据。
+ * 从 Timor 或同步服务器拉取并缓存节假日数据。
  * 主进程专用：渲染进程不直接请求外网。
  */
 export class HolidayService {
@@ -28,7 +47,10 @@ export class HolidayService {
   /** 含法定放假 + 调休上班的全量日历标注 */
   private readonly calendarMemory = new Map<number, Map<string, HolidayCalendarDay>>()
 
-  constructor(cacheDir?: string) {
+  constructor(
+    cacheDir?: string,
+    private readonly resolveAuth: HolidayAuthResolver = () => null
+  ) {
     this.cacheDir = cacheDir ?? path.join(resolveDataDir(), 'holiday-cache')
   }
 
@@ -62,6 +84,7 @@ export class HolidayService {
   /** 扫描磁盘 v2 缓存，汇总设置页状态 */
   getStatus(): HolidayCacheStatus {
     const yearsMeta: HolidayYearMeta[] = []
+    let latestOrigin: HolidayOriginFile | null = null
     try {
       if (fs.existsSync(this.cacheDir)) {
         for (const name of fs.readdirSync(this.cacheDir)) {
@@ -77,15 +100,23 @@ export class HolidayService {
             updatedAt = null
           }
           yearsMeta.push({ year, updatedAt })
+          const origin = this.readOrigin(year)
+          if (
+            origin &&
+            (!latestOrigin || Date.parse(origin.fetchedAt) >= Date.parse(latestOrigin.fetchedAt))
+          ) {
+            latestOrigin = origin
+          }
         }
       }
     } catch {
       /* 目录不可读则视为无缓存 */
     }
     yearsMeta.sort((a, b) => a.year - b.year)
+    const source: HolidayDataSourceId = latestOrigin?.source ?? HOLIDAY_DATA_SOURCE_TIMOR
     return {
-      source: HOLIDAY_DATA_SOURCE,
-      sourceLabel: HOLIDAY_DATA_SOURCE_LABEL,
+      source,
+      sourceLabel: holidaySourceLabel(source),
       cachedYears: yearsMeta.map((m) => m.year),
       yearsMeta
     }
@@ -102,10 +133,16 @@ export class HolidayService {
     for (const year of list) {
       this.calendarMemory.delete(year)
       const filePath = this.cacheFilePath(year)
+      const originPath = this.originFilePath(year)
       try {
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
       } catch {
         /* 删失败仍尝试重拉 */
+      }
+      try {
+        if (fs.existsSync(originPath)) fs.unlinkSync(originPath)
+      } catch {
+        /* ignore */
       }
     }
     const marks = await this.getCalendarMarks(list)
@@ -114,6 +151,27 @@ export class HolidayService {
 
   private cacheFilePath(year: number): string {
     return path.join(this.cacheDir, `${year}${CACHE_FILE_SUFFIX}`)
+  }
+
+  private originFilePath(year: number): string {
+    return path.join(this.cacheDir, `${year}${ORIGIN_FILE_SUFFIX}`)
+  }
+
+  private writeOrigin(year: number, source: HolidayDataSourceId): void {
+    fs.mkdirSync(this.cacheDir, { recursive: true })
+    const payload: HolidayOriginFile = { source, fetchedAt: new Date().toISOString() }
+    fs.writeFileSync(this.originFilePath(year), JSON.stringify(payload), 'utf8')
+  }
+
+  private readOrigin(year: number): HolidayOriginFile | null {
+    try {
+      const raw = JSON.parse(fs.readFileSync(this.originFilePath(year), 'utf8')) as HolidayOriginFile
+      if (raw?.source !== 'server' && raw?.source !== 'timor.tech') return null
+      if (typeof raw.fetchedAt !== 'string') return null
+      return raw
+    } catch {
+      return null
+    }
   }
 
   private async ensureYearsLoaded(years: number[]): Promise<void> {
@@ -152,6 +210,44 @@ export class HolidayService {
   }
 
   private async fetchYearFromApi(year: number): Promise<Map<string, HolidayCalendarDay>> {
+    const auth = this.resolveAuth()
+    if (auth?.baseUrl && auth.accessToken) {
+      try {
+        const map = await this.fetchYearFromServer(year, auth.baseUrl, auth.accessToken)
+        this.writeOrigin(year, 'server')
+        return map
+      } catch {
+        /* 回退 Timor */
+      }
+    }
+    const map = await this.fetchYearFromTimor(year)
+    this.writeOrigin(year, 'timor.tech')
+    return map
+  }
+
+  private async fetchYearFromServer(
+    year: number,
+    baseUrl: string,
+    accessToken: string
+  ): Promise<Map<string, HolidayCalendarDay>> {
+    const url = `${baseUrl.replace(/\/+$/, '')}/api/holidays/year/${year}`
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`
+      }
+    })
+    if (!res.ok) {
+      throw new Error(`节假日服务端请求失败: ${res.status}`)
+    }
+    const envelope = (await res.json()) as ServerHolidayYearEnvelope
+    if (envelope.code !== 0 || !envelope.data?.days) {
+      throw new Error(envelope.message || '节假日服务端返回无效数据')
+    }
+    return new Map(Object.entries(envelope.data.days))
+  }
+
+  private async fetchYearFromTimor(year: number): Promise<Map<string, HolidayCalendarDay>> {
     const url = timorHolidayYearUrl(year)
     const res = await fetch(url, { headers: { Accept: 'application/json' } })
     if (!res.ok) {

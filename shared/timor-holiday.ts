@@ -29,16 +29,32 @@ export interface HolidayYearMeta {
   updatedAt: string | null
 }
 
+/** 节假日数据来源：同步服务器 / Timor 直连 */
+export type HolidayDataSourceId = 'server' | 'timor.tech'
+
 /** 节假日缓存总览（设置页状态区） */
 export interface HolidayCacheStatus {
-  source: 'timor.tech'
+  source: HolidayDataSourceId
   sourceLabel: string
   cachedYears: number[]
   yearsMeta: HolidayYearMeta[]
 }
 
-export const HOLIDAY_DATA_SOURCE = 'timor.tech' as const
-export const HOLIDAY_DATA_SOURCE_LABEL = '中国法定节假日（timor.tech）'
+export const HOLIDAY_DATA_SOURCE_TIMOR = 'timor.tech' as const
+export const HOLIDAY_DATA_SOURCE_SERVER = 'server' as const
+
+/** @deprecated 兼容旧引用，等同 TIMOR */
+export const HOLIDAY_DATA_SOURCE = HOLIDAY_DATA_SOURCE_TIMOR
+
+export const HOLIDAY_DATA_SOURCE_LABEL_TIMOR = '中国法定节假日（timor.tech）'
+export const HOLIDAY_DATA_SOURCE_LABEL_SERVER = '中国法定节假日（同步服务器）'
+
+/** @deprecated 兼容旧引用 */
+export const HOLIDAY_DATA_SOURCE_LABEL = HOLIDAY_DATA_SOURCE_LABEL_TIMOR
+
+export function holidaySourceLabel(source: HolidayDataSourceId): string {
+  return source === 'server' ? HOLIDAY_DATA_SOURCE_LABEL_SERVER : HOLIDAY_DATA_SOURCE_LABEL_TIMOR
+}
 
 /** 合法年份：整数且 2000–2100 */
 export function normalizeHolidayYears(years: unknown): number[] {

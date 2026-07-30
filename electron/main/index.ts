@@ -21,9 +21,10 @@ import { CategoryRepository } from './db/category-repository'
 import { TaskActivityRepository } from './db/task-activity-repository'
 import { SyncOutbox } from './db/sync-outbox'
 import { readSyncPreferences } from './db/sync-preferences-store'
+import { ensureSyncState, readSyncCredentials } from './db/sync-state'
 import { HolidayService } from './services/holiday-service'
 import { TaskActivityService } from './services/task-activity-service'
-import { bindMinimizeToTray, createTray, destroyTray, markQuitting } from './tray'
+import { bindMinimizeToTray, createTray, destroyTray, markQuitting, setTrayUpdateReady } from './tray'
 import { resolveDataDir } from './data-path'
 import { registerGlobalShortcuts, unregisterGlobalShortcuts, createDefaultShortcutHandlers } from './shortcuts'
 import { getWidgetWindowManager } from './widget-window-manager'
@@ -32,7 +33,10 @@ import {
   registerAttachmentProtocol,
   registerAttachmentSchemePrivilege
 } from './attachment-protocol'
-import { registerNotificationSupport } from './services/system-notification'
+import {
+  applyPortableUpdateIfPending,
+  getUpdateOrchestrator
+} from './update/update-orchestrator'
 
 let mainWindow: BrowserWindow | null = null
 let reminderService: ReminderService | null = null
@@ -90,11 +94,20 @@ app.whenReady().then(() => {
     return
   }
 
+  applyPortableUpdateIfPending()
+
   /** 移除默认应用菜单（Windows/Linux 顶栏 File/Edit/View/Window/Help） */
   Menu.setApplicationMenu(null)
 
   registerAttachmentProtocol()
   registerIpcHandlers(() => mainWindow)
+  try {
+    const orch = getUpdateOrchestrator()
+    orch.setMainWindowGetter(() => mainWindow)
+    orch.scheduleAutoCheck()
+  } catch (err) {
+    console.warn('[aiTodo] 更新编排初始化失败', err)
+  }
   try {
     const notify = getNotifyRuntime(
       () => getDatabase(),
@@ -127,7 +140,12 @@ app.whenReady().then(() => {
     () => readSyncPreferences(getActiveDataDir())
   )
   const reminderRepo = new TaskReminderRepository(db)
-  const holidayService = new HolidayService()
+  const holidayService = new HolidayService(undefined, () => {
+    const creds = readSyncCredentials(getActiveDataDir())
+    const state = ensureSyncState(getDatabase())
+    if (!creds?.accessToken || !state.serverBaseUrl) return null
+    return { baseUrl: state.serverBaseUrl, accessToken: creds.accessToken }
+  })
   setHolidayService(holidayService)
   reminderService = new ReminderService(
     taskRepo,
@@ -163,10 +181,25 @@ app.whenReady().then(() => {
     onQuit: () => {
       markQuitting()
       app.quit()
+    },
+    onQuitAndInstallUpdate: () => {
+      try {
+        getUpdateOrchestrator().quitAndInstall()
+      } catch (err) {
+        console.warn('[aiTodo] 托盘重启更新失败', err)
+      }
     }
   }).catch((err) => {
     console.error('[aiTodo] 创建托盘失败', err)
   })
+
+  try {
+    getUpdateOrchestrator().subscribe((status) => {
+      setTrayUpdateReady(status.state === 'ready', mainWindow)
+    })
+  } catch {
+    /* ignore */
+  }
 
   try {
     getWidgetWindowManager().restoreOnStartup()

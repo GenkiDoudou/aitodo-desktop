@@ -135,5 +135,11 @@ export const IPC = {
   NOTIFY_TEST_IYUU: 'notify:testIyuu',
   NOTIFY_TEST_WEBHOOK: 'notify:testWebhook',
   NOTIFY_LIST_DELIVERIES: 'notify:listDeliveries',
-  NOTIFY_LIST_PENDING: 'notify:listPending'
+  NOTIFY_LIST_PENDING: 'notify:listPending',
+  /** 自动更新 */
+  APP_UPDATE_GET_STATUS: 'appUpdate:getStatus',
+  APP_UPDATE_CHECK: 'appUpdate:check',
+  APP_UPDATE_QUIT_AND_INSTALL: 'appUpdate:quitAndInstall',
+  /** Main → Renderer：更新状态推送 */
+  APP_UPDATE_STATUS: 'appUpdate:status'
 } as const

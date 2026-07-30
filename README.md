@@ -40,11 +40,19 @@ npm run dev
 ```bash
 cd desktop
 npm run build        # 编译 main/preload/renderer
-npm run build:win    # Windows NSIS 安装包（可选安装目录）
-npm run build:mac    # macOS dmg（需在 macOS 上执行）
+npm run build:win    # Windows：NSIS + zip，并生成 latest-portable.yml
+npm run build:mac    # macOS：dmg + zip（需在 macOS 上执行）
 ```
 
-产物输出在 `desktop/dist/`。
+产物输出在 `desktop/dist/`。自动更新相关资产与双仓上传步骤见 [`docs/auto-update-release.md`](docs/auto-update-release.md)。
+
+### 自动更新（概要）
+
+- **NSIS / macOS**：`electron-updater` + `latest.yml` / `latest-mac.yml`
+- **免解压目录**：`*-win.zip` + `latest-portable.yml`；更新**不会**覆盖同级 `data/`
+- 发布到 **Gitee + GitHub Releases**（客户端优先 Gitee，失败回退 GitHub）
+- 首版**无代码签名**，可能出现 SmartScreen / Gatekeeper 提示
+- 仓库名可用环境变量 `AITODO_UPDATE_GITEE_*` / `AITODO_UPDATE_GITHUB_*` 覆盖
 
 ## 数据目录
 
@@ -69,7 +77,7 @@ npm run build:mac    # macOS dmg（需在 macOS 上执行）
 - **列表 / 详情勾选**：二态（完成 ↔ 未完成）；勾选不会把「进行中」单独暴露为中间态。
 - **进行中**：通过状态看板拖拽，或详情面板状态下拉设置。
 
-**桌面增强**：子任务（树形列表、详情内新建子任务、父任务完成约束）已实现，超出《openspec/待办需求.md》v1 最小集，后续 Web/后端可对齐时另行规格化。
+**桌面增强**：子任务（树形列表、详情内新建子任务、父任务完成约束）已实现。
 
 ## AI 任务解析
 
@@ -79,15 +87,11 @@ npm run build:mac    # macOS dmg（需在 macOS 上执行）
 
 ## 云同步（可选）
 
-默认仍为纯本地。若要多设备同步：
+默认仍为纯本地。若要多设备同步，需自行部署兼容的 Sync Server（HTTP API + JWT），然后在桌面端「设置 → 账号与同步」填写服务器地址并登录。
 
-1. 启动仓库根目录 `todo-service/`（JDK 17，默认 H2 `MODE=MySQL`，端口 `8088`，演示账号 `demo` / `demo1234`，由 Flyway 种子写入）。
-2. 桌面端「设置 → 账号与同步」填写服务器地址并登录。
-3. 未登录时行为与纯本地一致；退出登录后停止自动同步。
-4. 「设置 → 通知管理」：托盘、互斥外部渠道（IYUU/Webhook 二选一）、在线/离线代发、每日免打扰；待发送列表与消息中心「待发送」同源。未登录本机直连；已登录代发+租约；关端可到点外发。
-5. 同步范围可勾选任务、配置（含定时汇总配置）、**定时汇总结果**（站内汇总消息）、便签。
+未登录时行为与纯本地一致；退出登录后停止自动同步。通知、租约、同步范围等行为见应用内设置说明。
 
-详情见 `openspec/需求规格说明书/2026-07-20-desktop-cloud-sync-技术方案.md`。
+> 本仓库为桌面客户端开源仓；服务端实现可自建，不必与本仓同组织。
 
 ## 明确不包含（当前）
 

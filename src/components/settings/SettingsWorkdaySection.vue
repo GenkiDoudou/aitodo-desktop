@@ -2,7 +2,8 @@
   <section class="settings-section workday-settings">
     <h2 class="settings-section__title">工作日</h2>
     <p class="settings-section__hint">
-      查看中国法定节假日与调休补班（数据来自 timor.tech）。此处仅展示日历，不修改任务「工作日」重复规则。
+      查看中国法定节假日与调休补班。未登录直连 timor.tech；登录云同步后优先从同步服务器获取（失败回退
+      timor.tech）。此处仅展示日历，不修改任务「工作日」重复规则。
     </p>
 
     <div class="workday-settings__status">
