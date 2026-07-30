@@ -56,7 +56,19 @@ describe('detectInstallShape', () => {
 describe('parseUpdateYml / compareSemver', () => {
   it('parses version path sha512', () => {
     const m = parseUpdateYml(`version: 1.2.3\npath: app-1.2.3-win.zip\nsha512: abc=\n`)
-    expect(m).toEqual({ version: '1.2.3', path: 'app-1.2.3-win.zip', sha512: 'abc=' })
+    expect(m).toEqual({
+      version: '1.2.3',
+      path: 'app-1.2.3-win.zip',
+      sha512: 'abc=',
+      parts: []
+    })
+  })
+
+  it('parses ordered part lines', () => {
+    const m = parseUpdateYml(
+      `version: 1.0.0\npath: a.zip\nsha512: x=\npart: a.zip.part01\npart: a.zip.part02\n`
+    )
+    expect(m.parts).toEqual(['a.zip.part01', 'a.zip.part02'])
   })
 
   it('compares semver', () => {
@@ -100,7 +112,49 @@ describe('FeedResolver', () => {
     expect(feed.source).toBe('gitee')
     expect(feed.manifest.version).toBe('1.1.0')
     expect(feed.assetUrl).toContain('Setup.exe')
+    expect(feed.partUrls).toEqual([])
     expect(calls.some((u) => u.includes('github.com'))).toBe(false)
+  })
+
+  it('uses gitee part urls when full zip is absent', async () => {
+    const resolver = new FeedResolver({
+      config: {
+        gitee: { owner: 'o', repo: 'r' },
+        github: { owner: 'o', repo: 'r' }
+      },
+      fetchText: async (url) => {
+        if (url.includes('gitee.com/api')) {
+          return JSON.stringify({
+            assets: [
+              {
+                name: 'latest-portable.yml',
+                browser_download_url:
+                  'https://gitee.com/o/r/releases/download/v1.0.0/latest-portable.yml'
+              },
+              {
+                name: 'a.zip.part01',
+                browser_download_url: 'https://gitee.com/o/r/releases/download/v1.0.0/a.zip.part01'
+              },
+              {
+                name: 'a.zip.part02',
+                browser_download_url: 'https://gitee.com/o/r/releases/download/v1.0.0/a.zip.part02'
+              }
+            ]
+          })
+        }
+        if (url.endsWith('latest-portable.yml')) {
+          return 'version: 1.0.0\npath: a.zip\nsha512: zz=\npart: a.zip.part01\npart: a.zip.part02\n'
+        }
+        throw new Error(url)
+      }
+    })
+    const feed = await resolver.resolve('portable')
+    expect(feed.source).toBe('gitee')
+    expect(feed.assetUrl).toBeNull()
+    expect(feed.partUrls).toEqual([
+      'https://gitee.com/o/r/releases/download/v1.0.0/a.zip.part01',
+      'https://gitee.com/o/r/releases/download/v1.0.0/a.zip.part02'
+    ])
   })
 
   it('falls back to github when gitee fails', async () => {

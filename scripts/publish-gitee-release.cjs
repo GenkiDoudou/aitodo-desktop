@@ -28,7 +28,9 @@ if (!tag) {
   process.exit(1)
 }
 
-const ASSET_PATTERNS = [/\.exe$/i, /\.blockmap$/i, /\.yml$/i, /\.zip$/i]
+const ASSET_PATTERNS = [/\.exe$/i, /\.blockmap$/i, /\.yml$/i, /\.zip$/i, /\.part\d+$/i]
+/** Gitee 附件硬限制 100MB，低于此值才上传 */
+const GITEE_MAX_UPLOAD_BYTES = 95 * 1024 * 1024
 
 function listAssets() {
   if (!fs.existsSync(distDir)) {
@@ -39,6 +41,17 @@ function listAssets() {
     .filter((name) => ASSET_PATTERNS.some((re) => re.test(name)))
     .map((name) => path.join(distDir, name))
     .filter((p) => fs.statSync(p).isFile())
+}
+
+function shouldUpload(filePath) {
+  const size = fs.statSync(filePath).size
+  if (size >= GITEE_MAX_UPLOAD_BYTES) {
+    console.warn(
+      `[publish-gitee-release] skip ${path.basename(filePath)} (${(size / 1024 / 1024).toFixed(1)}MB ≥ 95MB，请使用分卷 .part*)`
+    )
+    return false
+  }
+  return true
 }
 
 function apiRequest(method, apiPath, { query, form, json } = {}) {
@@ -183,14 +196,36 @@ function uploadFile(releaseId, filePath) {
 async function main() {
   const assets = listAssets()
   if (!assets.length) {
-    throw new Error('dist 下没有可上传的 exe/zip/yml/blockmap')
+    throw new Error('dist 下没有可上传的 exe/zip/yml/blockmap/part')
   }
-  console.log(`[publish-gitee-release] tag=${tag} assets=${assets.length}`)
+  const uploadList = assets.filter(shouldUpload)
+  if (!uploadList.length) {
+    throw new Error('没有可上传到 Gitee 的文件（全部超过 95MB？请确认已生成 .part 分卷）')
+  }
+  console.log(
+    `[publish-gitee-release] tag=${tag} upload=${uploadList.length}/${assets.length}`
+  )
   const releaseId = await ensureRelease()
-  for (const file of assets) {
-    await uploadFile(releaseId, file)
+  let ok = 0
+  let failed = 0
+  for (const file of uploadList) {
+    try {
+      await uploadFile(releaseId, file)
+      ok += 1
+    } catch (err) {
+      failed += 1
+      const msg = err instanceof Error ? err.message : String(err)
+      if (/100 MB|超出限制|file size/i.test(msg)) {
+        console.warn(`[publish-gitee-release] skip oversized ${path.basename(file)}: ${msg}`)
+        continue
+      }
+      throw err
+    }
   }
-  console.log('[publish-gitee-release] done')
+  if (ok === 0) {
+    throw new Error('Gitee 没有成功上传任何附件')
+  }
+  console.log(`[publish-gitee-release] done ok=${ok} skippedOrFailedSize=${failed}`)
 }
 
 main().catch((err) => {

@@ -9,8 +9,12 @@ export interface ResolvedFeed {
   /** generic provider 目录 URL（以 / 结尾） */
   baseUrl: string
   manifest: UpdateManifest
-  /** 资源直链 */
-  assetUrl: string
+  /**
+   * 整包直链。若源上只有分卷、没有完整 path 文件，则为 null，此时用 partUrls。
+   */
+  assetUrl: string | null
+  /** 有序分卷直链；无分卷时为空数组 */
+  partUrls: string[]
 }
 
 export type FetchText = (url: string) => Promise<string>
@@ -28,6 +32,7 @@ export interface FeedResolverOptions {
 
 /**
  * 双源 feed：先 Gitee 后 GitHub；单次 resolve 内源固定。
+ * Gitee 可能因 100MB 限制只有分卷；GitHub 通常有完整 zip。
  */
 export class FeedResolver {
   private readonly config: UpdateFeedConfig
@@ -55,14 +60,33 @@ export class FeedResolver {
 
   async resolveFrom(source: UpdateFeedSource, kind: FeedManifestKind): Promise<ResolvedFeed> {
     const manifestName = MANIFEST_FILE[kind]
-    const { manifestUrl, baseUrl, assetUrlFor } = await this.resolveUrls(source, manifestName)
+    const { manifestUrl, baseUrl, resolveAsset } = await this.resolveUrls(source, manifestName)
     const text = await this.fetchText(manifestUrl)
     const manifest = parseUpdateYml(text)
+    const single = resolveAsset(manifest.path)
+    const partUrls = manifest.parts.map((p) => {
+      const url = resolveAsset(p)
+      if (!url) throw new Error(`更新源缺少分卷 ${p}`)
+      return url
+    })
+
+    if (!single && partUrls.length === 0) {
+      throw new Error(`更新源缺少安装包 ${manifest.path}`)
+    }
+    if (!single && partUrls.length > 0 && manifest.parts.length === 0) {
+      throw new Error(`更新源缺少安装包 ${manifest.path}`)
+    }
+    // 有分卷声明但源上既无整包也无齐套分卷
+    if (!single && manifest.parts.length > 0 && partUrls.length !== manifest.parts.length) {
+      throw new Error(`更新源分卷不完整`)
+    }
+
     return {
       source,
       baseUrl,
       manifest,
-      assetUrl: assetUrlFor(manifest.path)
+      assetUrl: single,
+      partUrls: single ? [] : partUrls
     }
   }
 
@@ -72,7 +96,8 @@ export class FeedResolver {
   ): Promise<{
     manifestUrl: string
     baseUrl: string
-    assetUrlFor: (fileName: string) => string
+    /** 返回 null 表示该源 release 资产列表里没有此文件 */
+    resolveAsset: (fileName: string) => string | null
   }> {
     if (source === 'github') {
       const { owner, repo } = this.config.github
@@ -80,7 +105,8 @@ export class FeedResolver {
       return {
         baseUrl,
         manifestUrl: `${baseUrl}${manifestName}`,
-        assetUrlFor: (fileName) => `${baseUrl}${fileName}`
+        // GitHub latest/download 对存在的文件直接可下；整包优先
+        resolveAsset: (fileName) => `${baseUrl}${fileName}`
       }
     }
 
@@ -104,10 +130,9 @@ export class FeedResolver {
     return {
       baseUrl,
       manifestUrl,
-      assetUrlFor: (fileName) => {
+      resolveAsset: (fileName) => {
         const hit = assets.find((a) => a.name === fileName)
-        if (hit?.browser_download_url) return hit.browser_download_url
-        return `${baseUrl}${fileName}`
+        return hit?.browser_download_url ?? null
       }
     }
   }

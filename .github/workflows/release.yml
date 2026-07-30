@@ -44,6 +44,7 @@ jobs:
             dist/*.yml
             dist/*-win.zip
             dist/*.zip
+            dist/*.part*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

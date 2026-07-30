@@ -26,18 +26,12 @@
 
 ## 双仓上传
 
-同一 git tag / 版本号，将上表资产上传到 Gitee + GitHub Releases，**文件名必须一致**。
+同一 git tag / 版本号，将上表资产上传到 Gitee + GitHub Releases，**文件名必须一致**（分卷名也要一致）。
 
-- **GitHub**：在公开仓打 `v*` tag，由 Actions（`.github/workflows/release.yml`）打包并上传 Release
-- **Gitee**：同一 workflow 会：
-  1. 把 tag 推到 Gitee
-  2. 用 API 创建 Release 并上传 `dist/` 产物  
+- **GitHub**：完整 `*-win.zip` + 可选 `.part*` + yml / Setup
+- **Gitee**：附件单文件 **&lt;100MB**。`generate-portable-yml` 会在 zip≥90MB 时切成 `.part01`… 并写入 `latest-portable.yml` 的 `part:` 列表；上传脚本跳过超限整包，改传分卷。客户端从 Gitee 下齐分卷后合并，再校验整包 `sha512`——**下载仍走 Gitee**。
 
-需在 GitHub 仓库 **Settings → Secrets and variables → Actions** 配置：
-
-- `GITEE_TOKEN`：Gitee 私人令牌（勾选 **projects** 等仓库权限）
-
-生成令牌：Gitee → 设置 → 私人令牌。
+需在 GitHub 仓库配置 `GITEE_TOKEN`（Gitee 私人令牌，projects 权限）。
 
 ## 无代码签名
 
