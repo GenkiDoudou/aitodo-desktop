@@ -187,7 +187,7 @@ export class TaskService {
       remindAt: primaryRemindAt(reminderInputs as import('@shared/task-reminder').TaskReminderItem[]),
       remindFiredAt: null,
       completedAt: status === 'DONE' ? ts : null,
-      sortOrder: dto.sortOrder ?? 0,
+      sortOrder: dto.sortOrder ?? this.repo.maxSortOrder() + 1,
       createdAt: ts,
       updatedAt: ts,
       deletedAt: null,
@@ -446,6 +446,42 @@ export class TaskService {
   emptyTrash(): number {
     this.activityService?.deleteForTrashedTasks()
     return this.repo.hardDeleteAllTrash()
+  }
+
+  /** 按 ids 顺序重写 sortOrder；未列出任务不变；未知 id 跳过；全非法报错；空数组 no-op */
+  reorder(ids: string[]): Task[] {
+    if (!ids.length) return []
+    const existing = new Set(
+      this.repo.list({}).map((t) => t.id)
+    )
+    const seen = new Set<string>()
+    const ordered: string[] = []
+    for (const id of ids) {
+      if (!existing.has(id) || seen.has(id)) continue
+      seen.add(id)
+      ordered.push(id)
+    }
+    if (!ordered.length) {
+      throw new AppError('VALIDATION_ERROR', '没有可排序的任务')
+    }
+    const ts = nowIso()
+    return this.withTx(() => {
+      const result: Task[] = []
+      ordered.forEach((id, index) => {
+        const task = this.repo.findById(id)
+        if (!task) return
+        const next: Task = {
+          ...task,
+          sortOrder: index,
+          updatedAt: ts,
+          syncVersion: task.syncVersion + 1
+        }
+        this.repo.update(next)
+        this.enqueueTaskUpsert(next)
+        result.push(this.enrichTask(next))
+      })
+      return result
+    })
   }
 
   private recordActivities(inputs: import('./task-activity-recorder').TaskActivityRecordInput[]): void {

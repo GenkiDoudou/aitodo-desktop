@@ -1,6 +1,10 @@
 import { ensureSyncState, readSyncCredentials } from '../db/sync-state'
 import { readNotificationConfig, writeNotificationConfig } from '../db/notification-config-store'
-import { mergeNotificationConfig, type NotificationConfig } from '@shared/notification-config'
+import {
+  applyServerChannelConfig,
+  mergeNotificationConfig,
+  type NotificationConfig
+} from '@shared/notification-config'
 import type { AppMessage, AppMessageSource } from '@shared/types'
 import type Database from 'better-sqlite3'
 import { AppMessageRepository } from '../db/app-message-repository'
@@ -62,8 +66,10 @@ export class NotifyRuntime {
       return
     }
     this.client = new NotifyApiClient(state.serverBaseUrl, creds.accessToken)
-    const cfg = readNotificationConfig(this.getDataDir())
-    void this.client.putConfig(cfg).catch((err) => console.warn('[notify] sync config up', err))
+    // 登录只拉取，避免空本地 token 覆盖服务端；显式保存时再 putConfig
+    void this.pullConfigFromServer().catch((err) =>
+      console.warn('[notify] pull config failed', err)
+    )
     this.heartbeat = new NotifyLeaseHeartbeat(
       () => this.client,
       () => ensureSyncState(this.getDb()).deviceId,
@@ -187,6 +193,14 @@ export class NotifyRuntime {
       })
       removeDeferredNotify(this.getDataDir(), item.event, item.entityId, item.fireAt)
     }
+  }
+
+  /** 从服务端拉取渠道配置写入本机（不上传） */
+  private async pullConfigFromServer(): Promise<void> {
+    if (!this.client) return
+    const remote = await this.client.getConfig()
+    const local = readNotificationConfig(this.getDataDir())
+    writeNotificationConfig(this.getDataDir(), applyServerChannelConfig(local, remote))
   }
 
   private async relayIfLoggedIn(payload: NotifyDispatchPayload): Promise<boolean> {

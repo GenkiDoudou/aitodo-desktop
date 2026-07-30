@@ -340,6 +340,14 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  async function reorder(ids: string[]) {
+    const updated = unwrapIpc(await window.api.tasks.reorder(ids))
+    const byId = new Map(updated.map((t) => [t.id, t]))
+    tasks.value = tasks.value.map((t) => byId.get(t.id) ?? t)
+    await fetchWithCurrentFilter()
+    return updated
+  }
+
   async function remove(id: string, options?: DeleteTaskOptions) {
     unwrapIpc(await window.api.tasks.delete(id, options))
     removeTaskFromList(id)
@@ -402,6 +410,7 @@ export const useTaskStore = defineStore('tasks', () => {
     create,
     quickCreate,
     update,
+    reorder,
     remove,
     refreshTrashCount,
     refreshSidebarCounts,

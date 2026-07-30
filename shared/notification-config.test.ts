@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_NOTIFICATION_CONFIG,
   activeChannelReady,
+  applyServerChannelConfig,
   buildTaskReminderExternalCopy,
   mergeNotificationConfig,
   type NotifyEvent
@@ -86,5 +87,29 @@ describe('notification-config', () => {
       title: '写周报',
       body: '写周报'
     })
+  })
+
+  it('applyServerChannelConfig overlays channel fields and keeps local tray/lease', () => {
+    const local = mergeNotificationConfig({
+      systemTrayEnabled: false,
+      activeChannel: 'iyuu',
+      iyuu: { token: '', events: ['task_reminder'] },
+      lease: { heartbeatIntervalMs: 12_000, leaseTtlMs: 40_000 }
+    })
+    const next = applyServerChannelConfig(local, {
+      activeChannel: 'webhook',
+      relayWhenOnline: false,
+      quietHours: { enabled: true, start: '22:00', end: '07:00' },
+      iyuu: { token: 'server-token', events: ['task_reminder', 'scheduled_summary'] },
+      webhook: { name: 'hook', url: 'https://example.com/h', events: ['task_reminder'] }
+    })
+    expect(next.systemTrayEnabled).toBe(false)
+    expect(next.lease.heartbeatIntervalMs).toBe(12_000)
+    expect(next.lease.leaseTtlMs).toBe(40_000)
+    expect(next.activeChannel).toBe('webhook')
+    expect(next.relayWhenOnline).toBe(false)
+    expect(next.quietHours.enabled).toBe(true)
+    expect(next.iyuu.token).toBe('server-token')
+    expect(next.webhook.url).toBe('https://example.com/h')
   })
 })

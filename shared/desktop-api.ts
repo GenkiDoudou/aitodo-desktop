@@ -76,6 +76,8 @@ export interface DesktopApi {
     emptyTrash(): Promise<IpcResult<number>>
     countTrash(): Promise<IpcResult<number>>
     countDone(): Promise<IpcResult<number>>
+    /** 按 id 顺序重写 sortOrder */
+    reorder(ids: string[]): Promise<IpcResult<Task[]>>
     /** 读取垃圾桶中的任务详情 */
     getInTrash(id: string): Promise<IpcResult<Task>>
   }
@@ -84,6 +86,7 @@ export interface DesktopApi {
     create(dto: CreateCategoryDto): Promise<IpcResult<Category>>
     update(id: string, dto: UpdateCategoryDto): Promise<IpcResult<Category>>
     delete(id: string): Promise<IpcResult<void>>
+    reorder(ids: string[]): Promise<IpcResult<Category[]>>
   }
   tags: {
     list(): Promise<IpcResult<string[]>>

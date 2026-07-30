@@ -176,8 +176,22 @@
               <button
                 type="button"
                 class="sidebar__row"
-                :class="{ 'is-active': isCategoryActive(cat.id), 'has-keywords': cat.keywords?.length }"
+                :class="{
+                  'is-active': isCategoryActive(cat.id),
+                  'has-keywords': cat.keywords?.length,
+                  'is-drag-over-before':
+                    categoryDropHint?.id === cat.id && categoryDropHint.place === 'before',
+                  'is-drag-over-after':
+                    categoryDropHint?.id === cat.id && categoryDropHint.place === 'after',
+                  'is-dragging': categoryDragId === cat.id
+                }"
+                draggable="true"
                 @click="selectCategory(cat.id)"
+                @dragstart="onCategoryDragStart($event, cat.id)"
+                @dragover="onCategoryDragOver($event, cat.id)"
+                @dragleave="onCategoryDragLeave(cat.id)"
+                @drop="onCategoryDrop($event, cat.id)"
+                @dragend="onCategoryDragEnd"
               >
                 <span class="sidebar__row-dot" :style="{ background: cat.color ?? '#909399' }" />
                 <span class="sidebar__row-body">
@@ -206,7 +220,19 @@
               </button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                  <el-dropdown-item
+                    command="move-up"
+                    :disabled="categoryIndex(cat.id) <= 0"
+                  >
+                    上移
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    command="move-down"
+                    :disabled="categoryIndex(cat.id) >= categoryStore.categories.length - 1"
+                  >
+                    下移
+                  </el-dropdown-item>
+                  <el-dropdown-item command="edit" divided>编辑</el-dropdown-item>
                   <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -263,7 +289,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, type Component } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Bell,
   Calendar,
@@ -290,6 +316,7 @@ import {
   DEFAULT_TASK_VIEW_KANBAN_ID
 } from '@shared/apply-task-view'
 import type { Category } from '@shared/types'
+import { moveItemInOrder } from '@shared/list-order'
 import { VIEW_TEMPLATES, type ViewTemplateId } from '@shared/view-templates'
 import AppMessagePanel from '@/components/AppMessagePanel.vue'
 import CategoryEditDialog from '@/components/CategoryEditDialog.vue'
@@ -350,6 +377,63 @@ const viewStore = useViewStore()
 const viewTemplates = VIEW_TEMPLATES
 const categoryEditOpen = ref(false)
 const editingCategory = ref<Category | null>(null)
+
+const CATEGORY_DRAG_MIME = 'application/x-ai-todo-category-reorder'
+const categoryDragId = ref<string | null>(null)
+const categoryDropHint = ref<{ id: string; place: 'before' | 'after' } | null>(null)
+
+function categoryIndex(id: string): number {
+  return categoryStore.categories.findIndex((c) => c.id === id)
+}
+
+function onCategoryDragStart(e: DragEvent, id: string) {
+  categoryDragId.value = id
+  if (!e.dataTransfer) return
+  e.dataTransfer.setData(CATEGORY_DRAG_MIME, id)
+  e.dataTransfer.effectAllowed = 'move'
+}
+
+function onCategoryDragOver(e: DragEvent, id: string) {
+  if (!categoryDragId.value || categoryDragId.value === id) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  const place = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+  categoryDropHint.value = { id, place }
+}
+
+function onCategoryDragLeave(id: string) {
+  if (categoryDropHint.value?.id === id) categoryDropHint.value = null
+}
+
+async function onCategoryDrop(e: DragEvent, targetId: string) {
+  e.preventDefault()
+  const fromId = categoryDragId.value ?? e.dataTransfer?.getData(CATEGORY_DRAG_MIME)
+  const place = categoryDropHint.value?.id === targetId ? categoryDropHint.value.place : 'after'
+  categoryDropHint.value = null
+  categoryDragId.value = null
+  if (!fromId || fromId === targetId) return
+  const ids = categoryStore.categories.map((c) => c.id)
+  const from = ids.indexOf(fromId)
+  const target = ids.indexOf(targetId)
+  if (from < 0 || target < 0) return
+  let insertAt = place === 'before' ? target : target + 1
+  if (from < insertAt) insertAt--
+  const next = moveItemInOrder(ids, from, insertAt)
+  if (next.every((id, i) => id === ids[i])) return
+  try {
+    await categoryStore.reorder(next)
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : '清单排序失败')
+    await categoryStore.load()
+  }
+}
+
+function onCategoryDragEnd() {
+  categoryDragId.value = null
+  categoryDropHint.value = null
+}
 
 /** 「全部」已由顶部入口承担，侧栏不再重复展示默认「全部任务」视图 */
 const sidebarViews = computed(() =>
@@ -559,6 +643,19 @@ async function promptCategory() {
 }
 
 async function onCategoryCommand(command: string, id: string, name: string) {
+  if (command === 'move-up' || command === 'move-down') {
+    const ids = categoryStore.categories.map((c) => c.id)
+    const from = ids.indexOf(id)
+    const to = command === 'move-up' ? from - 1 : from + 1
+    if (from < 0 || to < 0 || to >= ids.length) return
+    try {
+      await categoryStore.reorder(moveItemInOrder(ids, from, to))
+    } catch (err) {
+      ElMessage.error(err instanceof Error ? err.message : '清单排序失败')
+      await categoryStore.load()
+    }
+    return
+  }
   if (command === 'edit') {
     const cat = categoryStore.categories.find((c) => c.id === id)
     if (!cat) return
@@ -749,6 +846,18 @@ onUnmounted(() => {
     .sidebar__row-count {
       margin-top: 2px;
     }
+  }
+
+  &.is-dragging {
+    opacity: 0.45;
+  }
+
+  &.is-drag-over-before {
+    box-shadow: inset 0 2px 0 0 var(--el-color-primary);
+  }
+
+  &.is-drag-over-after {
+    box-shadow: inset 0 -2px 0 0 var(--el-color-primary);
   }
 }
 

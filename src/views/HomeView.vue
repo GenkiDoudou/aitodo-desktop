@@ -271,6 +271,7 @@
           :categories="parseCategoriesForMatch"
           @select="openTask"
           @toggle-status="onToggleStatus"
+          @reorder-roots="onReorderRoots"
         />
 
       </section>
@@ -1855,7 +1856,16 @@ async function onToggleStatus(task: Task) {
 
 }
 
-
+async function onReorderRoots(ids: string[]) {
+  taskSortBy.value = 'custom'
+  persistTaskSortBy('custom')
+  try {
+    await taskStore.reorder(ids)
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : '任务排序失败')
+    await taskStore.load()
+  }
+}
 
 async function onChangePriority(taskId: string, priority: TaskPriority) {
 

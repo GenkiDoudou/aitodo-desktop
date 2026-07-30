@@ -76,7 +76,7 @@ export class CategoryService {
       id: uuidv4(),
       name: title,
       color: dto.color ?? '#409EFF',
-      sortOrder: dto.sortOrder ?? 0,
+      sortOrder: dto.sortOrder ?? this.repo.maxSortOrder() + 1,
       keywords,
       createdAt: ts,
       updatedAt: ts,
@@ -131,6 +131,31 @@ export class CategoryService {
         },
         clientSyncVersion: 1
       })
+    })
+  }
+
+  /** 按 ids 顺序重写 sortOrder；未知 id 跳过；全非法则报错；空数组 no-op */
+  reorder(ids: string[]): Category[] {
+    if (!ids.length) return this.list()
+    const existing = new Set(this.repo.list().map((c) => c.id))
+    const seen = new Set<string>()
+    const ordered: string[] = []
+    for (const id of ids) {
+      if (!existing.has(id) || seen.has(id)) continue
+      seen.add(id)
+      ordered.push(id)
+    }
+    if (!ordered.length) {
+      throw new AppError('VALIDATION_ERROR', '没有可排序的清单')
+    }
+    const ts = nowIso()
+    return this.withTx(() => {
+      ordered.forEach((id, index) => {
+        this.repo.update(id, { sortOrder: index, updatedAt: ts })
+        const updated = this.repo.findById(id)!
+        this.enqueueUpsert(updated, 1)
+      })
+      return this.list()
     })
   }
 }

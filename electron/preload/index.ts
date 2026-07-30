@@ -35,7 +35,8 @@ const api: DesktopApi = {
       ipcRenderer.invoke(IPC.TASKS_PERMANENT_DELETE, id, options),
     emptyTrash: () => ipcRenderer.invoke(IPC.TASKS_EMPTY_TRASH),
     countTrash: () => ipcRenderer.invoke(IPC.TASKS_COUNT_TRASH),
-    countDone: () => ipcRenderer.invoke(IPC.TASKS_COUNT_DONE)
+    countDone: () => ipcRenderer.invoke(IPC.TASKS_COUNT_DONE),
+    reorder: (ids: string[]) => ipcRenderer.invoke(IPC.TASKS_REORDER, ids)
   },
   kanbanGroups: {
     list: (scopeKey: string) => ipcRenderer.invoke(IPC.KANBAN_GROUPS_LIST, scopeKey),
@@ -97,7 +98,8 @@ const api: DesktopApi = {
     create: (dto: CreateCategoryDto) => ipcRenderer.invoke(IPC.CATEGORIES_CREATE, dto),
     update: (id: string, dto: UpdateCategoryDto) =>
       ipcRenderer.invoke(IPC.CATEGORIES_UPDATE, id, dto),
-    delete: (id: string) => ipcRenderer.invoke(IPC.CATEGORIES_DELETE, id)
+    delete: (id: string) => ipcRenderer.invoke(IPC.CATEGORIES_DELETE, id),
+    reorder: (ids: string[]) => ipcRenderer.invoke(IPC.CATEGORIES_REORDER, ids)
   },
   tags: {
     list: () => ipcRenderer.invoke(IPC.TAGS_LIST)

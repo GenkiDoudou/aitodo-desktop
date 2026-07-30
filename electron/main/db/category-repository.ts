@@ -38,6 +38,15 @@ export class CategoryRepository {
     return rows.map(mapRow)
   }
 
+  maxSortOrder(): number {
+    const row = this.db
+      .prepare(
+        `SELECT COALESCE(MAX(sort_order), -1) as mx FROM categories WHERE deleted_at IS NULL`
+      )
+      .get() as { mx: number }
+    return row.mx
+  }
+
   findById(id: string): Category | null {
     const row = this.db
       .prepare(`SELECT * FROM categories WHERE id = ? AND deleted_at IS NULL`)

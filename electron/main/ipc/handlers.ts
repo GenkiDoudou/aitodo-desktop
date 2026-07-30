@@ -231,6 +231,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.TASKS_EMPTY_TRASH, () => wrapIpc(() => services().tasks.emptyTrash()))
   ipcMain.handle(IPC.TASKS_COUNT_TRASH, () => wrapIpc(() => services().tasks.countTrash()))
   ipcMain.handle(IPC.TASKS_COUNT_DONE, () => wrapIpc(() => services().tasks.countDone()))
+  ipcMain.handle(IPC.TASKS_REORDER, (_e, ids: string[]) =>
+    wrapIpc(() => services().tasks.reorder(ids ?? []))
+  )
 
   ipcMain.handle(IPC.KANBAN_GROUPS_LIST, (_e, scopeKey: string) =>
     wrapIpc(() => services().kanbanGroups.listBoard(scopeKey))
@@ -309,6 +312,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       services().categories.delete(id)
       return undefined
     })
+  )
+  ipcMain.handle(IPC.CATEGORIES_REORDER, (_e, ids: string[]) =>
+    wrapIpc(() => services().categories.reorder(ids ?? []))
   )
 
   ipcMain.handle(IPC.TAGS_LIST, () => wrapIpc(() => services().tags.listAllNames()))

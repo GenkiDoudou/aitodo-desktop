@@ -257,6 +257,13 @@ export class TaskRepository {
     return result.changes
   }
 
+  maxSortOrder(): number {
+    const row = this.db
+      .prepare(`SELECT COALESCE(MAX(sort_order), -1) as mx FROM tasks WHERE deleted_at IS NULL`)
+      .get() as { mx: number }
+    return row.mx
+  }
+
   insert(task: Task): void {
     this.db
       .prepare(

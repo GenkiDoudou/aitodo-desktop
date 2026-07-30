@@ -1,4 +1,4 @@
-/** 通知管理：本机配置（渠道密钥可随登录同步到服务端） */
+/** 通知管理：本机配置（登录拉取服务端渠道配置；显式保存时再上传） */
 
 export const NOTIFY_EVENTS = ['task_reminder', 'scheduled_summary'] as const
 export type NotifyEvent = (typeof NOTIFY_EVENTS)[number]
@@ -204,6 +204,25 @@ export function mergeNotificationConfig(partial?: unknown): NotificationConfig {
           : base.lease.leaseTtlMs
     }
   }
+}
+
+/**
+ * 登录拉取：用服务端渠道字段覆盖本地；托盘 / 租约为本机字段，保留不变。
+ */
+export function applyServerChannelConfig(
+  local: NotificationConfig,
+  server: unknown
+): NotificationConfig {
+  const remote = mergeNotificationConfig(server)
+  return mergeNotificationConfig({
+    ...local,
+    activeChannel: remote.activeChannel,
+    relayWhenOnline: remote.relayWhenOnline,
+    relayWhenOffline: remote.relayWhenOffline,
+    quietHours: remote.quietHours,
+    iyuu: remote.iyuu,
+    webhook: remote.webhook
+  })
 }
 
 /** 生效渠道是否订阅该事件且具备最低凭证 */

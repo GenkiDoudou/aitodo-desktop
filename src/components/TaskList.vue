@@ -9,78 +9,117 @@
         <li v-if="item.type === 'group'" class="task-list__group">
           {{ item.label }}
         </li>
-        <li
-          v-else
-          class="task-list__row"
-          :class="{ 'is-selected': selectedId === item.task.id }"
-          :style="{ paddingLeft: `${12 + item.depth * 20}px` }"
-          @click="emit('select', item.task.id)"
-        >
-          <button
-            v-if="hasChildren(item.task.id)"
-            type="button"
-            class="task-list__expand"
-            :aria-expanded="isExpanded(item.task.id)"
-            :aria-label="isExpanded(item.task.id) ? '折叠子任务' : '展开子任务'"
-            @click="toggleExpand(item.task.id, $event)"
+        <li v-else class="task-list__item">
+          <el-dropdown
+            trigger="contextmenu"
+            class="task-list__dropdown"
+            @command="(cmd: string) => onTaskCommand(cmd, item.task.id, item.depth)"
           >
-            <el-icon>
-              <ArrowDown v-if="isExpanded(item.task.id)" />
-              <ArrowRight v-else />
-            </el-icon>
-          </button>
-          <span v-else class="task-list__expand-placeholder" aria-hidden="true" />
+            <div
+              class="task-list__row"
+              :class="{
+                'is-selected': selectedId === item.task.id,
+                'is-draggable': item.depth === 0,
+                'is-dragging': taskDragId === item.task.id,
+                'is-drag-over-before':
+                  taskDropHint?.id === item.task.id && taskDropHint.place === 'before',
+                'is-drag-over-after':
+                  taskDropHint?.id === item.task.id && taskDropHint.place === 'after'
+              }"
+              :style="{ paddingLeft: `${12 + item.depth * 20}px` }"
+              :draggable="item.depth === 0"
+              @click="emit('select', item.task.id)"
+              @dragstart="onTaskDragStart($event, item.task.id, item.depth)"
+              @dragover="onTaskDragOver($event, item.task.id, item.depth)"
+              @dragleave="onTaskDragLeave(item.task.id)"
+              @drop="onTaskDrop($event, item.task.id, item.depth)"
+              @dragend="onTaskDragEnd"
+            >
+              <button
+                v-if="hasChildren(item.task.id)"
+                type="button"
+                class="task-list__expand"
+                :aria-expanded="isExpanded(item.task.id)"
+                :aria-label="isExpanded(item.task.id) ? '折叠子任务' : '展开子任务'"
+                @click="toggleExpand(item.task.id, $event)"
+              >
+                <el-icon>
+                  <ArrowDown v-if="isExpanded(item.task.id)" />
+                  <ArrowRight v-else />
+                </el-icon>
+              </button>
+              <span v-else class="task-list__expand-placeholder" aria-hidden="true" />
 
-          <el-checkbox
-            :model-value="item.task.status === 'DONE'"
-            @click.stop
-            @change="() => emit('toggle-status', item.task)"
-          />
+              <el-checkbox
+                :model-value="item.task.status === 'DONE'"
+                @click.stop
+                @change="() => emit('toggle-status', item.task)"
+              />
 
-          <div class="task-list__body">
-            <div class="task-list__title-row">
-              <TaskPriorityBadge :priority="item.task.priority ?? 4" />
-              <span class="task-list__title" :class="{ 'is-done': item.task.status === 'DONE' }">
-                {{ item.task.title }}
-              </span>
-              <span
-                v-if="hasChildren(item.task.id) && !isExpanded(item.task.id)"
-                class="task-list__child-count"
-              >
-                {{ childCount(item.task.id) }}
-              </span>
+              <div class="task-list__body">
+                <div class="task-list__title-row">
+                  <TaskPriorityBadge :priority="item.task.priority ?? 4" />
+                  <span class="task-list__title" :class="{ 'is-done': item.task.status === 'DONE' }">
+                    {{ item.task.title }}
+                  </span>
+                  <span
+                    v-if="hasChildren(item.task.id) && !isExpanded(item.task.id)"
+                    class="task-list__child-count"
+                  >
+                    {{ childCount(item.task.id) }}
+                  </span>
+                </div>
+                <div v-if="hasMeta(item.task)" class="task-list__meta">
+                  <span
+                    v-if="categoryLabel(item.task)"
+                    class="task-list__meta-item task-list__meta-item--category"
+                    title="清单"
+                  >
+                    {{ categoryLabel(item.task) }}
+                  </span>
+                  <span
+                    v-if="showCompletedAt(item.task)"
+                    class="task-list__meta-item task-list__meta-item--completed"
+                    title="完成时间"
+                  >
+                    完成 {{ formatTaskListTime(item.task.completedAt!) }}
+                  </span>
+                  <span v-if="showCreatedAt(item.task)" class="task-list__meta-item" title="创建时间">
+                    创建 {{ formatTaskCreatedAt(item.task.createdAt) }}
+                  </span>
+                  <span
+                    v-if="showDueAt(item.task)"
+                    class="task-list__meta-item"
+                    :class="{ 'is-overdue': isOverdue(item.task) }"
+                    title="截止时间"
+                  >
+                    截止 {{ formatTaskListTime(item.task.dueAt!) }}
+                  </span>
+                  <span v-if="showRemindAt(item.task)" class="task-list__meta-item" title="提醒时间">
+                    提醒 {{ formatTaskListTime(item.task.remindAt!) }}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div v-if="hasMeta(item.task)" class="task-list__meta">
-              <span
-                v-if="categoryLabel(item.task)"
-                class="task-list__meta-item task-list__meta-item--category"
-                title="清单"
-              >
-                {{ categoryLabel(item.task) }}
-              </span>
-              <span
-                v-if="showCompletedAt(item.task)"
-                class="task-list__meta-item task-list__meta-item--completed"
-                title="完成时间"
-              >
-                完成 {{ formatTaskListTime(item.task.completedAt!) }}
-              </span>
-              <span v-if="showCreatedAt(item.task)" class="task-list__meta-item" title="创建时间">
-                创建 {{ formatTaskCreatedAt(item.task.createdAt) }}
-              </span>
-              <span
-                v-if="showDueAt(item.task)"
-                class="task-list__meta-item"
-                :class="{ 'is-overdue': isOverdue(item.task) }"
-                title="截止时间"
-              >
-                截止 {{ formatTaskListTime(item.task.dueAt!) }}
-              </span>
-              <span v-if="showRemindAt(item.task)" class="task-list__meta-item" title="提醒时间">
-                提醒 {{ formatTaskListTime(item.task.remindAt!) }}
-              </span>
-            </div>
-          </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item
+                  command="move-up"
+                  :disabled="item.depth !== 0 || rootIndex(item.task.id) <= 0"
+                >
+                  上移
+                </el-dropdown-item>
+                <el-dropdown-item
+                  command="move-down"
+                  :disabled="
+                    item.depth !== 0 || rootIndex(item.task.id) >= rootTaskIds.length - 1
+                  "
+                >
+                  下移
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </li>
       </template>
     </ul>
@@ -92,11 +131,14 @@ import { computed, ref, watch } from 'vue'
 import { ArrowDown, ArrowRight } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import type { Task } from '@shared/types'
+import { moveItemInOrder } from '@shared/list-order'
 import type { TaskListLayoutItem } from '@shared/task-list-layout'
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
 import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 import TaskPriorityBadge from '@/components/TaskPriorityBadge.vue'
+
+const TASK_REORDER_MIME = 'application/x-ai-todo-list-task-reorder'
 
 const props = withDefaults(
   defineProps<{
@@ -118,9 +160,13 @@ const props = withDefaults(
 const emit = defineEmits<{
   select: [string]
   'toggle-status': [Task]
+  /** 当前渲染扁平顶层任务的新顺序 */
+  'reorder-roots': [string[]]
 }>()
 
 const expandedIds = ref<Set<string>>(new Set())
+const taskDragId = ref<string | null>(null)
+const taskDropHint = ref<{ id: string; place: 'before' | 'after' } | null>(null)
 
 const taskById = computed(() => {
   const map = new Map<string, Task>()
@@ -175,6 +221,80 @@ const displayItems = computed(() =>
     return isRowVisible(item.task, item.depth)
   })
 )
+
+const rootTaskIds = computed(() =>
+  displayItems.value
+    .filter((item): item is Extract<TaskListLayoutItem, { type: 'task' }> =>
+      item.type === 'task' && item.depth === 0
+    )
+    .map((item) => item.task.id)
+)
+
+function rootIndex(id: string): number {
+  return rootTaskIds.value.indexOf(id)
+}
+
+function onTaskDragStart(e: DragEvent, id: string, depth: number) {
+  if (depth !== 0) {
+    e.preventDefault()
+    return
+  }
+  taskDragId.value = id
+  if (!e.dataTransfer) return
+  e.dataTransfer.setData(TASK_REORDER_MIME, id)
+  e.dataTransfer.effectAllowed = 'move'
+}
+
+function onTaskDragOver(e: DragEvent, id: string, depth: number) {
+  if (depth !== 0 || !taskDragId.value || taskDragId.value === id) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  const place = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+  taskDropHint.value = { id, place }
+}
+
+function onTaskDragLeave(id: string) {
+  if (taskDropHint.value?.id === id) taskDropHint.value = null
+}
+
+function onTaskDrop(e: DragEvent, targetId: string, depth: number) {
+  e.preventDefault()
+  const fromId = taskDragId.value ?? e.dataTransfer?.getData(TASK_REORDER_MIME)
+  const place = taskDropHint.value?.id === targetId ? taskDropHint.value.place : 'after'
+  taskDropHint.value = null
+  taskDragId.value = null
+  if (depth !== 0 || !fromId || fromId === targetId) return
+  const ids = [...rootTaskIds.value]
+  const from = ids.indexOf(fromId)
+  const target = ids.indexOf(targetId)
+  if (from < 0 || target < 0) return
+  let insertAt = place === 'before' ? target : target + 1
+  if (from < insertAt) insertAt--
+  const next = moveItemInOrder(ids, from, insertAt)
+  if (next.every((id, i) => id === ids[i])) return
+  emit('reorder-roots', next)
+}
+
+function onTaskDragEnd() {
+  taskDragId.value = null
+  taskDropHint.value = null
+}
+
+function onTaskCommand(command: string, id: string, depth: number) {
+  if (depth !== 0) return
+  const ids = [...rootTaskIds.value]
+  const from = ids.indexOf(id)
+  if (from < 0) return
+  if (command === 'move-up') {
+    if (from <= 0) return
+    emit('reorder-roots', moveItemInOrder(ids, from, from - 1))
+  } else if (command === 'move-down') {
+    if (from >= ids.length - 1) return
+    emit('reorder-roots', moveItemInOrder(ids, from, from + 1))
+  }
+}
 
 function metaVis() {
   return props.metaVisibility ?? DEFAULT_TASK_LIST_META_VISIBILITY
@@ -308,6 +428,15 @@ function isOverdue(task: Task) {
   user-select: none;
 }
 
+.task-list__item {
+  list-style: none;
+}
+
+.task-list__dropdown {
+  display: block;
+  width: 100%;
+}
+
 .task-list__row {
   display: flex;
   align-items: flex-start;
@@ -325,6 +454,22 @@ function isOverdue(task: Task) {
   &.is-selected {
     background: var(--desktop-active);
     border-left-color: var(--el-color-primary);
+  }
+
+  &.is-draggable {
+    cursor: grab;
+  }
+
+  &.is-dragging {
+    opacity: 0.45;
+  }
+
+  &.is-drag-over-before {
+    box-shadow: inset 0 2px 0 0 var(--el-color-primary);
+  }
+
+  &.is-drag-over-after {
+    box-shadow: inset 0 -2px 0 0 var(--el-color-primary);
   }
 }
 

@@ -331,4 +331,32 @@ describe('TaskService', () => {
     const listed = service.list().find((t) => t.id === task.id)
     expect(listed?.tags).toEqual(['个人', '工作'])
   })
+
+  it('create assigns maxSortOrder + 1', () => {
+    const a = service.create({ title: 'A' })
+    const b = service.create({ title: 'B' })
+    expect(a.sortOrder).toBe(0)
+    expect(b.sortOrder).toBe(1)
+  })
+
+  it('reorder updates listed tasks only', () => {
+    const a = service.create({ title: 'A' })
+    const b = service.create({ title: 'B' })
+    const c = service.create({ title: 'C' })
+    service.reorder([c.id, a.id])
+    expect(service.get(c.id).sortOrder).toBe(0)
+    expect(service.get(a.id).sortOrder).toBe(1)
+    expect(service.get(b.id).sortOrder).toBe(b.sortOrder)
+  })
+
+  it('reorder empty is no-op', () => {
+    const a = service.create({ title: 'A' })
+    expect(service.reorder([])).toEqual([])
+    expect(service.get(a.id).sortOrder).toBe(a.sortOrder)
+  })
+
+  it('reorder all-invalid throws', () => {
+    service.create({ title: 'A' })
+    expect(() => service.reorder(['x'])).toThrowError(AppError)
+  })
 })

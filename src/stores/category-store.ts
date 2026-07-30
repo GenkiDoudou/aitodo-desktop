@@ -29,10 +29,14 @@ export const useCategoryStore = defineStore('categories', () => {
     await load()
   }
 
+  async function reorder(ids: string[]) {
+    categories.value = unwrapIpc(await window.api.categories.reorder(ids))
+  }
+
   async function remove(id: string) {
     unwrapIpc(await window.api.categories.delete(id))
     await load()
   }
 
-  return { categories, load, create, update, remove }
+  return { categories, load, create, update, reorder, remove }
 })
