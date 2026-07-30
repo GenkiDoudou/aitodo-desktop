@@ -17,8 +17,10 @@
 |------|------|
 | `小柒todo Setup x.y.z.exe` + `.blockmap` | Windows NSIS 安装版 + 差分 |
 | `latest.yml` | NSIS 自动更新清单（electron-builder 生成） |
-| `*-win.zip`（或 builder 生成的 Windows zip） | 免解压目录全量包 |
-| `latest-portable.yml` | 免解压清单（`npm run build:win` 末尾脚本生成） |
+| `*-win.zip`（或 builder 生成的 Windows zip） | 免解压目录全量包（GitHub 完整上传） |
+| `*.part01`… | Gitee 分卷（zip≥90MB 时） |
+| `下载免解压版.bat` + `download-portable-from-gitee.ps1` | **Gitee 手动获取免解压包**：自动下分卷、合并、校验 |
+| `latest-portable.yml` | 免解压清单（含可选 `part:` 列表） |
 | Mac zip + `latest-mac.yml` | macOS 自动更新（`build:mac`） |
 | Mac dmg（可选） | 仅手动安装，不参与自动更新主路径 |
 
@@ -28,8 +30,8 @@
 
 同一 git tag / 版本号，将上表资产上传到 Gitee + GitHub Releases，**文件名必须一致**（分卷名也要一致）。
 
-- **GitHub**：完整 `*-win.zip` + 可选 `.part*` + yml / Setup
-- **Gitee**：附件单文件 **&lt;100MB**。`generate-portable-yml` 会在 zip≥90MB 时切成 `.part01`… 并写入 `latest-portable.yml` 的 `part:` 列表；上传脚本跳过超限整包，改传分卷。客户端从 Gitee 下齐分卷后合并，再校验整包 `sha512`——**下载仍走 Gitee**。
+- **GitHub**：完整 `*-win.zip` + 可选 `.part*` + yml / Setup + 下载脚本
+- **Gitee**：单附件 **&lt;100MB**。大 zip 切分卷；用户首次要免解压包时，下载并运行 **`下载免解压版.bat`**（会从 Gitee 拉分卷合并，不走 GitHub）。应用内自动更新同样走 Gitee 分卷逻辑。
 
 需在 GitHub 仓库配置 `GITEE_TOKEN`（Gitee 私人令牌，projects 权限）。
 

@@ -28,7 +28,16 @@ if (!tag) {
   process.exit(1)
 }
 
-const ASSET_PATTERNS = [/\.exe$/i, /\.blockmap$/i, /\.yml$/i, /\.zip$/i, /\.part\d+$/i]
+const ASSET_PATTERNS = [
+  /\.exe$/i,
+  /\.blockmap$/i,
+  /\.yml$/i,
+  /\.zip$/i,
+  /\.part\d+$/i,
+  /\.ps1$/i,
+  /\.bat$/i
+]
+
 /** Gitee 附件硬限制 100MB，低于此值才上传 */
 const GITEE_MAX_UPLOAD_BYTES = 95 * 1024 * 1024
 
