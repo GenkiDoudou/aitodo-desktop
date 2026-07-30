@@ -33,6 +33,7 @@ import {
   registerAttachmentProtocol,
   registerAttachmentSchemePrivilege
 } from './attachment-protocol'
+import { registerNotificationSupport } from './services/system-notification'
 import {
   applyPortableUpdateIfPending,
   getUpdateOrchestrator
