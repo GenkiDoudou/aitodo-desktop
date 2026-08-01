@@ -1,7 +1,32 @@
 <template>
   <section class="settings-section">
-    <h2 class="settings-section__title">关闭行为</h2>
-    <p class="settings-section__hint">设置点击主窗口关闭按钮时的默认处理方式。</p>
+    <h2 class="settings-section__title">窗口与启动</h2>
+    <p class="settings-section__hint">控制开机自启与关闭主窗口时的行为。</p>
+
+    <div class="settings-section__field">
+      <span class="settings-section__label">开机时自动启动</span>
+      <el-switch
+        v-model="launch.enabled"
+        :disabled="loading || savingLaunch"
+        @change="saveLaunch"
+      />
+    </div>
+    <p v-if="!packaged" class="settings-section__hint settings-section__hint--tight">
+      当前为开发/未打包环境，系统自启可能无效，请用安装包验证。
+    </p>
+    <p v-if="syncedHint" class="settings-section__hint settings-section__hint--tight">{{ syncedHint }}</p>
+
+    <div v-if="launch.enabled" class="settings-section__field">
+      <span class="settings-section__label">启动后</span>
+      <el-radio-group
+        v-model="launch.startupMode"
+        :disabled="loading || savingLaunch"
+        @change="saveLaunch"
+      >
+        <el-radio value="tray">静默到托盘</el-radio>
+        <el-radio value="window">打开主窗口</el-radio>
+      </el-radio-group>
+    </div>
 
     <div class="settings-section__field">
       <span class="settings-section__label">关闭主窗口时</span>
@@ -19,19 +44,35 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { CloseBehavior } from '@shared/close-behavior'
+import {
+  DEFAULT_LAUNCH_AT_LOGIN,
+  type LaunchAtLoginPrefs
+} from '@shared/launch-at-login'
 import { unwrapIpc } from '@/ipc/client'
 
 const behavior = ref<CloseBehavior>('ask')
+const launch = reactive<LaunchAtLoginPrefs>({ ...DEFAULT_LAUNCH_AT_LOGIN })
+const packaged = ref(true)
+const syncedHint = ref('')
 const loading = ref(false)
 const saving = ref(false)
+const savingLaunch = ref(false)
 
-async function loadBehavior() {
+async function loadAll() {
   loading.value = true
+  syncedHint.value = ''
   try {
     behavior.value = unwrapIpc(await window.api.app.getCloseBehavior())
+    const next = unwrapIpc(await window.api.app.getLaunchAtLogin())
+    launch.enabled = next.enabled
+    launch.startupMode = next.startupMode
+    packaged.value = next.packaged
+    if (next.syncedFromSystem) {
+      syncedHint.value = '已与系统设置同步'
+    }
   } finally {
     loading.value = false
   }
@@ -45,13 +86,33 @@ async function saveBehavior(value: string | number | boolean | undefined) {
     ElMessage.success('关闭行为已保存')
   } catch (err) {
     ElMessage.error(err instanceof Error ? err.message : '保存关闭行为失败')
-    await loadBehavior()
+    await loadAll()
   } finally {
     saving.value = false
   }
 }
 
-onMounted(loadBehavior)
+async function saveLaunch() {
+  savingLaunch.value = true
+  try {
+    const next = unwrapIpc(
+      await window.api.app.setLaunchAtLogin({
+        enabled: launch.enabled,
+        startupMode: launch.startupMode
+      })
+    )
+    launch.enabled = next.enabled
+    launch.startupMode = next.startupMode
+    ElMessage.success('开机自启已保存')
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : '保存开机自启失败')
+    await loadAll()
+  } finally {
+    savingLaunch.value = false
+  }
+}
+
+onMounted(loadAll)
 </script>
 
 <style scoped lang="scss">
@@ -71,12 +132,17 @@ onMounted(loadBehavior)
   color: var(--desktop-muted);
 }
 
+.settings-section__hint--tight {
+  margin: -8px 0 16px;
+}
+
 .settings-section__field {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   padding: 16px;
+  margin-bottom: 12px;
   border: 1px solid var(--desktop-border);
   border-radius: 12px;
   background: var(--desktop-panel);
