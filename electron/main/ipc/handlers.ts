@@ -470,6 +470,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
         throw new Error(err instanceof Error ? err.message : '设置开机自启失败')
       }
       saveLaunchAtLoginPrefs(merged)
+      notifyAppSettingsChanged()
       return merged
     })
   )

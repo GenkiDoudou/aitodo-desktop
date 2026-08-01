@@ -1,23 +1,29 @@
+import { app } from 'electron'
 import { nowIso } from '@shared/datetime'
 import { mergeAiPromptConfig } from '@shared/ai-prompt-config'
 import { mergeLlmConfig } from '@shared/llm-config'
 import { mergeShortcutBindings } from '@shared/shortcuts'
 import { mergeCloseBehavior, type CloseBehavior } from '@shared/close-behavior'
+import type { LaunchAtLoginPrefs } from '@shared/launch-at-login'
+import { mergeLaunchAtLoginPrefs } from '@shared/launch-at-login'
 import { mergeTaskActivityRetention } from '@shared/task-activity-retention'
 import type { TaskActivityRetentionPolicy } from '@shared/types'
 import type { SyncOutbox } from '../db/sync-outbox'
 import {
   readAiPromptConfig,
   readCloseBehavior,
+  readLaunchAtLoginPrefs,
   readLlmConfig,
   readShortcutBindings,
   readTaskActivityRetention,
   saveAiPromptConfig,
   saveCloseBehavior,
+  saveLaunchAtLoginPrefs,
   saveLlmConfig,
   saveShortcutBindings,
   saveTaskActivityRetention
 } from '../data-path'
+import { applyLaunchAtLoginToSystem } from '../launch-at-login'
 import type { WidgetNoteRepository } from '../db/widget-note-repository'
 import { writeUiPreferencesSnapshot } from '../db/ui-preferences-snapshot'
 
@@ -38,6 +44,7 @@ export interface AppSettingsSyncPayload {
   llm: ReturnType<typeof readLlmConfig>
   aiPrompt: ReturnType<typeof readAiPromptConfig>
   closeBehavior: CloseBehavior
+  launchAtLogin: LaunchAtLoginPrefs
   taskActivityRetention: TaskActivityRetentionPolicy
   widget: { openOnStartup: boolean }
   /** 渲染进程 UI 偏好（可选，定时同步时可能为空） */
@@ -57,6 +64,7 @@ export function buildAppSettingsPayload(
     llm: readLlmConfig(),
     aiPrompt: readAiPromptConfig(),
     closeBehavior: readCloseBehavior(),
+    launchAtLogin: readLaunchAtLoginPrefs(),
     taskActivityRetention: readTaskActivityRetention(),
     widget: { openOnStartup: settings.openOnStartup },
     ...(uiPreferences ? { uiPreferences } : {})
@@ -100,6 +108,15 @@ export function applyAppSettingsPayload(
   }
   if (payload.closeBehavior && typeof payload.closeBehavior === 'object') {
     saveCloseBehavior(mergeCloseBehavior(payload.closeBehavior as never))
+  }
+  if (payload.launchAtLogin !== undefined) {
+    const prefs = mergeLaunchAtLoginPrefs(payload.launchAtLogin as LaunchAtLoginPrefs)
+    saveLaunchAtLoginPrefs(prefs)
+    try {
+      applyLaunchAtLoginToSystem(prefs, app)
+    } catch {
+      /* 登录项失败不阻断其它配置 */
+    }
   }
   if (payload.taskActivityRetention && typeof payload.taskActivityRetention === 'object') {
     saveTaskActivityRetention(mergeTaskActivityRetention(payload.taskActivityRetention as never))
