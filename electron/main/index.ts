@@ -25,7 +25,8 @@ import { ensureSyncState, readSyncCredentials } from './db/sync-state'
 import { HolidayService } from './services/holiday-service'
 import { TaskActivityService } from './services/task-activity-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting, setTrayUpdateReady } from './tray'
-import { resolveDataDir } from './data-path'
+import { resolveDataDir, readLaunchAtLoginPrefs } from './data-path'
+import { shouldStartHidden } from '@shared/launch-at-login'
 import { registerGlobalShortcuts, unregisterGlobalShortcuts, createDefaultShortcutHandlers } from './shortcuts'
 import { getWidgetWindowManager } from './widget-window-manager'
 import { getQuickCaptureWindowManager } from './quick-capture-window-manager'
@@ -130,6 +131,17 @@ app.whenReady().then(() => {
     /* 启动清理失败不阻塞应用 */
   }
   mainWindow = createWindow()
+  const loginItem = app.getLoginItemSettings()
+  if (
+    shouldStartHidden({
+      prefs: readLaunchAtLoginPrefs(),
+      argv: process.argv,
+      wasOpenedAsHidden: loginItem.wasOpenedAsHidden,
+      wasOpenedAtLogin: loginItem.wasOpenedAtLogin
+    })
+  ) {
+    mainWindow.hide()
+  }
   registerGlobalShortcuts(mainWindow, createDefaultShortcutHandlers(() => mainWindow))
 
   const db = getDatabase()
