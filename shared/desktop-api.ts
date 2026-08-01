@@ -30,6 +30,7 @@ import type { ShortcutActionId, ShortcutBindings } from './shortcuts'
 import type { LlmConfig } from './llm-config'
 import type { AiPromptConfig } from './ai-prompt-config'
 import type { CloseBehavior, ConfirmClosePayload } from './close-behavior'
+import type { LaunchAtLoginPrefs } from './launch-at-login'
 import type { UserConfigImportResult } from '@shared/user-config-export'
 import type { HolidayCalendarDay, HolidayCacheStatus } from '@shared/timor-holiday'
 import type { FilterNode } from '@shared/task-filter-ast'
@@ -76,6 +77,8 @@ export interface DesktopApi {
     emptyTrash(): Promise<IpcResult<number>>
     countTrash(): Promise<IpcResult<number>>
     countDone(): Promise<IpcResult<number>>
+    /** 收件箱未排优任务数（全局，不受当前清单筛选影响） */
+    countInbox(): Promise<IpcResult<number>>
     /** 按 id 顺序重写 sortOrder */
     reorder(ids: string[]): Promise<IpcResult<Task[]>>
     /** 读取垃圾桶中的任务详情 */
@@ -191,6 +194,10 @@ export interface DesktopApi {
     ): Promise<IpcResult<ParseTaskInputResult>>
     getCloseBehavior(): Promise<IpcResult<CloseBehavior>>
     setCloseBehavior(behavior: CloseBehavior): Promise<IpcResult<CloseBehavior>>
+    getLaunchAtLogin(): Promise<
+      IpcResult<LaunchAtLoginPrefs & { packaged: boolean; syncedFromSystem?: boolean }>
+    >
+    setLaunchAtLogin(prefs: LaunchAtLoginPrefs): Promise<IpcResult<LaunchAtLoginPrefs>>
     confirmClose(payload: ConfirmClosePayload): Promise<IpcResult<void>>
     showWindow(): Promise<IpcResult<void>>
     openMain(route?: string): Promise<IpcResult<void>>

@@ -36,6 +36,7 @@ const api: DesktopApi = {
     emptyTrash: () => ipcRenderer.invoke(IPC.TASKS_EMPTY_TRASH),
     countTrash: () => ipcRenderer.invoke(IPC.TASKS_COUNT_TRASH),
     countDone: () => ipcRenderer.invoke(IPC.TASKS_COUNT_DONE),
+    countInbox: () => ipcRenderer.invoke(IPC.TASKS_COUNT_INBOX),
     reorder: (ids: string[]) => ipcRenderer.invoke(IPC.TASKS_REORDER, ids)
   },
   kanbanGroups: {
@@ -157,6 +158,8 @@ const api: DesktopApi = {
       ipcRenderer.invoke(IPC.APP_PARSE_TASK_INPUT, text, categories),
     getCloseBehavior: () => ipcRenderer.invoke(IPC.APP_GET_CLOSE_BEHAVIOR),
     setCloseBehavior: (behavior) => ipcRenderer.invoke(IPC.APP_SET_CLOSE_BEHAVIOR, behavior),
+    getLaunchAtLogin: () => ipcRenderer.invoke(IPC.APP_GET_LAUNCH_AT_LOGIN),
+    setLaunchAtLogin: (prefs) => ipcRenderer.invoke(IPC.APP_SET_LAUNCH_AT_LOGIN, prefs),
     confirmClose: (payload: ConfirmClosePayload) =>
       ipcRenderer.invoke(IPC.APP_CONFIRM_CLOSE, payload),
     showWindow: () => ipcRenderer.invoke(IPC.APP_SHOW_WINDOW),

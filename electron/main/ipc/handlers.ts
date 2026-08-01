@@ -50,10 +50,12 @@ import {
   readLlmConfig,
   readAiPromptConfig,
   readCloseBehavior,
+  readLaunchAtLoginPrefs,
   relocateDataDir,
   saveLlmConfig,
   saveAiPromptConfig,
   saveCloseBehavior,
+  saveLaunchAtLoginPrefs,
   saveShortcutBindings
 } from '../data-path'
 import { registerGlobalShortcuts, createDefaultShortcutHandlers } from '../shortcuts'
@@ -62,6 +64,9 @@ import { findShortcutConflicts, formatShortcutConflictMessage, mergeShortcutBind
 import type { LlmConfig } from '@shared/llm-config'
 import type { AiPromptConfig } from '@shared/ai-prompt-config'
 import type { CloseBehavior, ConfirmClosePayload } from '@shared/close-behavior'
+import type { LaunchAtLoginPrefs } from '@shared/launch-at-login'
+import { mergeLaunchAtLoginPrefs } from '@shared/launch-at-login'
+import { applyLaunchAtLoginToSystem, reconcileLaunchAtLoginPrefs } from '../launch-at-login'
 import { AppError } from '@shared/types'
 import { wrapIpc, wrapIpcAsync } from './wrap'
 import { cloneTaskListFilter } from '@shared/task-list-filter'
@@ -231,6 +236,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.TASKS_EMPTY_TRASH, () => wrapIpc(() => services().tasks.emptyTrash()))
   ipcMain.handle(IPC.TASKS_COUNT_TRASH, () => wrapIpc(() => services().tasks.countTrash()))
   ipcMain.handle(IPC.TASKS_COUNT_DONE, () => wrapIpc(() => services().tasks.countDone()))
+  ipcMain.handle(IPC.TASKS_COUNT_INBOX, () =>
+    wrapIpc(() => services().tasks.countInboxUntriaged())
+  )
   ipcMain.handle(IPC.TASKS_REORDER, (_e, ids: string[]) =>
     wrapIpc(() => services().tasks.reorder(ids ?? []))
   )
@@ -437,6 +445,32 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       saveCloseBehavior(behavior)
       notifyAppSettingsChanged()
       return readCloseBehavior()
+    })
+  )
+
+  ipcMain.handle(IPC.APP_GET_LAUNCH_AT_LOGIN, () =>
+    wrapIpc(() => {
+      const local = readLaunchAtLoginPrefs()
+      const { prefs, changed } = reconcileLaunchAtLoginPrefs(local, app)
+      if (changed) saveLaunchAtLoginPrefs(prefs)
+      return {
+        ...prefs,
+        packaged: app.isPackaged,
+        syncedFromSystem: changed
+      }
+    })
+  )
+
+  ipcMain.handle(IPC.APP_SET_LAUNCH_AT_LOGIN, (_e, prefs: LaunchAtLoginPrefs) =>
+    wrapIpc(() => {
+      const merged = mergeLaunchAtLoginPrefs(prefs)
+      try {
+        applyLaunchAtLoginToSystem(merged, app)
+      } catch (err) {
+        throw new Error(err instanceof Error ? err.message : '设置开机自启失败')
+      }
+      saveLaunchAtLoginPrefs(merged)
+      return merged
     })
   )
 
