@@ -155,6 +155,37 @@ async function ensureRelease() {
   return created.data.id
 }
 
+/** 覆盖发版：先清掉同名 Release 上的旧附件，避免重复/脏文件 */
+async function clearReleaseAssets(releaseId) {
+  let detail
+  try {
+    detail = await apiRequest('GET', `/repos/${owner}/${repo}/releases/${releaseId}`)
+  } catch (err) {
+    console.warn(
+      `[publish-gitee-release] 无法读取 release 附件列表: ${err instanceof Error ? err.message : err}`
+    )
+    return
+  }
+  const assets = detail.data?.assets || detail.data?.attach_files || []
+  for (const asset of assets) {
+    const fileId = asset.id
+    const name = asset.name || asset.filename || String(fileId)
+    if (!fileId) continue
+    try {
+      await apiRequest(
+        'DELETE',
+        `/repos/${owner}/${repo}/releases/${releaseId}/attach_files/${fileId}`,
+        { form: {} }
+      )
+      console.log(`[publish-gitee-release] removed old asset ${name}`)
+    } catch (err) {
+      console.warn(
+        `[publish-gitee-release] remove ${name} failed: ${err instanceof Error ? err.message : err}`
+      )
+    }
+  }
+}
+
 function uploadFile(releaseId, filePath) {
   const boundary = '----AitodoBoundary' + Date.now()
   const fileName = path.basename(filePath)
@@ -215,6 +246,7 @@ async function main() {
     `[publish-gitee-release] tag=${tag} upload=${uploadList.length}/${assets.length}`
   )
   const releaseId = await ensureRelease()
+  await clearReleaseAssets(releaseId)
   let ok = 0
   let failed = 0
   for (const file of uploadList) {

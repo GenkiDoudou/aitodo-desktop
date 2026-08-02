@@ -53,6 +53,7 @@ jobs:
             - **免解压版（Gitee）**：因单附件上限 100MB，大包以 `.part*` 分卷发布。请下载 **`下载免解压版.bat`**（及同目录的 `download-portable-from-gitee.ps1`），双击运行即可自动下载分卷、合并并校验。
             - GitHub Release 另附完整 `*-win.zip`，也可直接下载解压。
           generate_release_notes: true
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
