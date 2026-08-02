@@ -114,6 +114,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const loading = ref(false)
   const trashCount = ref(0)
   const doneCount = ref(0)
+  const inboxCount = ref(0)
   const filter = ref<TaskListFilter>({
     smartList: 'all',
     hideDone: readHideDonePreference()
@@ -366,6 +367,11 @@ export const useTaskStore = defineStore('tasks', () => {
     } catch {
       doneCount.value = 0
     }
+    try {
+      inboxCount.value = unwrapIpc(await window.api.tasks.countInbox())
+    } catch {
+      inboxCount.value = 0
+    }
   }
 
   /** @deprecated 使用 refreshSidebarCounts */
@@ -400,6 +406,7 @@ export const useTaskStore = defineStore('tasks', () => {
     loading,
     trashCount,
     doneCount,
+    inboxCount,
     filter,
     load,
     navigate,

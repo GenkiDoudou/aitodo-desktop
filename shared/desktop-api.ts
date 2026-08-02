@@ -31,6 +31,7 @@ import type { LlmConfig } from './llm-config'
 import type { AiPromptConfig } from './ai-prompt-config'
 import type { CloseBehavior, ConfirmClosePayload } from './close-behavior'
 import type { LaunchAtLoginPrefs } from './launch-at-login'
+import type { AttachmentPrefs, AttachmentS3PublicConfig } from './attachment-storage'
 import type { UserConfigImportResult } from '@shared/user-config-export'
 import type { HolidayCalendarDay, HolidayCacheStatus } from '@shared/timor-holiday'
 import type { FilterNode } from '@shared/task-filter-ast'
@@ -198,14 +199,29 @@ export interface DesktopApi {
       IpcResult<LaunchAtLoginPrefs & { packaged: boolean; syncedFromSystem?: boolean }>
     >
     setLaunchAtLogin(prefs: LaunchAtLoginPrefs): Promise<IpcResult<LaunchAtLoginPrefs>>
+    getAttachmentPrefs(): Promise<
+      IpcResult<{ prefs: AttachmentPrefs; hasS3Secrets: boolean; loggedIn: boolean }>
+    >
+    setAttachmentPrefs(prefs: AttachmentPrefs): Promise<IpcResult<AttachmentPrefs>>
+    testAndSaveS3(dto: {
+      s3: AttachmentS3PublicConfig
+      secrets: { accessKey: string; secretKey: string }
+    }): Promise<IpcResult<AttachmentPrefs>>
     confirmClose(payload: ConfirmClosePayload): Promise<IpcResult<void>>
     showWindow(): Promise<IpcResult<void>>
     openMain(route?: string): Promise<IpcResult<void>>
     pickAttachment(): Promise<IpcResult<SavedAttachment | null>>
     saveAttachment(dto: { name: string; base64: string }): Promise<IpcResult<SavedAttachment>>
     resolveAttachmentUrl(uri: string): Promise<IpcResult<string | null>>
-    openAttachment(uri: string): Promise<IpcResult<void>>
-    downloadAttachment(uri: string, suggestedName?: string): Promise<IpcResult<boolean>>
+    openAttachment(
+      uri: string,
+      meta?: { storage?: AttachmentPrefs['mode']; remoteId?: string; objectKey?: string }
+    ): Promise<IpcResult<void>>
+    downloadAttachment(
+      uri: string,
+      suggestedName?: string,
+      meta?: { storage?: AttachmentPrefs['mode']; remoteId?: string; objectKey?: string }
+    ): Promise<IpcResult<boolean>>
     /** @deprecated 请使用 onAction('newTask') */
     onNewTask(callback: () => void): () => void
     onAction(callback: (action: ShortcutActionId) => void): () => void

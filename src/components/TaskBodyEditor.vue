@@ -291,7 +291,11 @@ async function pickAttachment() {
       return
     }
     attachments.value = [...attachments.value, meta]
-    ElMessage.success('附件已添加')
+    if (saved.uploadError) {
+      ElMessage.warning(`附件已保存在本地，但未同步到云端：${saved.uploadError}`)
+    } else {
+      ElMessage.success('附件已添加')
+    }
   } catch {
     /* unwrapIpc 已 Toast */
   }
@@ -303,20 +307,32 @@ function removeAttachment(index: number) {
 
 async function openAttachment(item: TaskFileAttachment) {
   try {
-    unwrapIpc(await window.api.app.openAttachment(item.uri))
-  } catch {
-    ElMessage.warning('无法打开附件')
+    unwrapIpc(
+      await window.api.app.openAttachment(item.uri, {
+        storage: item.storage,
+        remoteId: item.remoteId,
+        objectKey: item.objectKey
+      })
+    )
+  } catch (err) {
+    ElMessage.warning(err instanceof Error ? err.message : '无法打开附件')
   }
 }
 
 async function downloadAttachment(item: TaskFileAttachment) {
   try {
-    const ok = unwrapIpc(await window.api.app.downloadAttachment(item.uri, item.name))
+    const ok = unwrapIpc(
+      await window.api.app.downloadAttachment(item.uri, item.name, {
+        storage: item.storage,
+        remoteId: item.remoteId,
+        objectKey: item.objectKey
+      })
+    )
     if (ok) {
       ElMessage.success('附件已保存')
     }
-  } catch {
-    ElMessage.warning('下载失败')
+  } catch (err) {
+    ElMessage.warning(err instanceof Error ? err.message : '下载失败')
   }
 }
 

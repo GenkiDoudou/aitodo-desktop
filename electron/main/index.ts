@@ -23,6 +23,7 @@ import { SyncOutbox } from './db/sync-outbox'
 import { readSyncPreferences } from './db/sync-preferences-store'
 import { ensureSyncState, readSyncCredentials } from './db/sync-state'
 import { HolidayService } from './services/holiday-service'
+import { setAttachmentAuthResolver } from './services/attachment-service'
 import { TaskActivityService } from './services/task-activity-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting, setTrayUpdateReady } from './tray'
 import { resolveDataDir, readLaunchAtLoginPrefs } from './data-path'
@@ -160,6 +161,12 @@ app.whenReady().then(() => {
     return { baseUrl: state.serverBaseUrl, accessToken: creds.accessToken }
   })
   setHolidayService(holidayService)
+  setAttachmentAuthResolver(() => {
+    const creds = readSyncCredentials(getActiveDataDir())
+    const state = ensureSyncState(getDatabase())
+    if (!creds?.accessToken || !state.serverBaseUrl) return null
+    return { baseUrl: state.serverBaseUrl, accessToken: creds.accessToken }
+  })
   reminderService = new ReminderService(
     taskRepo,
     reminderRepo,

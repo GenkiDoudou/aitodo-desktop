@@ -51,11 +51,13 @@ import {
   readAiPromptConfig,
   readCloseBehavior,
   readLaunchAtLoginPrefs,
+  readAttachmentPrefs,
   relocateDataDir,
   saveLlmConfig,
   saveAiPromptConfig,
   saveCloseBehavior,
   saveLaunchAtLoginPrefs,
+  saveAttachmentPrefs,
   saveShortcutBindings
 } from '../data-path'
 import { registerGlobalShortcuts, createDefaultShortcutHandlers } from '../shortcuts'
@@ -71,13 +73,17 @@ import { AppError } from '@shared/types'
 import { wrapIpc, wrapIpcAsync } from './wrap'
 import { cloneTaskListFilter } from '@shared/task-list-filter'
 import {
-  openAttachmentPath,
   openAttachmentUriOrFileUrl,
   pickAndSaveAttachment,
   resolveAttachmentFileUrl,
-  saveAttachmentBuffer,
-  downloadAttachment
+  saveAttachmentBufferWithRemote,
+  downloadAttachment,
+  type AttachmentOpenMeta
 } from '../services/attachment-service'
+import { testS3Connection } from '../services/s3-attachment-client'
+import { hasS3Secrets, saveS3Secrets, type S3Secrets } from '../s3-credentials'
+import { mergeAttachmentPrefs, type AttachmentPrefs } from '@shared/attachment-storage'
+import { readSyncCredentials } from '../db/sync-state'
 import {
   exportUserConfigToFile,
   importUserConfigFromFile
@@ -475,6 +481,50 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     })
   )
 
+  ipcMain.handle(IPC.APP_GET_ATTACHMENT_PREFS, () =>
+    wrapIpc(() => {
+      const prefs = readAttachmentPrefs()
+      const creds = readSyncCredentials(getActiveDataDir())
+      return {
+        prefs,
+        hasS3Secrets: hasS3Secrets(),
+        loggedIn: Boolean(creds?.accessToken)
+      }
+    })
+  )
+
+  ipcMain.handle(IPC.APP_SET_ATTACHMENT_PREFS, (_e, prefs: AttachmentPrefs) =>
+    wrapIpc(() => {
+      const merged = mergeAttachmentPrefs(prefs)
+      saveAttachmentPrefs(merged)
+      notifyAppSettingsChanged()
+      return merged
+    })
+  )
+
+  ipcMain.handle(
+    IPC.APP_TEST_AND_SAVE_S3,
+    async (
+      _e,
+      dto: {
+        s3: NonNullable<AttachmentPrefs['s3']>
+        secrets: S3Secrets
+      }
+    ) =>
+      wrapIpcAsync(async () => {
+        await testS3Connection({ ...dto.s3, ...dto.secrets })
+        const merged = mergeAttachmentPrefs({
+          ...readAttachmentPrefs(),
+          mode: 's3',
+          s3: dto.s3
+        })
+        saveAttachmentPrefs(merged)
+        saveS3Secrets(dto.secrets)
+        notifyAppSettingsChanged()
+        return merged
+      })
+  )
+
   ipcMain.handle(IPC.APP_CONFIRM_CLOSE, (_e, payload: ConfirmClosePayload) =>
     wrapIpc(() => {
       if (payload?.behavior !== 'tray' && payload?.behavior !== 'quit') {
@@ -506,23 +556,27 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     wrapIpcAsync(() => pickAndSaveAttachment(getMainWindow() ?? undefined))
   )
 
-  ipcMain.handle(IPC.APP_SAVE_ATTACHMENT, (_e, dto: { name: string; base64: string }) =>
-    wrapIpc(() => saveAttachmentBuffer(dto.name, Buffer.from(dto.base64, 'base64')))
+  ipcMain.handle(IPC.APP_SAVE_ATTACHMENT, async (_e, dto: { name: string; base64: string }) =>
+    wrapIpcAsync(() => saveAttachmentBufferWithRemote(dto.name, Buffer.from(dto.base64, 'base64')))
   )
 
   ipcMain.handle(IPC.APP_RESOLVE_ATTACHMENT_URL, (_e, uri: string) =>
     wrapIpc(() => resolveAttachmentFileUrl(uri))
   )
 
-  ipcMain.handle(IPC.APP_OPEN_ATTACHMENT, (_e, uri: string) =>
-    wrapIpc(() => {
-      openAttachmentUriOrFileUrl(uri)
+  ipcMain.handle(IPC.APP_OPEN_ATTACHMENT, async (_e, uri: string, meta?: AttachmentOpenMeta) =>
+    wrapIpcAsync(async () => {
+      await openAttachmentUriOrFileUrl(uri, meta)
       return undefined
     })
   )
 
-  ipcMain.handle(IPC.APP_DOWNLOAD_ATTACHMENT, async (_e, uri: string, suggestedName?: string) =>
-    wrapIpcAsync(() => downloadAttachment(getMainWindow() ?? undefined, uri, suggestedName))
+  ipcMain.handle(
+    IPC.APP_DOWNLOAD_ATTACHMENT,
+    async (_e, uri: string, suggestedName?: string, meta?: AttachmentOpenMeta) =>
+      wrapIpcAsync(() =>
+        downloadAttachment(getMainWindow() ?? undefined, uri, suggestedName, meta)
+      )
   )
 
   ipcMain.handle(IPC.HOLIDAYS_CALENDAR_MARKS, async (_e, years: number[]) =>

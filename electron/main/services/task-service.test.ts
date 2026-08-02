@@ -359,4 +359,15 @@ describe('TaskService', () => {
     service.create({ title: 'A' })
     expect(() => service.reorder(['x'])).toThrowError(AppError)
   })
+
+  it('countInboxUntriaged counts untriaged open roots only', () => {
+    service.create({ title: 'inbox' })
+    service.create({ title: 'triaged', triagedAt: '2026-01-01T00:00:00' })
+    const done = service.create({ title: 'done' })
+    service.update(done.id, { status: 'DONE' })
+    const parent = service.create({ title: 'parent' })
+    service.create({ title: 'child', parentId: parent.id })
+    // inbox + parent（child 非顶层；triaged/done 不计）
+    expect(service.countInboxUntriaged()).toBe(2)
+  })
 })

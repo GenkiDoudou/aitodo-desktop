@@ -109,6 +109,10 @@ export class TaskService {
     return this.repo.countDone()
   }
 
+  countInboxUntriaged(): number {
+    return this.repo.countInboxUntriaged()
+  }
+
   private enrichTask(task: Task): Task {
     const reminders = this.reminderRepo.listByTaskId(task.id)
     const tags = this.tagRepo.getTagsForTask(task.id)

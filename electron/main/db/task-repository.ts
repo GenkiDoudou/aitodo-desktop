@@ -226,6 +226,20 @@ export class TaskRepository {
     return row.cnt
   }
 
+  /** 收件箱未排优：顶层、未完成、未 triaged */
+  countInboxUntriaged(): number {
+    const row = this.db
+      .prepare(
+        `SELECT COUNT(*) as cnt FROM tasks
+         WHERE deleted_at IS NULL
+           AND parent_id IS NULL
+           AND status != 'DONE'
+           AND triaged_at IS NULL`
+      )
+      .get() as { cnt: number }
+    return row.cnt
+  }
+
   findDeletedChildrenByParentId(parentId: string): Task[] {
     const rows = this.db
       .prepare(`SELECT * FROM tasks WHERE parent_id = ? AND deleted_at IS NOT NULL`)

@@ -6,17 +6,26 @@ import { mergeShortcutBindings } from '@shared/shortcuts'
 import { mergeCloseBehavior, type CloseBehavior } from '@shared/close-behavior'
 import type { LaunchAtLoginPrefs } from '@shared/launch-at-login'
 import { mergeLaunchAtLoginPrefs } from '@shared/launch-at-login'
+import type { AttachmentPrefs } from '@shared/attachment-storage'
+import {
+  attachmentPrefsForSync,
+  attachmentS3SecretsForSync,
+  mergeAttachmentPrefs,
+  parseAttachmentS3Secrets
+} from '@shared/attachment-storage'
 import { mergeTaskActivityRetention } from '@shared/task-activity-retention'
 import type { TaskActivityRetentionPolicy } from '@shared/types'
 import type { SyncOutbox } from '../db/sync-outbox'
 import {
   readAiPromptConfig,
+  readAttachmentPrefs,
   readCloseBehavior,
   readLaunchAtLoginPrefs,
   readLlmConfig,
   readShortcutBindings,
   readTaskActivityRetention,
   saveAiPromptConfig,
+  saveAttachmentPrefs,
   saveCloseBehavior,
   saveLaunchAtLoginPrefs,
   saveLlmConfig,
@@ -24,6 +33,7 @@ import {
   saveTaskActivityRetention
 } from '../data-path'
 import { applyLaunchAtLoginToSystem } from '../launch-at-login'
+import { readS3Secrets, saveS3Secrets } from '../s3-credentials'
 import type { WidgetNoteRepository } from '../db/widget-note-repository'
 import { writeUiPreferencesSnapshot } from '../db/ui-preferences-snapshot'
 
@@ -36,6 +46,7 @@ export const APP_SETTINGS_ENTITY_ID = 'default'
 /**
  * app_settings 载荷：把分散在本机文件/SQLite 的配置打成一份可 push/pull 的快照。
  * 注意：含 LLM API Key，仅在用户开启 syncConfig 且已登录时入队。
+ * S3 AK/SK 仅在 attachmentPrefs.syncS3Secrets=true 时附带。
  */
 export interface AppSettingsSyncPayload {
   id: typeof APP_SETTINGS_ENTITY_ID
@@ -45,6 +56,10 @@ export interface AppSettingsSyncPayload {
   aiPrompt: ReturnType<typeof readAiPromptConfig>
   closeBehavior: CloseBehavior
   launchAtLogin: LaunchAtLoginPrefs
+  /** 附件偏好（不含密钥本体） */
+  attachmentPrefs: AttachmentPrefs
+  /** 可选：用户开启「同步 S3 密钥」时才出现 */
+  attachmentS3Secrets?: { accessKey: string; secretKey: string }
   taskActivityRetention: TaskActivityRetentionPolicy
   widget: { openOnStartup: boolean }
   /** 渲染进程 UI 偏好（可选，定时同步时可能为空） */
@@ -57,6 +72,8 @@ export function buildAppSettingsPayload(
   uiPreferences?: Record<string, string>
 ): AppSettingsSyncPayload {
   const settings = widgetNoteRepo.getSettings()
+  const attachmentPrefs = attachmentPrefsForSync(readAttachmentPrefs())
+  const attachmentS3Secrets = attachmentS3SecretsForSync(attachmentPrefs, readS3Secrets())
   return {
     id: APP_SETTINGS_ENTITY_ID,
     updatedAt: nowIso(),
@@ -65,6 +82,8 @@ export function buildAppSettingsPayload(
     aiPrompt: readAiPromptConfig(),
     closeBehavior: readCloseBehavior(),
     launchAtLogin: readLaunchAtLoginPrefs(),
+    attachmentPrefs,
+    ...(attachmentS3Secrets ? { attachmentS3Secrets } : {}),
     taskActivityRetention: readTaskActivityRetention(),
     widget: { openOnStartup: settings.openOnStartup },
     ...(uiPreferences ? { uiPreferences } : {})
@@ -117,6 +136,13 @@ export function applyAppSettingsPayload(
     } catch {
       /* 登录项失败不阻断其它配置 */
     }
+  }
+  if (payload.attachmentPrefs !== undefined) {
+    saveAttachmentPrefs(mergeAttachmentPrefs(payload.attachmentPrefs))
+  }
+  const remoteS3Secrets = parseAttachmentS3Secrets(payload.attachmentS3Secrets)
+  if (remoteS3Secrets) {
+    saveS3Secrets(remoteS3Secrets)
   }
   if (payload.taskActivityRetention && typeof payload.taskActivityRetention === 'object') {
     saveTaskActivityRetention(mergeTaskActivityRetention(payload.taskActivityRetention as never))

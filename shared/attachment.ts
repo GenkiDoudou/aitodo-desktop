@@ -8,6 +8,13 @@ export interface SavedAttachment {
   name: string
   /** 是否图片（用于选择 ![](/[]) 语法） */
   isImage: boolean
+  storage?: 'local' | 'server' | 's3'
+  remoteId?: string
+  objectKey?: string
+  sha256?: string
+  size?: number
+  /** 远端上传失败时提示；本地文件仍可用 */
+  uploadError?: string
 }
 
 /** 从 Markdown 文本中提取附件 URI */

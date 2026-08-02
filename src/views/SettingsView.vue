@@ -29,6 +29,7 @@
       <SettingsImportExportSection v-else-if="activeSection === 'importExport'" />
       <SettingsTaskActivitySection v-else-if="activeSection === 'taskActivity'" />
       <SettingsCloseBehaviorSection v-else-if="activeSection === 'closeBehavior'" />
+      <SettingsAttachmentSection v-else-if="activeSection === 'attachments'" />
       <SettingsWorkdaySection v-else-if="activeSection === 'workday'" />
       <SettingsThemeSection v-else-if="activeSection === 'theme'" />
       <SettingsWidgetSection v-else-if="activeSection === 'widget'" />
@@ -53,7 +54,8 @@ import {
   Connection,
   Bell,
   SwitchButton,
-  Timer
+  Timer,
+  Paperclip
 } from '@element-plus/icons-vue'
 import SettingsDataSection from '@/components/settings/SettingsDataSection.vue'
 import SettingsSyncSection from '@/components/settings/SettingsSyncSection.vue'
@@ -64,6 +66,7 @@ import SettingsPromptSection from '@/components/settings/SettingsPromptSection.v
 import SettingsImportExportSection from '@/components/settings/SettingsImportExportSection.vue'
 import SettingsTaskActivitySection from '@/components/settings/SettingsTaskActivitySection.vue'
 import SettingsCloseBehaviorSection from '@/components/settings/SettingsCloseBehaviorSection.vue'
+import SettingsAttachmentSection from '@/components/settings/SettingsAttachmentSection.vue'
 import SettingsWorkdaySection from '@/components/settings/SettingsWorkdaySection.vue'
 import SettingsWidgetSection from '@/components/settings/SettingsWidgetSection.vue'
 import SettingsAboutSection from '@/components/settings/SettingsAboutSection.vue'
@@ -79,6 +82,7 @@ type SettingsSection =
   | 'importExport'
   | 'taskActivity'
   | 'closeBehavior'
+  | 'attachments'
   | 'workday'
   | 'theme'
   | 'widget'
@@ -101,6 +105,7 @@ watch(
       section === 'importExport' ||
       section === 'taskActivity' ||
       section === 'closeBehavior' ||
+      section === 'attachments' ||
       section === 'workday' ||
       section === 'theme' ||
       section === 'widget' ||
@@ -131,6 +136,7 @@ const menuItems: MenuItem[] = [
   { id: 'importExport', label: '导入导出', icon: FolderOpened },
   { id: 'taskActivity', label: '任务动态', icon: Timer },
   { id: 'closeBehavior', label: '窗口与启动', icon: SwitchButton },
+  { id: 'attachments', label: '附件管理', icon: Paperclip },
   { id: 'workday', label: '工作日', icon: Calendar },
   { id: 'theme', label: '风格切换', icon: Brush },
   { id: 'widget', label: '桌面挂件', icon: Monitor },

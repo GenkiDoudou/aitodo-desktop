@@ -160,6 +160,9 @@ const api: DesktopApi = {
     setCloseBehavior: (behavior) => ipcRenderer.invoke(IPC.APP_SET_CLOSE_BEHAVIOR, behavior),
     getLaunchAtLogin: () => ipcRenderer.invoke(IPC.APP_GET_LAUNCH_AT_LOGIN),
     setLaunchAtLogin: (prefs) => ipcRenderer.invoke(IPC.APP_SET_LAUNCH_AT_LOGIN, prefs),
+    getAttachmentPrefs: () => ipcRenderer.invoke(IPC.APP_GET_ATTACHMENT_PREFS),
+    setAttachmentPrefs: (prefs) => ipcRenderer.invoke(IPC.APP_SET_ATTACHMENT_PREFS, prefs),
+    testAndSaveS3: (dto) => ipcRenderer.invoke(IPC.APP_TEST_AND_SAVE_S3, dto),
     confirmClose: (payload: ConfirmClosePayload) =>
       ipcRenderer.invoke(IPC.APP_CONFIRM_CLOSE, payload),
     showWindow: () => ipcRenderer.invoke(IPC.APP_SHOW_WINDOW),
@@ -167,9 +170,9 @@ const api: DesktopApi = {
     pickAttachment: () => ipcRenderer.invoke(IPC.APP_PICK_ATTACHMENT),
     saveAttachment: (dto) => ipcRenderer.invoke(IPC.APP_SAVE_ATTACHMENT, dto),
     resolveAttachmentUrl: (uri) => ipcRenderer.invoke(IPC.APP_RESOLVE_ATTACHMENT_URL, uri),
-    openAttachment: (uri) => ipcRenderer.invoke(IPC.APP_OPEN_ATTACHMENT, uri),
-    downloadAttachment: (uri, suggestedName) =>
-      ipcRenderer.invoke(IPC.APP_DOWNLOAD_ATTACHMENT, uri, suggestedName),
+    openAttachment: (uri, meta) => ipcRenderer.invoke(IPC.APP_OPEN_ATTACHMENT, uri, meta),
+    downloadAttachment: (uri, suggestedName, meta) =>
+      ipcRenderer.invoke(IPC.APP_DOWNLOAD_ATTACHMENT, uri, suggestedName, meta),
     onNewTask: (callback: () => void) => {
       const listener = () => callback()
       ipcRenderer.on(IPC.APP_NEW_TASK, listener)

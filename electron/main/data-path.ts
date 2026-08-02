@@ -12,6 +12,8 @@ import type { CloseBehavior } from '@shared/close-behavior'
 import { mergeCloseBehavior } from '@shared/close-behavior'
 import type { LaunchAtLoginPrefs } from '@shared/launch-at-login'
 import { mergeLaunchAtLoginPrefs } from '@shared/launch-at-login'
+import type { AttachmentPrefs } from '@shared/attachment-storage'
+import { mergeAttachmentPrefs } from '@shared/attachment-storage'
 import type { TaskActivityRetentionPolicy } from '@shared/types'
 import { mergeTaskActivityRetention } from '@shared/task-activity-retention'
 
@@ -30,6 +32,8 @@ interface DesktopConfig {
   closeBehavior?: CloseBehavior
   /** 开机自启偏好 */
   launchAtLogin?: Partial<LaunchAtLoginPrefs>
+  /** 附件存储偏好（不含 S3 密钥） */
+  attachmentPrefs?: Partial<AttachmentPrefs>
   /** 任务动态全局保留策略 */
   taskActivityRetention?: Partial<TaskActivityRetentionPolicy>
 }
@@ -342,5 +346,28 @@ export function saveTaskActivityRetention(policy: TaskActivityRetentionPolicy): 
     ...existing,
     taskActivityRetention: mergeTaskActivityRetention(policy)
   }
+  fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
+}
+
+/** 读取附件存储偏好（不含密钥） */
+export function readAttachmentPrefs(): AttachmentPrefs {
+  const cfg = readActiveConfig()
+  return mergeAttachmentPrefs(cfg.attachmentPrefs)
+}
+
+/** 持久化附件存储偏好（不含密钥） */
+export function saveAttachmentPrefs(prefs: AttachmentPrefs): void {
+  const defaultDir = getDefaultDataDir()
+  fs.mkdirSync(defaultDir, { recursive: true })
+  const configPath = path.join(defaultDir, CONFIG_FILE)
+  let existing: DesktopConfig = {}
+  if (fs.existsSync(configPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as DesktopConfig
+    } catch {
+      existing = {}
+    }
+  }
+  const next: DesktopConfig = { ...existing, attachmentPrefs: mergeAttachmentPrefs(prefs) }
   fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
 }

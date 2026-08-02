@@ -444,7 +444,7 @@ import {
   readQuadrantViewPreferences,
   type QuadrantViewPreferences
 } from '@/utils/quadrant-preferences'
-import { inboxBadgeCount, isUntriagedInboxTask } from '@shared/inbox-tasks'
+import { isUntriagedInboxTask } from '@shared/inbox-tasks'
 import type { WidgetNote } from '@shared/widget-notes'
 import { nowIso } from '@shared/datetime'
 import {
@@ -863,7 +863,7 @@ const taskCounts = computed(() => {
   return {
     all: roots.length,
     last7days,
-    inbox: inboxBadgeCount(widgetNotes.value, taskStore.tasks)
+    inbox: widgetNotes.value.length + taskStore.inboxCount
   }
 })
 
@@ -1057,7 +1057,7 @@ const listDisplayCount = computed(() => {
     return matrixDisplayTasks.value.filter((t) => !t.parentId).length
   }
   if (isInboxView.value) {
-    return inboxBadgeCount(widgetNotes.value, taskStore.tasks)
+    return widgetNotes.value.length + taskStore.inboxCount
   }
   return headerTaskCounts.value.total
 })

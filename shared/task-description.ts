@@ -1,9 +1,15 @@
 import { ATTACHMENT_SCHEME, isImageFileName, type SavedAttachment } from './attachment'
+import type { AttachmentStorageMode } from './attachment-storage'
 
 /** 任务正文外置附件元数据（非图片文件，不写入 Markdown 正文） */
 export interface TaskFileAttachment {
   uri: string
   name: string
+  storage?: AttachmentStorageMode
+  remoteId?: string
+  objectKey?: string
+  sha256?: string
+  size?: number
 }
 
 const ATTACHMENTS_MARKER = '<!-- aitodo-attachments:'
@@ -12,11 +18,26 @@ const ATTACHMENTS_END = '-->'
 /** 匹配正文内遗留的非图片附件链接（不含 ![ 图片语法） */
 const LEGACY_FILE_LINK_RE = /(?<!!)\[([^\]]*)\]\((aitodo-attachment:\/\/[^\s)]+)\)/g
 
+function normalizeAttachment(item: TaskFileAttachment): TaskFileAttachment {
+  const out: TaskFileAttachment = {
+    uri: item.uri,
+    name: item.name || '附件'
+  }
+  if (item.storage === 'local' || item.storage === 'server' || item.storage === 's3') {
+    out.storage = item.storage
+  }
+  if (typeof item.remoteId === 'string' && item.remoteId) out.remoteId = item.remoteId
+  if (typeof item.objectKey === 'string' && item.objectKey) out.objectKey = item.objectKey
+  if (typeof item.sha256 === 'string' && item.sha256) out.sha256 = item.sha256
+  if (typeof item.size === 'number' && Number.isFinite(item.size)) out.size = item.size
+  return out
+}
+
 function dedupeAttachments(items: TaskFileAttachment[]): TaskFileAttachment[] {
   const map = new Map<string, TaskFileAttachment>()
   for (const item of items) {
     if (!item.uri.startsWith(ATTACHMENT_SCHEME)) continue
-    map.set(item.uri, { uri: item.uri, name: item.name || '附件' })
+    map.set(item.uri, normalizeAttachment(item))
   }
   return [...map.values()]
 }
@@ -115,5 +136,13 @@ export function serializeTaskDescription(
 
 /** pickAttachment / saveAttachment 结果写入外置列表 */
 export function savedAttachmentToFileMeta(saved: SavedAttachment): TaskFileAttachment {
-  return { uri: saved.uri, name: saved.name }
+  return normalizeAttachment({
+    uri: saved.uri,
+    name: saved.name,
+    storage: saved.storage,
+    remoteId: saved.remoteId,
+    objectKey: saved.objectKey,
+    sha256: saved.sha256,
+    size: saved.size
+  })
 }
