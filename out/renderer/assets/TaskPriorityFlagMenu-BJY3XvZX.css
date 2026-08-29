@@ -1,0 +1,234 @@
+@charset "UTF-8";
+:root {
+  /* 默认主风格：Claude（运行时由 theme-preferences 覆盖） */
+  --desktop-bg: #faf9f5;
+  --desktop-panel: #f5f0e8;
+  --desktop-sidebar: #efe9de;
+  --desktop-sidebar-rail: #e8e0d2;
+  --desktop-sidebar-panel: #f5f0e8;
+  --desktop-sidebar-item-active: #ffffff;
+  --desktop-border: #e6dfd8;
+  --desktop-hover: rgba(20, 20, 19, 0.05);
+  --desktop-active: rgba(204, 120, 92, 0.15);
+  --desktop-muted: #6c6a64;
+  --desktop-text: #141413;
+  --desktop-font: "Source Sans 3", -apple-system, BlinkMacSystemFont, sans-serif;
+  --desktop-font-display: "Libre Baskerville", Georgia, serif;
+  --desktop-radius-sm: 6px;
+  --desktop-radius-md: 8px;
+  --desktop-radius-lg: 12px;
+  --desktop-radius-pill: 8px;
+  --desktop-title-weight: 400;
+  --desktop-shadow: none;
+  /* AI 入口专用 Teal，与主操作色区分 */
+  --desktop-ai: #0d9488;
+  --desktop-ai-light: rgba(13, 148, 136, 0.08);
+  --desktop-ai-border: rgba(13, 148, 136, 0.22);
+  --desktop-ai-hover: rgba(13, 148, 136, 0.14);
+  --desktop-ai-hover-solid: #0f766e;
+  --desktop-ai-active: #115e59;
+  --el-font-size-base: 14px;
+  --el-component-size: 32px;
+  --el-border-radius-base: 8px;
+}
+
+body {
+  font-family: var(--desktop-font);
+  color: var(--desktop-text);
+}
+
+/* 页面级标题使用 display 字体 */
+.home__view-title,
+.settings-layout__nav-head h1,
+.settings-section__title,
+.detail__title {
+  font-family: var(--desktop-font-display);
+  font-weight: var(--desktop-title-weight);
+}
+
+/* 弱化网页卡片感，贴近桌面工具窗口 */
+.el-drawer__header {
+  margin-bottom: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--desktop-border);
+}
+
+.el-button {
+  font-weight: 500;
+  border-radius: var(--desktop-radius-md);
+}
+
+.el-button--primary {
+  border-radius: var(--desktop-radius-pill);
+}
+
+.el-input__wrapper {
+  border-radius: var(--desktop-radius-md);
+}
+
+.el-dialog {
+  border-radius: var(--desktop-radius-lg);
+  box-shadow: var(--desktop-shadow);
+}
+
+/* Figma / Notion / Airtable / Airbnb 药丸主按钮 */
+[data-desktop-theme=notion] .el-button--primary,
+[data-desktop-theme=figma] .el-button--primary,
+[data-desktop-theme=airtable] .el-button--primary,
+[data-desktop-theme=airbnb] .el-button--primary {
+  border-radius: var(--desktop-radius-pill);
+}.quick-add-input[data-v-98321b52] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.quick-add-input__field[data-v-98321b52] {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 22px;
+  overflow: hidden;
+}
+.quick-add-input__mirror[data-v-98321b52],
+.quick-add-input__control[data-v-98321b52] {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  font-size: 14px;
+  line-height: 22px;
+  font-family: inherit;
+  letter-spacing: normal;
+  white-space: pre;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.quick-add-input__mirror[data-v-98321b52]::-webkit-scrollbar,
+.quick-add-input__control[data-v-98321b52]::-webkit-scrollbar {
+  display: none;
+}
+.quick-add-input__mirror[data-v-98321b52] {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--desktop-text);
+  word-break: keep-all;
+}
+.quick-add-input__control[data-v-98321b52] {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  outline: none;
+  color: transparent;
+  caret-color: var(--desktop-text);
+}
+.quick-add-input__control[data-v-98321b52]::placeholder {
+  color: var(--desktop-muted);
+}
+.quick-add-input__seg.is-due[data-v-98321b52] {
+  color: var(--el-color-primary);
+  font-weight: 500;
+}
+.quick-add-input__seg.is-remind[data-v-98321b52] {
+  color: var(--el-color-warning);
+  font-weight: 500;
+}
+.quick-add-input__seg.is-recurrence[data-v-98321b52] {
+  color: #7c3aed;
+  font-weight: 500;
+}
+.quick-add-input__seg.is-category[data-v-98321b52] {
+  color: var(--el-color-success);
+  font-weight: 500;
+}
+.quick-add-input__meta[data-v-98321b52] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 2px;
+}
+.quick-add-input__tag[data-v-98321b52] {
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--desktop-bg);
+  color: var(--desktop-muted);
+  border: 1px solid transparent;
+}
+.quick-add-input__tag.is-due[data-v-98321b52] {
+  color: var(--el-color-primary);
+  border-color: color-mix(in srgb, var(--el-color-primary) 25%, transparent);
+  background: color-mix(in srgb, var(--el-color-primary) 8%, var(--desktop-bg));
+}
+.quick-add-input__tag.is-remind[data-v-98321b52] {
+  color: var(--el-color-warning);
+  border-color: color-mix(in srgb, var(--el-color-warning) 25%, transparent);
+  background: color-mix(in srgb, var(--el-color-warning) 8%, var(--desktop-bg));
+}
+.quick-add-input__tag.is-recurrence[data-v-98321b52] {
+  color: #7c3aed;
+  border-color: color-mix(in srgb, #7c3aed 25%, transparent);
+  background: color-mix(in srgb, #7c3aed 8%, var(--desktop-bg));
+}
+.quick-add-input__tag.is-category[data-v-98321b52] {
+  color: var(--el-color-success);
+  border-color: color-mix(in srgb, var(--el-color-success) 25%, transparent);
+  background: color-mix(in srgb, var(--el-color-success) 8%, var(--desktop-bg));
+}
+.quick-add-input__tag.is-title[data-v-98321b52] {
+  color: var(--desktop-muted);
+  border-color: var(--desktop-border, rgba(0, 0, 0, 0.06));
+}.priority-flag-icon[data-v-db3c8bc7] {
+  display: block;
+  flex-shrink: 0;
+}.priority-flag-menu__trigger[data-v-32026a50] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--desktop-muted);
+}
+.priority-flag-menu__trigger[data-v-32026a50]:hover {
+  background: var(--desktop-hover);
+}
+.priority-flag-menu__item[data-v-32026a50] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
+}
+.priority-flag-menu__label[data-v-32026a50] {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.priority-flag-menu__code[data-v-32026a50] {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.priority-flag-menu__desc[data-v-32026a50] {
+  font-size: 12px;
+  color: var(--desktop-muted);
+  line-height: 1.2;
+}
+.priority-flag-menu__check[data-v-32026a50] {
+  color: var(--el-color-primary);
+  font-size: 16px;
+}
+[data-v-32026a50] .el-dropdown-menu__item.is-selected .priority-flag-menu__label {
+  color: var(--el-color-primary);
+}

@@ -1,0 +1,80 @@
+# 公开仓发版：打 v* tag 后打包，并上传到 GitHub + Gitee Releases
+# 工作流位于 desktop/.github，经 subtree 同步后会出现在公开仓根目录 .github/
+#
+# 仓库 Secrets 需配置：
+#   GITEE_TOKEN — Gitee 私人令牌（需 projects 权限，用于创建 Release / 上传附件 / 推送 tag）
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build Windows
+        run: npm run build:win
+
+      - name: Upload GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/*.yml
+            dist/*-win.zip
+            dist/*.zip
+            dist/*.part*
+            dist/*.ps1
+            dist/*.bat
+          body: |
+            ## 下载说明
+            - **安装版**：下载 `小柒todo Setup *.exe`
+            - **免解压版（Gitee）**：因单附件上限 100MB，大包以 `.part*` 分卷发布。请下载 **`下载免解压版.bat`**（及同目录的 `download-portable-from-gitee.ps1`），双击运行即可自动下载分卷、合并并校验。
+            - GitHub Release 另附完整 `*-win.zip`，也可直接下载解压。
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push tag to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GITEE_TOKEN:-}" ]; then
+            echo "GITEE_TOKEN secret is empty; skip Gitee sync"
+            exit 1
+          fi
+          git remote remove gitee 2>/dev/null || true
+          git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/GenkiDoudou/aitodo-desktop.git"
+          git push gitee "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          git push gitee HEAD:main || true
+
+      - name: Upload Gitee Release assets
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_OWNER: GenkiDoudou
+          GITEE_REPO: aitodo-desktop
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/publish-gitee-release.cjs

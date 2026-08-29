@@ -1,0 +1,81 @@
+<template>
+  <div class="shortcut-editor">
+    <el-button size="small" :disabled="capturing" @click="startCapture">
+      {{ capturing ? '请按下快捷键…' : value ? '更改' : '设置' }}
+    </el-button>
+    <el-button v-if="value" size="small" text type="danger" @click="clearBinding">清除</el-button>
+    <el-button v-if="value && !isDefault" size="small" text @click="emit('reset')">恢复默认</el-button>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onUnmounted, ref } from 'vue'
+import { normalizeAccelerator } from '@shared/shortcuts'
+
+defineProps<{
+  value: string
+  isDefault: boolean
+}>()
+
+const emit = defineEmits<{
+  change: [string]
+  reset: []
+}>()
+
+const capturing = ref(false)
+
+function buildAccelerator(e: KeyboardEvent): string | null {
+  if (e.key === 'Escape') {
+    return null
+  }
+  if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) {
+    return null
+  }
+  const parts: string[] = []
+  if (e.ctrlKey || e.metaKey) parts.push('Mod')
+  if (e.altKey) parts.push('Alt')
+  if (e.shiftKey) parts.push('Shift')
+  const key = e.key === ',' ? ',' : e.key.length === 1 ? e.key.toUpperCase() : e.key
+  parts.push(key)
+  return normalizeAccelerator(parts.join('+'))
+}
+
+function onCaptureKeydown(e: KeyboardEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+  if (e.key === 'Escape') {
+    stopCapture()
+    return
+  }
+  const accel = buildAccelerator(e)
+  if (!accel) return
+  stopCapture()
+  emit('change', accel)
+}
+
+function startCapture() {
+  if (capturing.value) return
+  capturing.value = true
+  window.addEventListener('keydown', onCaptureKeydown, true)
+}
+
+function stopCapture() {
+  capturing.value = false
+  window.removeEventListener('keydown', onCaptureKeydown, true)
+}
+
+function clearBinding() {
+  emit('change', '')
+}
+
+onUnmounted(stopCapture)
+</script>
+
+<style scoped lang="scss">
+.shortcut-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+</style>

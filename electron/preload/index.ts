@@ -1,0 +1,260 @@
+import { contextBridge, ipcRenderer } from 'electron'
+import { IPC } from '@shared/ipc-channels'
+import type { DesktopApi } from '@shared/desktop-api'
+import type {
+  CreateCategoryDto,
+  CreateKanbanGroupDto,
+  CreateScheduledSummaryDto,
+  CreateTaskDto,
+  CreateTaskViewDto,
+  DeleteTaskOptions,
+  TaskListFilter,
+  UpdateCategoryDto,
+  UpdateKanbanGroupDto,
+  UpdateScheduledSummaryDto,
+  UpdateTaskDto,
+  UpdateTaskViewDto
+} from '@shared/types'
+import type { FilterNode } from '@shared/task-filter-ast'
+import type { ViewTemplateId } from '@shared/view-templates'
+import type { ConfirmClosePayload } from '@shared/close-behavior'
+
+/**
+ * 白名单 IPC 封装：渲染进程仅可调用此处暴露的方法。
+ */
+const api: DesktopApi = {
+  tasks: {
+    list: (filter?: TaskListFilter) => ipcRenderer.invoke(IPC.TASKS_LIST, filter),
+    get: (id: string) => ipcRenderer.invoke(IPC.TASKS_GET, id),
+    getInTrash: (id: string) => ipcRenderer.invoke(IPC.TASKS_GET_IN_TRASH, id),
+    create: (dto: CreateTaskDto) => ipcRenderer.invoke(IPC.TASKS_CREATE, dto),
+    update: (id: string, dto: UpdateTaskDto) => ipcRenderer.invoke(IPC.TASKS_UPDATE, id, dto),
+    delete: (id: string, options?: DeleteTaskOptions) => ipcRenderer.invoke(IPC.TASKS_DELETE, id, options),
+    restore: (id: string) => ipcRenderer.invoke(IPC.TASKS_RESTORE, id),
+    permanentDelete: (id: string, options?: DeleteTaskOptions) =>
+      ipcRenderer.invoke(IPC.TASKS_PERMANENT_DELETE, id, options),
+    emptyTrash: () => ipcRenderer.invoke(IPC.TASKS_EMPTY_TRASH),
+    countTrash: () => ipcRenderer.invoke(IPC.TASKS_COUNT_TRASH),
+    countDone: () => ipcRenderer.invoke(IPC.TASKS_COUNT_DONE),
+    reorder: (ids: string[]) => ipcRenderer.invoke(IPC.TASKS_REORDER, ids)
+  },
+  kanbanGroups: {
+    list: (scopeKey: string) => ipcRenderer.invoke(IPC.KANBAN_GROUPS_LIST, scopeKey),
+    create: (dto: CreateKanbanGroupDto) => ipcRenderer.invoke(IPC.KANBAN_GROUPS_CREATE, dto),
+    update: (id: string, dto: UpdateKanbanGroupDto) =>
+      ipcRenderer.invoke(IPC.KANBAN_GROUPS_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.KANBAN_GROUPS_DELETE, id)
+  },
+  messages: {
+    list: (
+      kind?: import('@shared/types').AppMessageKind,
+      source?: import('@shared/types').AppMessageSource
+    ) => ipcRenderer.invoke(IPC.MESSAGES_LIST, kind, source),
+    countUnread: (kind?: import('@shared/types').AppMessageKind) =>
+      ipcRenderer.invoke(IPC.MESSAGES_COUNT_UNREAD, kind),
+    markRead: (id: string) => ipcRenderer.invoke(IPC.MESSAGES_MARK_READ, id),
+    markAllRead: (kind?: import('@shared/types').AppMessageKind) =>
+      ipcRenderer.invoke(IPC.MESSAGES_MARK_ALL_READ, kind)
+  },
+  scheduledSummaries: {
+    list: () => ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_LIST),
+    create: (dto: CreateScheduledSummaryDto) =>
+      ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_CREATE, dto),
+    update: (id: string, dto: UpdateScheduledSummaryDto) =>
+      ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_DELETE, id),
+    preview: (dto: CreateScheduledSummaryDto & { id?: string }) =>
+      ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_PREVIEW, dto),
+    runNow: (id: string) => ipcRenderer.invoke(IPC.SCHEDULED_SUMMARIES_RUN_NOW, id)
+  },
+  holidays: {
+    calendarMarks: (years: number[]) => ipcRenderer.invoke(IPC.HOLIDAYS_CALENDAR_MARKS, years),
+    status: () => ipcRenderer.invoke(IPC.HOLIDAYS_STATUS),
+    refresh: (years: number[]) => ipcRenderer.invoke(IPC.HOLIDAYS_REFRESH, years)
+  },
+  taskViews: {
+    list: () => ipcRenderer.invoke(IPC.TASK_VIEWS_LIST),
+    create: (dto: CreateTaskViewDto) => ipcRenderer.invoke(IPC.TASK_VIEWS_CREATE, dto),
+    update: (id: string, dto: UpdateTaskViewDto) =>
+      ipcRenderer.invoke(IPC.TASK_VIEWS_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.TASK_VIEWS_DELETE, id),
+    previewCount: (rule: FilterNode) => ipcRenderer.invoke(IPC.TASK_VIEWS_PREVIEW_COUNT, rule),
+    createFromTemplate: (templateId: ViewTemplateId) =>
+      ipcRenderer.invoke(IPC.TASK_VIEWS_CREATE_FROM_TEMPLATE, templateId)
+  },
+  taskActivities: {
+    listByTask: (taskId: string, limit?: number, before?: string) =>
+      ipcRenderer.invoke(IPC.TASK_ACTIVITIES_LIST_BY_TASK, taskId, limit, before),
+    count: () => ipcRenderer.invoke(IPC.TASK_ACTIVITIES_COUNT),
+    deleteAll: () => ipcRenderer.invoke(IPC.TASK_ACTIVITIES_DELETE_ALL),
+    purge: () => ipcRenderer.invoke(IPC.TASK_ACTIVITIES_PURGE),
+    deleteTrashed: () => ipcRenderer.invoke(IPC.TASK_ACTIVITIES_DELETE_TRASHED),
+    getRetention: () => ipcRenderer.invoke(IPC.TASK_ACTIVITY_RETENTION_GET),
+    setRetention: (policy: import('@shared/types').TaskActivityRetentionPolicy) =>
+      ipcRenderer.invoke(IPC.TASK_ACTIVITY_RETENTION_SET, policy)
+  },
+  categories: {
+    list: () => ipcRenderer.invoke(IPC.CATEGORIES_LIST),
+    create: (dto: CreateCategoryDto) => ipcRenderer.invoke(IPC.CATEGORIES_CREATE, dto),
+    update: (id: string, dto: UpdateCategoryDto) =>
+      ipcRenderer.invoke(IPC.CATEGORIES_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.CATEGORIES_DELETE, id),
+    reorder: (ids: string[]) => ipcRenderer.invoke(IPC.CATEGORIES_REORDER, ids)
+  },
+  tags: {
+    list: () => ipcRenderer.invoke(IPC.TAGS_LIST)
+  },
+  widget: {
+    toggle: () => ipcRenderer.invoke(IPC.WIDGET_TOGGLE),
+    show: () => ipcRenderer.invoke(IPC.WIDGET_SHOW),
+    getSettings: () => ipcRenderer.invoke(IPC.WIDGET_GET_SETTINGS),
+    updateSettings: (dto: import('@shared/widget-notes').UpdateWidgetSettingsDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_UPDATE_SETTINGS, dto)
+  },
+  widgetInstances: {
+    list: () => ipcRenderer.invoke(IPC.WIDGET_INSTANCES_LIST),
+    get: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCES_GET, id),
+    create: (dto: import('@shared/widget-notes').CreateWidgetInstanceDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_INSTANCES_CREATE, dto),
+    update: (id: string, dto: import('@shared/widget-notes').UpdateWidgetInstanceDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_INSTANCES_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCES_DELETE, id),
+    show: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCE_SHOW, id),
+    hide: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCE_HIDE, id),
+    toggle: (id: string) => ipcRenderer.invoke(IPC.WIDGET_INSTANCE_TOGGLE, id)
+  },
+  capture: {
+    toggle: () => ipcRenderer.invoke(IPC.CAPTURE_TOGGLE),
+    show: () => ipcRenderer.invoke(IPC.CAPTURE_SHOW),
+    hide: () => ipcRenderer.invoke(IPC.CAPTURE_HIDE)
+  },
+  widgetNotes: {
+    list: () => ipcRenderer.invoke(IPC.WIDGET_NOTES_LIST),
+    create: (dto?: import('@shared/widget-notes').CreateWidgetNoteDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_NOTES_CREATE, dto),
+    update: (id: string, dto: import('@shared/widget-notes').UpdateWidgetNoteDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_NOTES_UPDATE, id, dto),
+    delete: (id: string) => ipcRenderer.invoke(IPC.WIDGET_NOTES_DELETE, id),
+    convertToTask: (id: string, dto: import('@shared/widget-notes').ConvertWidgetNoteToTaskDto) =>
+      ipcRenderer.invoke(IPC.WIDGET_NOTES_CONVERT_TO_TASK, id, dto)
+  },
+  app: {
+    getDataPath: () => ipcRenderer.invoke(IPC.APP_GET_DATA_PATH),
+    setDataPath: (path: string) => ipcRenderer.invoke(IPC.APP_SET_DATA_PATH, path),
+    pickDataDir: () => ipcRenderer.invoke(IPC.APP_PICK_DATA_DIR),
+    exportUserConfig: (uiPreferences?: Record<string, string>) =>
+      ipcRenderer.invoke(IPC.APP_EXPORT_USER_CONFIG, uiPreferences),
+    importUserConfig: () => ipcRenderer.invoke(IPC.APP_IMPORT_USER_CONFIG),
+    getVersion: () => ipcRenderer.invoke(IPC.APP_GET_VERSION),
+    getInfo: () => ipcRenderer.invoke(IPC.APP_GET_INFO),
+    getShortcuts: () => ipcRenderer.invoke(IPC.APP_GET_SHORTCUTS),
+    setShortcuts: (bindings) => ipcRenderer.invoke(IPC.APP_SET_SHORTCUTS, bindings),
+    getLlmConfig: () => ipcRenderer.invoke(IPC.APP_GET_LLM_CONFIG),
+    setLlmConfig: (config) => ipcRenderer.invoke(IPC.APP_SET_LLM_CONFIG, config),
+    getAiPrompt: () => ipcRenderer.invoke(IPC.APP_GET_AI_PROMPT),
+    setAiPrompt: (config) => ipcRenderer.invoke(IPC.APP_SET_AI_PROMPT, config),
+    parseTaskInput: (text, categories) =>
+      ipcRenderer.invoke(IPC.APP_PARSE_TASK_INPUT, text, categories),
+    getCloseBehavior: () => ipcRenderer.invoke(IPC.APP_GET_CLOSE_BEHAVIOR),
+    setCloseBehavior: (behavior) => ipcRenderer.invoke(IPC.APP_SET_CLOSE_BEHAVIOR, behavior),
+    confirmClose: (payload: ConfirmClosePayload) =>
+      ipcRenderer.invoke(IPC.APP_CONFIRM_CLOSE, payload),
+    showWindow: () => ipcRenderer.invoke(IPC.APP_SHOW_WINDOW),
+    openMain: (route?: string) => ipcRenderer.invoke(IPC.APP_OPEN_MAIN, route),
+    pickAttachment: () => ipcRenderer.invoke(IPC.APP_PICK_ATTACHMENT),
+    saveAttachment: (dto) => ipcRenderer.invoke(IPC.APP_SAVE_ATTACHMENT, dto),
+    resolveAttachmentUrl: (uri) => ipcRenderer.invoke(IPC.APP_RESOLVE_ATTACHMENT_URL, uri),
+    openAttachment: (uri) => ipcRenderer.invoke(IPC.APP_OPEN_ATTACHMENT, uri),
+    downloadAttachment: (uri, suggestedName) =>
+      ipcRenderer.invoke(IPC.APP_DOWNLOAD_ATTACHMENT, uri, suggestedName),
+    onNewTask: (callback: () => void) => {
+      const listener = () => callback()
+      ipcRenderer.on(IPC.APP_NEW_TASK, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_NEW_TASK, listener)
+    },
+    onAction: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, action: string) => {
+        callback(action as import('@shared/shortcuts').ShortcutActionId)
+      }
+      ipcRenderer.on(IPC.APP_ACTION, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_ACTION, listener)
+    },
+    onCloseRequest: (callback) => {
+      const listener = () => callback()
+      ipcRenderer.on(IPC.APP_CLOSE_REQUEST, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_CLOSE_REQUEST, listener)
+    },
+    onMessagePush: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, message: import('@shared/types').AppMessage) => {
+        callback(message)
+      }
+      ipcRenderer.on(IPC.APP_MESSAGE_PUSH, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_MESSAGE_PUSH, listener)
+    },
+    onNavigate: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, route: string) => {
+        callback(route)
+      }
+      ipcRenderer.on(IPC.APP_NAVIGATE, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_NAVIGATE, listener)
+    }
+  },
+  sync: {
+    login: (dto: import('@shared/sync-protocol').SyncLoginRequest) =>
+      ipcRenderer.invoke(IPC.SYNC_LOGIN, dto),
+    register: (dto: import('@shared/sync-protocol').SyncRegisterRequest) =>
+      ipcRenderer.invoke(IPC.SYNC_REGISTER, dto),
+    completeLogin: (request: import('@shared/sync-protocol').SyncCompleteLoginRequest) =>
+      ipcRenderer.invoke(IPC.SYNC_COMPLETE_LOGIN, request),
+    logout: () => ipcRenderer.invoke(IPC.SYNC_LOGOUT),
+    getStatus: () => ipcRenderer.invoke(IPC.SYNC_GET_STATUS),
+    trigger: () => ipcRenderer.invoke(IPC.SYNC_TRIGGER),
+    setServerUrl: (url: string) => ipcRenderer.invoke(IPC.SYNC_SET_SERVER_URL, url),
+    setPreferences: (partial: Partial<import('@shared/sync-preferences').SyncPreferences>) =>
+      ipcRenderer.invoke(IPC.SYNC_SET_PREFERENCES, partial),
+    testServerUrl: (url?: string) => ipcRenderer.invoke(IPC.SYNC_TEST_SERVER_URL, url),
+    reportUiPreferences: (prefs: Record<string, string>) =>
+      ipcRenderer.invoke(IPC.SYNC_REPORT_UI_PREFERENCES, prefs),
+    onUiPreferencesApplied: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, prefs: Record<string, string>) => {
+        callback(prefs)
+      }
+      ipcRenderer.on(IPC.SYNC_UI_PREFERENCES_APPLIED, listener)
+      return () => ipcRenderer.removeListener(IPC.SYNC_UI_PREFERENCES_APPLIED, listener)
+    },
+    onAuthCompleted: (callback: () => void) => {
+      const listener = () => {
+        callback()
+      }
+      ipcRenderer.on(IPC.SYNC_AUTH_COMPLETED, listener)
+      return () => ipcRenderer.removeListener(IPC.SYNC_AUTH_COMPLETED, listener)
+    }
+  },
+  notify: {
+    getConfig: () => ipcRenderer.invoke(IPC.NOTIFY_GET_CONFIG),
+    setConfig: (config: import('@shared/notification-config').NotificationConfig) =>
+      ipcRenderer.invoke(IPC.NOTIFY_SET_CONFIG, config),
+    testIyuu: (token?: string) => ipcRenderer.invoke(IPC.NOTIFY_TEST_IYUU, token),
+    testWebhook: (url: string, headers?: Record<string, string>) =>
+      ipcRenderer.invoke(IPC.NOTIFY_TEST_WEBHOOK, url, headers),
+    listDeliveries: () => ipcRenderer.invoke(IPC.NOTIFY_LIST_DELIVERIES),
+    listPending: () => ipcRenderer.invoke(IPC.NOTIFY_LIST_PENDING)
+  },
+  appUpdate: {
+    getStatus: () => ipcRenderer.invoke(IPC.APP_UPDATE_GET_STATUS),
+    check: () => ipcRenderer.invoke(IPC.APP_UPDATE_CHECK),
+    quitAndInstall: () => ipcRenderer.invoke(IPC.APP_UPDATE_QUIT_AND_INSTALL),
+    onStatus: (callback) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        status: import('@shared/app-update').AppUpdateStatus
+      ) => {
+        callback(status)
+      }
+      ipcRenderer.on(IPC.APP_UPDATE_STATUS, listener)
+      return () => ipcRenderer.removeListener(IPC.APP_UPDATE_STATUS, listener)
+    }
+  }
+}
+
+contextBridge.exposeInMainWorld('api', api)
