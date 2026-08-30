@@ -1,5 +1,5 @@
-import { d as defineComponent, o as onMounted, b as openBlock, c as createElementBlock, M as Fragment, N as renderList, a4 as normalizeStyle, e as createBaseVNode, t as toDisplayString, u as unref, ab as TASK_PRIORITIES, i as ref, F as computed, P as ElMessage, _ as _export_sfc, n as normalizeClass, g as createCommentVNode, U as withDirectives, ar as vModelText, G as watch, am as isValidTaskPriority, L as createBlock, a as onUnmounted, h as withModifiers, j as createApp, k as element_plus_default } from "./_plugin-vue_export-helper-Dd7a7WMt.js";
-import { C as splitTasksByPriority, W as WIDGET_NOTE_COLORS, M as kanbanScopeKey, _ as categoryLogoInitial, c as compareTasks, K as KANBAN_DONE_COLUMN_ID, q as KANBAN_UNGROUPED_ID, w as readKanbanConfig, $ as DEFAULT_KANBAN_STATUS_LABELS, s as KANBAN_STATUS_COLUMNS, u as statusLabelFor, a0 as WIDGET_KANBAN_DEFAULT_WIDTH, a1 as WIDGET_KANBAN_DEFAULT_HEIGHT, R as isFilterRuleActive, r as readViewDisplayPreferences, a2 as filterTasksForViewWidget, a3 as flattenTasksForViewWidget, Z as widgetInstanceDisplayName } from "./quadrant-tasks-3FapRoJR.js";
+import { d as defineComponent, o as onMounted, b as openBlock, c as createElementBlock, M as Fragment, N as renderList, a5 as normalizeStyle, e as createBaseVNode, t as toDisplayString, u as unref, ab as TASK_PRIORITIES, i as ref, F as computed, P as ElMessage, _ as _export_sfc, n as normalizeClass, g as createCommentVNode, V as withDirectives, ar as vModelText, G as watch, am as isValidTaskPriority, L as createBlock, a as onUnmounted, h as withModifiers, j as createApp, k as element_plus_default } from "./_plugin-vue_export-helper-D7E7GOLT.js";
+import { n as nextTaskStatus, J as splitTasksByPriority, W as WIDGET_NOTE_COLORS, O as kanbanScopeKey, a0 as categoryLogoInitial, e as compareTasks, K as KANBAN_DONE_COLUMN_ID, z as KANBAN_UNGROUPED_ID, C as readKanbanConfig, a1 as DEFAULT_KANBAN_STATUS_LABELS, A as KANBAN_STATUS_COLUMNS, B as statusLabelFor, a2 as WIDGET_KANBAN_DEFAULT_WIDTH, a3 as WIDGET_KANBAN_DEFAULT_HEIGHT, U as isFilterRuleActive, r as readViewDisplayPreferences, a4 as filterTasksForViewWidget, a5 as flattenTasksForViewWidget, $ as widgetInstanceDisplayName } from "./quadrant-tasks-ClG9t7P5.js";
 const _hoisted_1$4 = { class: "matrix-panel" };
 const _hoisted_2$4 = {
   key: 0,
@@ -54,8 +54,11 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
       tasks.value = res.data;
     }
     async function toggleDone(id) {
+      const task = tasks.value.find((t) => t.id === id);
+      if (!task) return;
+      const next = nextTaskStatus(task.status);
       setUpdating(id, true);
-      const res = await window.widgetApi.tasks.update(id, { status: "DONE" });
+      const res = await window.widgetApi.tasks.update(id, { status: next });
       setUpdating(id, false);
       if (!res.ok) {
         ElMessage.error(res.error.message);
@@ -135,7 +138,7 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const WidgetMatrixPanel = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-047186b5"]]);
+const WidgetMatrixPanel = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-641d6e56"]]);
 const _hoisted_1$3 = { class: "notes-panel" };
 const _hoisted_2$3 = { class: "notes-panel__list" };
 const _hoisted_3$3 = { class: "notes-panel__items" };
@@ -715,8 +718,11 @@ const _sfc_main$1 = /* @__PURE__ */ defineComponent({
       tasks.value = [];
     }
     async function toggleDone(id) {
+      const task = tasks.value.find((t) => t.id === id);
+      if (!task) return;
+      const next = nextTaskStatus(task.status);
       setUpdating(id, true);
-      const res = await window.widgetApi.tasks.update(id, { status: "DONE" });
+      const res = await window.widgetApi.tasks.update(id, { status: next });
       setUpdating(id, false);
       if (!res.ok) {
         ElMessage.error(res.error.message);
@@ -830,7 +836,7 @@ const _sfc_main$1 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const WidgetViewsPanel = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-277fee72"]]);
+const WidgetViewsPanel = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-acebba3f"]]);
 const _hoisted_1 = ["title"];
 const _hoisted_2 = {
   key: 1,

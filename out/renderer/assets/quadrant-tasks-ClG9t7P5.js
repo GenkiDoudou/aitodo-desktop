@@ -1,4 +1,4 @@
-import { S as dayjs, af as getTaskPriorityMeta, aL as normalizeTaskPriority } from "./_plugin-vue_export-helper-Dd7a7WMt.js";
+import { Q as dayjs, af as getTaskPriorityMeta, aL as normalizeTaskPriority } from "./_plugin-vue_export-helper-D7E7GOLT.js";
 function isDueSmartList(smart) {
   return smart === "today" || smart === "week" || smart === "last7days";
 }
@@ -196,6 +196,24 @@ function taskDateIsoInRange(task, field, bounds) {
   const iso = resolveTaskDateIso(task, field);
   if (!iso) return false;
   return isoInClosedRange(iso, bounds);
+}
+function nextTaskStatus(current) {
+  if (current === "TODO") {
+    return "IN_PROGRESS";
+  }
+  if (current === "IN_PROGRESS") {
+    return "DONE";
+  }
+  return "TODO";
+}
+function taskStatusLabel(status) {
+  if (status === "IN_PROGRESS") {
+    return "进行中";
+  }
+  if (status === "DONE") {
+    return "已完成";
+  }
+  return "待办";
 }
 const TIME_FIELDS = ["dueAt", "createdAt", "completedAt"];
 function createEmptyAndGroup() {
@@ -944,62 +962,64 @@ function flattenQuadrantTaskTree(roots, allTasks, expandedIds) {
   return result;
 }
 export {
-  DEFAULT_KANBAN_STATUS_LABELS as $,
-  groupCompletedTasksByDate as A,
-  flattenQuadrantTaskTree as B,
-  splitTasksByPriority as C,
+  widgetInstanceDisplayName as $,
+  KANBAN_STATUS_COLUMNS as A,
+  statusLabelFor as B,
+  readKanbanConfig as C,
   DEFAULT_TASK_VIEW_ALL_ID as D,
-  buildChildCountMap as E,
-  isDueSmartList as F,
-  taskMatchesSmartListDate as G,
-  doneTimeRangeBounds as H,
-  taskDateIsoInRange as I,
-  normalizeTagName as J,
+  startOfWeekMonday as E,
+  buildTaskListLayout as F,
+  completedTaskDisplayTitle as G,
+  groupCompletedTasksByDate as H,
+  flattenQuadrantTaskTree as I,
+  splitTasksByPriority as J,
   KANBAN_DONE_COLUMN_ID as K,
-  normalizeTagNames as L,
-  kanbanScopeKey as M,
-  readKanbanBoardMode as N,
-  persistKanbanBoardMode as O,
-  TASK_DATE_FIELD_LABELS as P,
-  DONE_TIME_RANGE_LABELS as Q,
-  isFilterRuleActive as R,
-  matchTask as S,
+  buildChildCountMap as L,
+  normalizeTagName as M,
+  normalizeTagNames as N,
+  kanbanScopeKey as O,
+  readKanbanBoardMode as P,
+  persistKanbanBoardMode as Q,
+  TASK_DATE_FIELD_LABELS as R,
+  DONE_TIME_RANGE_LABELS as S,
   TASK_SORT_BY_LABELS as T,
-  resolveTaskDateIso as U,
-  CALENDAR_RANGE_PRESET_LABELS as V,
+  isFilterRuleActive as U,
+  matchTask as V,
   WIDGET_NOTE_COLORS as W,
-  calendarPresetBounds as X,
-  WIDGET_KIND_LABELS as Y,
-  widgetInstanceDisplayName as Z,
-  categoryLogoInitial as _,
-  DEFAULT_TASK_VIEW_KANBAN_ID as a,
-  WIDGET_KANBAN_DEFAULT_WIDTH as a0,
-  WIDGET_KANBAN_DEFAULT_HEIGHT as a1,
-  filterTasksForViewWidget as a2,
-  flattenTasksForViewWidget as a3,
-  createEmptyAndGroup as b,
-  compareTasks as c,
-  deriveAppliedViewState as d,
-  filterNodeForEditor as e,
+  resolveTaskDateIso as X,
+  CALENDAR_RANGE_PRESET_LABELS as Y,
+  calendarPresetBounds as Z,
+  WIDGET_KIND_LABELS as _,
+  taskDateIsoInRange as a,
+  categoryLogoInitial as a0,
+  DEFAULT_KANBAN_STATUS_LABELS as a1,
+  WIDGET_KANBAN_DEFAULT_WIDTH as a2,
+  WIDGET_KANBAN_DEFAULT_HEIGHT as a3,
+  filterTasksForViewWidget as a4,
+  flattenTasksForViewWidget as a5,
+  deriveAppliedViewState as b,
+  DEFAULT_TASK_VIEW_KANBAN_ID as c,
+  doneTimeRangeBounds as d,
+  compareTasks as e,
   findFallbackViewId as f,
-  defaultViewDisplayPreferences as g,
-  TASK_GROUP_BY_LABELS as h,
-  isEmptyFilterNode as i,
-  DEFAULT_TASK_LIST_META_VISIBILITY as j,
-  filterNodeToPersist as k,
-  persistViewDisplayPreferences as l,
-  endOfWeekSunday as m,
-  normalizeFilterNode as n,
-  extractTaskTags as o,
+  timeGroupKey as g,
+  normalizeFilterNode as h,
+  isDueSmartList as i,
+  createEmptyAndGroup as j,
+  filterNodeForEditor as k,
+  defaultViewDisplayPreferences as l,
+  isEmptyFilterNode as m,
+  nextTaskStatus as n,
+  TASK_GROUP_BY_LABELS as o,
   primaryTaskTag as p,
-  KANBAN_UNGROUPED_ID as q,
+  DEFAULT_TASK_LIST_META_VISIBILITY as q,
   readViewDisplayPreferences as r,
-  KANBAN_STATUS_COLUMNS as s,
-  timeGroupKey as t,
-  statusLabelFor as u,
+  filterNodeToPersist as s,
+  taskMatchesSmartListDate as t,
+  persistViewDisplayPreferences as u,
   validateFilterNode as v,
-  readKanbanConfig as w,
-  startOfWeekMonday as x,
-  buildTaskListLayout as y,
-  completedTaskDisplayTitle as z
+  taskStatusLabel as w,
+  endOfWeekSunday as x,
+  extractTaskTags as y,
+  KANBAN_UNGROUPED_ID as z
 };

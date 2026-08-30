@@ -77,22 +77,22 @@ body {
 [data-desktop-theme=airtable] .el-button--primary,
 [data-desktop-theme=airbnb] .el-button--primary {
   border-radius: var(--desktop-radius-pill);
-}.quick-add-input[data-v-98321b52] {
+}.quick-add-input[data-v-897654df] {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.quick-add-input__field[data-v-98321b52] {
+.quick-add-input__field[data-v-897654df] {
   position: relative;
   flex: 1;
   min-width: 0;
   min-height: 22px;
   overflow: hidden;
 }
-.quick-add-input__mirror[data-v-98321b52],
-.quick-add-input__control[data-v-98321b52] {
+.quick-add-input__mirror[data-v-897654df],
+.quick-add-input__control[data-v-897654df] {
   box-sizing: border-box;
   width: 100%;
   margin: 0;
@@ -107,18 +107,18 @@ body {
   overflow-y: hidden;
   scrollbar-width: none;
 }
-.quick-add-input__mirror[data-v-98321b52]::-webkit-scrollbar,
-.quick-add-input__control[data-v-98321b52]::-webkit-scrollbar {
+.quick-add-input__mirror[data-v-897654df]::-webkit-scrollbar,
+.quick-add-input__control[data-v-897654df]::-webkit-scrollbar {
   display: none;
 }
-.quick-add-input__mirror[data-v-98321b52] {
+.quick-add-input__mirror[data-v-897654df] {
   position: absolute;
   inset: 0;
   pointer-events: none;
   color: var(--desktop-text);
   word-break: keep-all;
 }
-.quick-add-input__control[data-v-98321b52] {
+.quick-add-input__control[data-v-897654df] {
   position: relative;
   z-index: 1;
   background: transparent;
@@ -126,32 +126,32 @@ body {
   color: transparent;
   caret-color: var(--desktop-text);
 }
-.quick-add-input__control[data-v-98321b52]::placeholder {
+.quick-add-input__control[data-v-897654df]::placeholder {
   color: var(--desktop-muted);
 }
-.quick-add-input__seg.is-due[data-v-98321b52] {
+.quick-add-input__seg.is-due[data-v-897654df] {
   color: var(--el-color-primary);
   font-weight: 500;
 }
-.quick-add-input__seg.is-remind[data-v-98321b52] {
+.quick-add-input__seg.is-remind[data-v-897654df] {
   color: var(--el-color-warning);
   font-weight: 500;
 }
-.quick-add-input__seg.is-recurrence[data-v-98321b52] {
+.quick-add-input__seg.is-recurrence[data-v-897654df] {
   color: #7c3aed;
   font-weight: 500;
 }
-.quick-add-input__seg.is-category[data-v-98321b52] {
+.quick-add-input__seg.is-category[data-v-897654df] {
   color: var(--el-color-success);
   font-weight: 500;
 }
-.quick-add-input__meta[data-v-98321b52] {
+.quick-add-input__meta[data-v-897654df] {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   padding-left: 2px;
 }
-.quick-add-input__tag[data-v-98321b52] {
+.quick-add-input__tag[data-v-897654df] {
   font-size: 11px;
   line-height: 1.4;
   padding: 2px 8px;
@@ -160,27 +160,27 @@ body {
   color: var(--desktop-muted);
   border: 1px solid transparent;
 }
-.quick-add-input__tag.is-due[data-v-98321b52] {
+.quick-add-input__tag.is-due[data-v-897654df] {
   color: var(--el-color-primary);
   border-color: color-mix(in srgb, var(--el-color-primary) 25%, transparent);
   background: color-mix(in srgb, var(--el-color-primary) 8%, var(--desktop-bg));
 }
-.quick-add-input__tag.is-remind[data-v-98321b52] {
+.quick-add-input__tag.is-remind[data-v-897654df] {
   color: var(--el-color-warning);
   border-color: color-mix(in srgb, var(--el-color-warning) 25%, transparent);
   background: color-mix(in srgb, var(--el-color-warning) 8%, var(--desktop-bg));
 }
-.quick-add-input__tag.is-recurrence[data-v-98321b52] {
+.quick-add-input__tag.is-recurrence[data-v-897654df] {
   color: #7c3aed;
   border-color: color-mix(in srgb, #7c3aed 25%, transparent);
   background: color-mix(in srgb, #7c3aed 8%, var(--desktop-bg));
 }
-.quick-add-input__tag.is-category[data-v-98321b52] {
+.quick-add-input__tag.is-category[data-v-897654df] {
   color: var(--el-color-success);
   border-color: color-mix(in srgb, var(--el-color-success) 25%, transparent);
   background: color-mix(in srgb, var(--el-color-success) 8%, var(--desktop-bg));
 }
-.quick-add-input__tag.is-title[data-v-98321b52] {
+.quick-add-input__tag.is-title[data-v-897654df] {
   color: var(--desktop-muted);
   border-color: var(--desktop-border, rgba(0, 0, 0, 0.06));
 }.priority-flag-icon[data-v-db3c8bc7] {

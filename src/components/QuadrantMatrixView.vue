@@ -61,10 +61,9 @@
               </button>
               <span v-else class="quadrant-matrix__expand-placeholder" aria-hidden="true" />
 
-              <el-checkbox
-                :model-value="task.status === 'DONE'"
-                @click.stop
-                @change="() => emit('toggle-status', task)"
+              <TaskStatusCheckbox
+                :status="task.status"
+                @toggle="emit('toggle-status', task)"
               />
               <div class="quadrant-matrix__task-body">
                 <div class="quadrant-matrix__title-row">
@@ -148,10 +147,9 @@
                 </button>
                 <span v-else class="quadrant-matrix__expand-placeholder" aria-hidden="true" />
 
-                <el-checkbox
-                  :model-value="task.status === 'DONE'"
-                  @click.stop
-                  @change="() => emit('toggle-status', task)"
+                <TaskStatusCheckbox
+                  :status="task.status"
+                  @toggle="emit('toggle-status', task)"
                 />
                 <div class="quadrant-matrix__task-body">
                   <div class="quadrant-matrix__title-row">
@@ -215,6 +213,7 @@ import {
 import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 import TaskPriorityBadge from '@/components/TaskPriorityBadge.vue'
+import TaskStatusCheckbox from '@/components/TaskStatusCheckbox.vue'
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
 
 const DRAG_MIME = 'application/x-aitodo-task'

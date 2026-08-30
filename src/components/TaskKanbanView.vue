@@ -163,10 +163,9 @@
                 </el-icon>
               </button>
               <span v-else class="task-kanban__expand-placeholder" aria-hidden="true" />
-              <el-checkbox
-                :model-value="row.task.status === 'DONE'"
-                @click.stop
-                @change="() => emit('toggle-status', row.task)"
+              <TaskStatusCheckbox
+                :status="row.task.status"
+                @toggle="emit('toggle-status', row.task)"
               />
               <span class="task-kanban__card-title">{{ row.task.title }}</span>
               <span
@@ -238,6 +237,7 @@ import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
 import QuickAddInput from '@/components/QuickAddInput.vue'
 import TaskPriorityFlagMenu from '@/components/TaskPriorityFlagMenu.vue'
+import TaskStatusCheckbox from '@/components/TaskStatusCheckbox.vue'
 import { compareTasks } from '@shared/task-list-layout'
 import type { TaskSortBy } from '@shared/task-list-layout'
 import { unwrapIpc } from '@/ipc/client'

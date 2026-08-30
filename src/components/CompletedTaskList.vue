@@ -44,10 +44,9 @@
               </button>
               <span v-else class="completed-list__expand-placeholder" />
 
-              <el-checkbox
-                :model-value="true"
-                @click.stop
-                @change="() => emit('toggle-status', item.task)"
+              <TaskStatusCheckbox
+                :status="item.task.status"
+                @toggle="emit('toggle-status', item.task)"
               />
               <div class="completed-list__body">
                 <div class="completed-list__title-row">
@@ -85,6 +84,7 @@ import type { Category, Task } from '@shared/types'
 import { groupCompletedTasksByDate, completedTaskDisplayTitle } from '@shared/completed-task-groups'
 import { buildTaskListLayout, type TaskListLayoutItem } from '@shared/task-list-layout'
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
+import TaskStatusCheckbox from '@/components/TaskStatusCheckbox.vue'
 import { unwrapIpc } from '@/ipc/client'
 
 const props = defineProps<{

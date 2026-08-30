@@ -53,6 +53,7 @@ import { ElMessage } from 'element-plus'
 import { splitTasksByPriority } from '@shared/quadrant-tasks'
 import { TASK_PRIORITIES, type TaskPriority } from '@shared/task-priority'
 import type { Task } from '@shared/types'
+import { nextTaskStatus } from '@shared/task-status-cycle'
 
 const tasks = ref<Task[]>([])
 const loading = ref(false)
@@ -80,8 +81,11 @@ async function reload() {
 }
 
 async function toggleDone(id: string) {
+  const task = tasks.value.find((t) => t.id === id)
+  if (!task) return
+  const next = nextTaskStatus(task.status)
   setUpdating(id, true)
-  const res = await window.widgetApi.tasks.update(id, { status: 'DONE' })
+  const res = await window.widgetApi.tasks.update(id, { status: next })
   setUpdating(id, false)
   if (!res.ok) {
     ElMessage.error(res.error.message)

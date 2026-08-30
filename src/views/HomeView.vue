@@ -1883,20 +1883,11 @@ function onDetailDialogVisible(visible: boolean) {
 
 
 async function onToggleStatus(task: Task) {
-
-  // 列表复选框为二态：非 DONE 视为未完成，点击后在 TODO/DONE 间切换（不再经 IN_PROGRESS 循环）
-  const next: TaskStatus = task.status === 'DONE' ? 'TODO' : 'DONE'
-
   try {
-
-    await taskStore.update(task.id, { status: next })
-
+    await taskStore.cycleStatus(task.id)
   } catch {
-
     /* store 内 unwrapIpc 已 Toast */
-
   }
-
 }
 
 async function onReorderRoots(ids: string[]) {

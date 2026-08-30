@@ -50,10 +50,9 @@
               </button>
               <span v-else class="task-list__expand-placeholder" aria-hidden="true" />
 
-              <el-checkbox
-                :model-value="item.task.status === 'DONE'"
-                @click.stop
-                @change="() => emit('toggle-status', item.task)"
+              <TaskStatusCheckbox
+                :status="item.task.status"
+                @toggle="emit('toggle-status', item.task)"
               />
 
               <div class="task-list__body">
@@ -137,6 +136,7 @@ import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-tim
 import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 import TaskPriorityBadge from '@/components/TaskPriorityBadge.vue'
+import TaskStatusCheckbox from '@/components/TaskStatusCheckbox.vue'
 
 const TASK_REORDER_MIME = 'application/x-ai-todo-list-task-reorder'
 

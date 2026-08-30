@@ -8,6 +8,7 @@ import {
   taskMatchesSmartListDate
 } from '@shared/date-filter'
 import { shouldOfferCompleteParent } from '@shared/offer-complete-parent'
+import { nextTaskStatus } from '@shared/task-status-cycle'
 import { isDueSmartList } from '@shared/smart-list'
 import type { CreateTaskDto, DeleteTaskOptions, Task, TaskListFilter } from '@shared/types'
 import type { TaskPriority } from '@shared/task-priority'
@@ -371,6 +372,24 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  /**
+   * 列表/看板圆圈三态循环：待办 → 进行中 → 已完成 → 待办。
+   * 标为完成时由 task-service 校验未完成的子任务。
+   */
+  async function cycleStatus(id: string) {
+    let task: Task
+    try {
+      task = unwrapIpc(await window.api.tasks.get(id))
+    } catch {
+      throw new Error('cycleStatus failed')
+    }
+    if (task.deletedAt) {
+      return task
+    }
+    const next = nextTaskStatus(task.status)
+    return update(id, { status: next })
+  }
+
   async function update(id: string, patch: Parameters<typeof window.api.tasks.update>[1]) {
     try {
       const task = unwrapIpc(await window.api.tasks.update(id, patch))
@@ -455,6 +474,7 @@ export const useTaskStore = defineStore('tasks', () => {
     setHideDone,
     create,
     quickCreate,
+    cycleStatus,
     update,
     reorder,
     remove,

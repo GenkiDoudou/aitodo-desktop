@@ -198,14 +198,10 @@
 
             <li v-for="item in displaySubtasks" :key="item.key" class="task-panel__subtask-row">
 
-              <el-checkbox
-
-                v-if="!item.isDraft"
-
-                :model-value="item.status === 'DONE'"
-
-                @change="() => toggleChildStatus(item)"
-
+              <TaskStatusCheckbox
+                v-if="!item.isDraft && item.status"
+                :status="item.status"
+                @toggle="toggleChildStatus(item)"
               />
 
               <span v-else class="task-panel__subtask-dot" />
@@ -302,6 +298,7 @@ import type { InputInstance } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 import type { Task, TaskStatus } from '@shared/types'
+import { nextTaskStatus } from '@shared/task-status-cycle'
 
 import { DEFAULT_TASK_PRIORITY, type TaskPriority } from '@shared/task-priority'
 
@@ -327,6 +324,7 @@ import TaskBodyEditor from '@/components/TaskBodyEditor.vue'
 import TaskPriorityFlagMenu from '@/components/TaskPriorityFlagMenu.vue'
 import TaskTagEditor from '@/components/TaskTagEditor.vue'
 import TaskActivityList from '@/components/TaskActivityList.vue'
+import TaskStatusCheckbox from '@/components/TaskStatusCheckbox.vue'
 import { useTagStore } from '@/stores/tag-store'
 
 
@@ -771,23 +769,14 @@ async function addSubtaskInline() {
 
 
 async function toggleChildStatus(item: { id?: string; status?: TaskStatus }) {
-
   if (!item.id || !item.status) return
-
-  const next: TaskStatus = item.status === 'DONE' ? 'TODO' : 'DONE'
-
+  const next = nextTaskStatus(item.status)
   try {
-
     await taskStore.update(item.id, { status: next })
-
     await refreshChildTasks()
-
   } catch {
-
     /* store 内 unwrapIpc 已 Toast */
-
   }
-
 }
 
 

@@ -454,7 +454,6 @@ function closeDetail() {
 }
 
 async function onToggleStatus(task: Task) {
-  const next: TaskStatus = task.status === 'DONE' ? 'TODO' : 'DONE'
   try {
     const rule = task.recurrence
     const isRecurring = Boolean(rule && rule.type !== 'none')
@@ -463,12 +462,13 @@ async function onToggleStatus(task: Task) {
     if (isRecurring && dateKey && calendarDateField.value === 'dueAt') {
       const master = taskStore.tasks.find((t) => t.id === task.id)
       const current = master?.completedOccurrenceDates ?? task.completedOccurrenceDates ?? []
+      const markingDone = task.status !== 'DONE'
       await taskStore.update(task.id, {
-        completedOccurrenceDates: toggleCompletedOccurrenceDate(current, dateKey, next === 'DONE')
+        completedOccurrenceDates: toggleCompletedOccurrenceDate(current, dateKey, markingDone)
       })
       return
     }
-    await taskStore.update(task.id, { status: next })
+    await taskStore.cycleStatus(task.id)
   } catch {
     /* store 已 Toast */
   }

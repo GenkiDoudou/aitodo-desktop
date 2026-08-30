@@ -92,6 +92,7 @@ import {
   isFilterRuleActive
 } from '@shared/apply-task-view'
 import type { Category, Task, TaskView, TaskViewLayout } from '@shared/types'
+import { nextTaskStatus } from '@shared/task-status-cycle'
 import {
   categoryLogoInitial,
   WIDGET_KANBAN_DEFAULT_HEIGHT,
@@ -232,8 +233,11 @@ function backToViews() {
 }
 
 async function toggleDone(id: string) {
+  const task = tasks.value.find((t) => t.id === id)
+  if (!task) return
+  const next = nextTaskStatus(task.status)
   setUpdating(id, true)
-  const res = await window.widgetApi.tasks.update(id, { status: 'DONE' })
+  const res = await window.widgetApi.tasks.update(id, { status: next })
   setUpdating(id, false)
   if (!res.ok) {
     ElMessage.error(res.error.message)

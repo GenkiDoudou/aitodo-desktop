@@ -1,6 +1,6 @@
-import { l as effectScope, i as ref, m as markRaw, q as inject, s as hasInjectionContext, v as isRef, x as isReactive, y as toRaw, z as getCurrentScope, A as onScopeDispose, B as reactive, C as nextTick, E as toRefs, F as computed, G as watch, u as unref, H as shallowReactive, I as shallowRef, d as defineComponent, J as h$1, K as provide, r as resolveComponent, b as openBlock, L as createBlock, w as withCtx, e as createBaseVNode, c as createElementBlock, M as Fragment$2, N as renderList, n as normalizeClass, t as toDisplayString, f as createVNode, O as createTextVNode, _ as _export_sfc, P as ElMessage, o as onMounted, a as onUnmounted, Q as commonjsGlobal, R as getDefaultExportFromCjs, S as dayjs, T as resolveDirective, g as createCommentVNode, U as withDirectives, V as timer_default, W as resolveDynamicComponent, X as bell_default, h as withModifiers, Y as finished_default, Z as calendar_default, $ as grid_default, a0 as setting_default, a1 as files_default, p as plus_default, a2 as message_box_default, a3 as folder_default, a4 as normalizeStyle, a5 as circle_check_default, a6 as delete_default, a7 as list_default, a8 as document_default, a9 as clock_default, aa as ElMessageBox, ab as TASK_PRIORITIES, ac as filter_default, ad as operation_default, ae as warning_filled_default, af as getTaskPriorityMeta, ag as arrow_down_default, ah as arrow_right_default, ai as useModel, aj as withKeys, ak as more_filled_default, al as mergeModels, am as isValidTaskPriority, D as DEFAULT_TASK_PRIORITY, an as onBeforeUnmount, ao as d_arrow_left_default, ap as d_arrow_right_default, aq as vShow, ar as vModelText, as as view_default, at as refresh_default, au as watchEffect, av as customRef, aw as getCurrentInstance, ax as scale_to_original_default, ay as full_screen_default, az as close_default, aA as createStaticVNode, aB as coin_default, aC as connection_default, aD as key_default, aE as cpu_default, aF as folder_opened_default, aG as switch_button_default, aH as brush_default, aI as monitor_default, aJ as info_filled_default, j as createApp, k as element_plus_default } from "./_plugin-vue_export-helper-Dd7a7WMt.js";
-import { D as DEFAULT_TASK_VIEW_ALL_ID, f as findFallbackViewId, d as deriveAppliedViewState, a as DEFAULT_TASK_VIEW_KANBAN_ID, c as compareTasks, t as timeGroupKey, p as primaryTaskTag, n as normalizeFilterNode, b as createEmptyAndGroup, T as TASK_SORT_BY_LABELS, e as filterNodeForEditor, r as readViewDisplayPreferences, g as defaultViewDisplayPreferences, i as isEmptyFilterNode, v as validateFilterNode, h as TASK_GROUP_BY_LABELS, j as DEFAULT_TASK_LIST_META_VISIBILITY, k as filterNodeToPersist, l as persistViewDisplayPreferences, m as endOfWeekSunday, o as extractTaskTags, K as KANBAN_DONE_COLUMN_ID, q as KANBAN_UNGROUPED_ID, s as KANBAN_STATUS_COLUMNS, u as statusLabelFor, w as readKanbanConfig, x as startOfWeekMonday, y as buildTaskListLayout, z as completedTaskDisplayTitle, A as groupCompletedTasksByDate, W as WIDGET_NOTE_COLORS, B as flattenQuadrantTaskTree, C as splitTasksByPriority, E as buildChildCountMap, F as isDueSmartList, G as taskMatchesSmartListDate, H as doneTimeRangeBounds, I as taskDateIsoInRange, J as normalizeTagName, L as normalizeTagNames, M as kanbanScopeKey, N as readKanbanBoardMode, O as persistKanbanBoardMode, P as TASK_DATE_FIELD_LABELS, Q as DONE_TIME_RANGE_LABELS, R as isFilterRuleActive, S as matchTask, U as resolveTaskDateIso, V as CALENDAR_RANGE_PRESET_LABELS, X as calendarPresetBounds, Y as WIDGET_KIND_LABELS, Z as widgetInstanceDisplayName } from "./quadrant-tasks-3FapRoJR.js";
-import { n as normalizeCategoryKeywords, a as normalizeCategoryKeyword, f as findCategoryKeywordConflict, Q as QuickAddInput, T as TaskPriorityFlagMenu, t as toParseCategories, b as buildQuickCreateTaskDtoFromDraft, R as REMIND_CUSTOM_UNITS, c as customOffsetToMinutes, r as remindAtFromDueOffset, d as REMIND_OFFSET_PRESETS, e as buildRemindersFromOffsets, g as RECURRENCE_CUSTOM_UNITS, h as nextDueAfterRecurrence, i as recurrenceLabel, j as assertRemindersBeforeDue } from "./TaskPriorityFlagMenu-hAZRagsG.js";
+import { l as effectScope, i as ref, m as markRaw, q as inject, s as hasInjectionContext, v as isRef, x as isReactive, y as toRaw, z as getCurrentScope, A as onScopeDispose, B as reactive, C as nextTick, E as toRefs, F as computed, G as watch, u as unref, H as shallowReactive, I as shallowRef, d as defineComponent, J as h$1, K as provide, r as resolveComponent, b as openBlock, L as createBlock, w as withCtx, e as createBaseVNode, c as createElementBlock, M as Fragment$2, N as renderList, n as normalizeClass, t as toDisplayString, f as createVNode, O as createTextVNode, _ as _export_sfc, P as ElMessage, Q as dayjs, R as ElMessageBox, o as onMounted, a as onUnmounted, S as commonjsGlobal, T as getDefaultExportFromCjs, U as resolveDirective, g as createCommentVNode, V as withDirectives, W as timer_default, X as resolveDynamicComponent, Y as bell_default, h as withModifiers, Z as finished_default, $ as calendar_default, a0 as grid_default, a1 as setting_default, a2 as files_default, p as plus_default, a3 as message_box_default, a4 as folder_default, a5 as normalizeStyle, a6 as circle_check_default, a7 as delete_default, a8 as list_default, a9 as document_default, aa as clock_default, ab as TASK_PRIORITIES, ac as filter_default, ad as operation_default, ae as warning_filled_default, af as getTaskPriorityMeta, ag as arrow_down_default, ah as arrow_right_default, ai as useModel, aj as withKeys, ak as more_filled_default, al as mergeModels, am as isValidTaskPriority, D as DEFAULT_TASK_PRIORITY, an as onBeforeUnmount, ao as d_arrow_left_default, ap as d_arrow_right_default, aq as vShow, ar as vModelText, as as view_default, at as refresh_default, au as watchEffect, av as customRef, aw as getCurrentInstance, ax as scale_to_original_default, ay as full_screen_default, az as close_default, aA as createStaticVNode, aB as coin_default, aC as connection_default, aD as key_default, aE as cpu_default, aF as folder_opened_default, aG as switch_button_default, aH as brush_default, aI as monitor_default, aJ as info_filled_default, j as createApp, k as element_plus_default } from "./_plugin-vue_export-helper-D7E7GOLT.js";
+import { i as isDueSmartList, n as nextTaskStatus, t as taskMatchesSmartListDate, d as doneTimeRangeBounds, a as taskDateIsoInRange, D as DEFAULT_TASK_VIEW_ALL_ID, f as findFallbackViewId, b as deriveAppliedViewState, c as DEFAULT_TASK_VIEW_KANBAN_ID, e as compareTasks, g as timeGroupKey, p as primaryTaskTag, h as normalizeFilterNode, j as createEmptyAndGroup, T as TASK_SORT_BY_LABELS, k as filterNodeForEditor, r as readViewDisplayPreferences, l as defaultViewDisplayPreferences, m as isEmptyFilterNode, v as validateFilterNode, o as TASK_GROUP_BY_LABELS, q as DEFAULT_TASK_LIST_META_VISIBILITY, s as filterNodeToPersist, u as persistViewDisplayPreferences, w as taskStatusLabel, x as endOfWeekSunday, y as extractTaskTags, K as KANBAN_DONE_COLUMN_ID, z as KANBAN_UNGROUPED_ID, A as KANBAN_STATUS_COLUMNS, B as statusLabelFor, C as readKanbanConfig, E as startOfWeekMonday, F as buildTaskListLayout, G as completedTaskDisplayTitle, H as groupCompletedTasksByDate, W as WIDGET_NOTE_COLORS, I as flattenQuadrantTaskTree, J as splitTasksByPriority, L as buildChildCountMap, M as normalizeTagName, N as normalizeTagNames, O as kanbanScopeKey, P as readKanbanBoardMode, Q as persistKanbanBoardMode, R as TASK_DATE_FIELD_LABELS, S as DONE_TIME_RANGE_LABELS, U as isFilterRuleActive, V as matchTask, X as resolveTaskDateIso, Y as CALENDAR_RANGE_PRESET_LABELS, Z as calendarPresetBounds, _ as WIDGET_KIND_LABELS, $ as widgetInstanceDisplayName } from "./quadrant-tasks-ClG9t7P5.js";
+import { t as toParseCategories, b as buildQuickCreateTaskDtoFromDraft, n as normalizeCategoryKeywords, a as normalizeCategoryKeyword, f as findCategoryKeywordConflict, Q as QuickAddInput, T as TaskPriorityFlagMenu, R as REMIND_CUSTOM_UNITS, c as customOffsetToMinutes, r as remindAtFromDueOffset, d as REMIND_OFFSET_PRESETS, e as buildRemindersFromOffsets, g as RECURRENCE_CUSTOM_UNITS, h as nextDueAfterRecurrence, i as recurrenceLabel, j as assertRemindersBeforeDue } from "./TaskPriorityFlagMenu-DX6JCblL.js";
 /*!
  * pinia v2.3.1
  * (c) 2025 Eduardo San Martin Morote
@@ -1909,7 +1909,7 @@ const _hoisted_5$J = { class: "close-behavior-dialog__option-title" };
 const _hoisted_6$G = { class: "close-behavior-dialog__option-desc" };
 const _hoisted_7$B = { class: "close-behavior-dialog__remember" };
 const _hoisted_8$q = { class: "close-behavior-dialog__footer" };
-const _sfc_main$W = /* @__PURE__ */ defineComponent({
+const _sfc_main$X = /* @__PURE__ */ defineComponent({
   __name: "CloseBehaviorDialog",
   props: {
     modelValue: { type: Boolean }
@@ -2046,7 +2046,7 @@ const _sfc_main$W = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const CloseBehaviorDialog = /* @__PURE__ */ _export_sfc(_sfc_main$W, [["__scopeId", "data-v-3ba9ce0e"]]);
+const CloseBehaviorDialog = /* @__PURE__ */ _export_sfc(_sfc_main$X, [["__scopeId", "data-v-3ba9ce0e"]]);
 function useDesktopActions() {
   const router2 = useRouter();
   async function dispatch(action) {
@@ -2313,10 +2313,16 @@ function formatShortcutConflictMessage(accelerator, conflictingIds, isMac = fals
   const names = conflictingIds.map(labelOf).join("、");
   return `快捷键 ${key} 已用于「${names}」，请换一组或先清除原绑定`;
 }
+class IpcUnwrapError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "IpcUnwrapError";
+  }
+}
 function unwrapIpc(result) {
   if (!result.ok) {
     ElMessage.error(result.error.message);
-    throw new Error(result.error.code);
+    throw new IpcUnwrapError(result.error.message);
   }
   return result.data;
 }
@@ -2375,6 +2381,456 @@ const useShortcutStore = /* @__PURE__ */ defineStore("shortcuts", () => {
     labelFor,
     isBound,
     matchAction
+  };
+});
+const useCategoryStore = /* @__PURE__ */ defineStore("categories", () => {
+  const categories = ref([]);
+  async function load() {
+    categories.value = unwrapIpc(await window.api.categories.list());
+  }
+  async function create(name, options) {
+    unwrapIpc(
+      await window.api.categories.create({
+        name,
+        color: options?.color,
+        keywords: options?.keywords
+      })
+    );
+    await load();
+  }
+  async function update(id, patch) {
+    unwrapIpc(await window.api.categories.update(id, patch));
+    await load();
+  }
+  async function reorder(ids) {
+    categories.value = unwrapIpc(await window.api.categories.reorder(ids));
+  }
+  async function remove(id) {
+    unwrapIpc(await window.api.categories.delete(id));
+    await load();
+  }
+  return { categories, load, create, update, reorder, remove };
+});
+function shouldOfferCompleteParent(options) {
+  const parent = options.parent;
+  if (!parent || parent.deletedAt || parent.status === "DONE") {
+    return false;
+  }
+  const aliveChildren = options.children.filter(
+    (child) => !child.deletedAt && child.parentId === parent.id
+  );
+  if (aliveChildren.length === 0) {
+    return false;
+  }
+  return aliveChildren.every((child) => child.status === "DONE");
+}
+function cloneTaskListFilter(filter) {
+  const out = {};
+  if (typeof filter.hideDone === "boolean") {
+    out.hideDone = filter.hideDone;
+  }
+  if (filter.smartList) {
+    out.smartList = filter.smartList;
+  }
+  if (filter.status) {
+    out.status = filter.status;
+  }
+  if (filter.search?.trim()) {
+    out.search = filter.search.trim();
+  }
+  if (Object.prototype.hasOwnProperty.call(filter, "categoryId")) {
+    out.categoryId = filter.categoryId ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(filter, "parentId")) {
+    out.parentId = filter.parentId ?? null;
+  }
+  if (filter.dateField) {
+    out.dateField = filter.dateField;
+  }
+  if (filter.doneTimeRange) {
+    out.doneTimeRange = filter.doneTimeRange;
+  }
+  if (filter.dateFrom) {
+    out.dateFrom = filter.dateFrom;
+  }
+  if (filter.dateTo) {
+    out.dateTo = filter.dateTo;
+  }
+  return out;
+}
+function isMatrixListFilter(filter) {
+  return filter.categoryId === void 0 && filter.smartList === void 0 && !Object.prototype.hasOwnProperty.call(filter, "parentId");
+}
+const HIDE_DONE_STORAGE_KEY = "aitodo_hide_done";
+function readHideDonePreference() {
+  try {
+    const raw = localStorage.getItem(HIDE_DONE_STORAGE_KEY);
+    if (raw === null) {
+      return true;
+    }
+    return raw === "true";
+  } catch {
+    return true;
+  }
+}
+function persistHideDone(hideDone) {
+  try {
+    localStorage.setItem(HIDE_DONE_STORAGE_KEY, String(hideDone));
+  } catch {
+  }
+}
+function mergeFilter(current, patch, options) {
+  const next = { ...current };
+  if (options?.clearSmartList) delete next.smartList;
+  if (options?.clearCategoryId) delete next.categoryId;
+  if (options?.clearSearch) delete next.search;
+  if (patch) {
+    Object.assign(next, patch);
+  }
+  return next;
+}
+function taskMatchesFilter(task, filter) {
+  if (filter.smartList === "trash") {
+    return Boolean(task.deletedAt);
+  }
+  if (task.deletedAt) {
+    return false;
+  }
+  if (filter.hideDone && task.status === "DONE") {
+    return false;
+  }
+  if (filter.categoryId !== void 0 && task.categoryId !== filter.categoryId) {
+    return false;
+  }
+  if (filter.search?.trim()) {
+    const q = filter.search.trim().toLowerCase();
+    if (!task.title.toLowerCase().includes(q)) {
+      return false;
+    }
+  }
+  if (isDueSmartList(filter.smartList)) {
+    return taskMatchesSmartListDate(task, filter.smartList, filter.dateField ?? "dueAt");
+  }
+  if (filter.smartList === "done" && task.status !== "DONE") {
+    return false;
+  }
+  if (filter.smartList === "done" && filter.doneTimeRange && filter.doneTimeRange !== "all") {
+    const bounds = doneTimeRangeBounds(filter.doneTimeRange, dayjs(), {
+      from: filter.dateFrom,
+      to: filter.dateTo
+    });
+    if (bounds && !taskDateIsoInRange(task, "completedAt", bounds)) {
+      return false;
+    }
+  }
+  if (filter.parentId !== void 0 && filter.parentId === null && task.parentId) {
+    return false;
+  }
+  return true;
+}
+const useTaskStore = /* @__PURE__ */ defineStore("tasks", () => {
+  const tasks = ref([]);
+  const loading = ref(false);
+  const trashCount = ref(0);
+  const doneCount = ref(0);
+  const filter = ref({
+    smartList: "all",
+    hideDone: readHideDonePreference()
+  });
+  let loadSeq = 0;
+  async function fetchWithCurrentFilter() {
+    const seq = ++loadSeq;
+    loading.value = true;
+    try {
+      const list2 = unwrapIpc(
+        await window.api.tasks.list(cloneTaskListFilter(filter.value))
+      );
+      if (seq !== loadSeq) {
+        return;
+      }
+      tasks.value = list2;
+    } catch (err) {
+      if (seq === loadSeq) {
+        console.error("[task-store] load failed", err);
+      }
+    } finally {
+      if (seq === loadSeq) {
+        loading.value = false;
+      }
+    }
+  }
+  async function load(patch, options) {
+    filter.value = mergeFilter(filter.value, patch, options);
+    await fetchWithCurrentFilter();
+  }
+  async function navigate(view) {
+    const hideDone = filter.value.hideDone;
+    if (view.kind === "smart") {
+      const next = { hideDone, smartList: view.smart };
+      if (view.dateField && isDueSmartList(view.smart)) {
+        next.dateField = view.dateField;
+      } else if (isDueSmartList(view.smart)) {
+        next.dateField = filter.value.dateField ?? "dueAt";
+      }
+      filter.value = next;
+    } else if (view.kind === "done") {
+      filter.value = {
+        hideDone: false,
+        smartList: "done",
+        doneTimeRange: view.doneTimeRange ?? filter.value.doneTimeRange ?? "all",
+        dateFrom: view.dateFrom ?? filter.value.dateFrom,
+        dateTo: view.dateTo ?? filter.value.dateTo
+      };
+    } else if (view.kind === "trash") {
+      filter.value = { smartList: "trash" };
+    } else if (view.kind === "category") {
+      filter.value = { hideDone, categoryId: view.categoryId };
+    } else if (view.kind === "uncategorized") {
+      filter.value = { hideDone, categoryId: null };
+    } else {
+      filter.value = { hideDone: false };
+    }
+    await fetchWithCurrentFilter();
+  }
+  function syncTaskInList(task) {
+    const visible = taskMatchesFilter(task, filter.value);
+    const idx = tasks.value.findIndex((t) => t.id === task.id);
+    if (!visible) {
+      if (idx >= 0) {
+        tasks.value = tasks.value.filter((t) => t.id !== task.id);
+      }
+      return;
+    }
+    if (idx >= 0) {
+      tasks.value = tasks.value.map((t) => t.id === task.id ? { ...task } : t);
+    } else {
+      tasks.value = [{ ...task }, ...tasks.value];
+    }
+  }
+  function removeTaskFromList(taskId) {
+    tasks.value = tasks.value.filter((t) => t.id !== taskId);
+  }
+  async function afterSave(task, mode) {
+    if (mode === "delete") {
+      if (task?.id) {
+        removeTaskFromList(task.id);
+      }
+      await fetchWithCurrentFilter();
+      await refreshSidebarCounts();
+      return;
+    }
+    if (!task) {
+      await fetchWithCurrentFilter();
+      await refreshSidebarCounts();
+      return;
+    }
+    if (mode === "create") {
+      await reloadAfterSave(task);
+      await refreshSidebarCounts();
+      return;
+    }
+    await fetchWithCurrentFilter();
+    syncTaskInList(task);
+    await refreshSidebarCounts();
+  }
+  async function reloadAfterSave(created) {
+    const hideDone = created.status === "DONE" ? false : filter.value.hideDone;
+    if (created.status === "DONE") {
+      persistHideDone(false);
+    }
+    const wasMatrix = isMatrixListFilter(filter.value);
+    if (wasMatrix) {
+      filter.value = { hideDone };
+    } else if (created.categoryId) {
+      filter.value = { hideDone, categoryId: created.categoryId };
+    } else {
+      filter.value = { hideDone, smartList: "all" };
+    }
+    await fetchWithCurrentFilter();
+    if (!tasks.value.some((t) => t.id === created.id) && !wasMatrix) {
+      filter.value = { hideDone: false, smartList: "all" };
+      await fetchWithCurrentFilter();
+    }
+    syncTaskInList(created);
+  }
+  async function setHideDone(hideDone) {
+    persistHideDone(hideDone);
+    filter.value = { ...filter.value, hideDone };
+    await fetchWithCurrentFilter();
+  }
+  async function create(title, options) {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      throw new Error("title required");
+    }
+    const dto = { title: trimmed };
+    if (options?.parentId) {
+      dto.parentId = options.parentId;
+    }
+    if (options?.categoryId) {
+      dto.categoryId = options.categoryId;
+    }
+    const task = unwrapIpc(await window.api.tasks.create(dto));
+    await reloadAfterSave(task);
+    return task;
+  }
+  async function quickCreate(rawInput, options) {
+    const trimmed = rawInput.trim();
+    if (!trimmed) {
+      throw new Error("title required");
+    }
+    const cats = toParseCategories(options?.parseCategories ?? []);
+    const parsed = unwrapIpc(await window.api.app.parseTaskInput(trimmed, cats));
+    const dto = buildQuickCreateTaskDtoFromDraft(parsed.draft, trimmed, cats, {
+      categoryId: options?.categoryId ?? null,
+      ...options?.priority !== void 0 ? { priority: options.priority } : {},
+      ...options?.kanbanGroupId !== void 0 ? { kanbanGroupId: options.kanbanGroupId } : {},
+      ...options?.status !== void 0 ? { status: options.status } : {},
+      ...options?.triagedAt !== void 0 ? { triagedAt: options.triagedAt } : {}
+    });
+    if (options?.startAt !== void 0) dto.startAt = options.startAt;
+    if (options?.dueAt !== void 0) dto.dueAt = options.dueAt;
+    if (!dto.title.trim()) {
+      throw new Error("title required");
+    }
+    const task = unwrapIpc(await window.api.tasks.create(dto));
+    syncTaskInList(task);
+    await fetchWithCurrentFilter();
+    await refreshSidebarCounts();
+    return task;
+  }
+  async function offerCompleteParentChain(child) {
+    if (!child.parentId) return;
+    let parent;
+    try {
+      parent = unwrapIpc(await window.api.tasks.get(child.parentId));
+    } catch {
+      return;
+    }
+    let siblings = [];
+    try {
+      siblings = unwrapIpc(await window.api.tasks.list({ parentId: child.parentId }));
+    } catch {
+      return;
+    }
+    if (!shouldOfferCompleteParent({ parent, children: siblings })) {
+      return;
+    }
+    try {
+      await ElMessageBox.confirm(
+        `子任务已全部完成，是否将「${parent.title}」标记为完成？`,
+        "完成父任务",
+        {
+          type: "info",
+          confirmButtonText: "完成",
+          cancelButtonText: "取消"
+        }
+      );
+    } catch {
+      return;
+    }
+    try {
+      await update(parent.id, { status: "DONE" });
+    } catch {
+    }
+  }
+  async function cycleStatus(id) {
+    let task;
+    try {
+      task = unwrapIpc(await window.api.tasks.get(id));
+    } catch {
+      throw new Error("cycleStatus failed");
+    }
+    if (task.deletedAt) {
+      return task;
+    }
+    const next = nextTaskStatus(task.status);
+    return update(id, { status: next });
+  }
+  async function update(id, patch) {
+    try {
+      const task = unwrapIpc(await window.api.tasks.update(id, patch));
+      await fetchWithCurrentFilter();
+      syncTaskInList(task);
+      await refreshSidebarCounts();
+      if (patch.status === "DONE" && task.status === "DONE" && task.parentId) {
+        await offerCompleteParentChain(task);
+      }
+      return task;
+    } catch {
+      throw new Error("update failed");
+    }
+  }
+  async function reorder(ids) {
+    const updated = unwrapIpc(await window.api.tasks.reorder(ids));
+    const byId = new Map(updated.map((t) => [t.id, t]));
+    tasks.value = tasks.value.map((t) => byId.get(t.id) ?? t);
+    await fetchWithCurrentFilter();
+    return updated;
+  }
+  async function remove(id, options) {
+    unwrapIpc(await window.api.tasks.delete(id, options));
+    removeTaskFromList(id);
+    await fetchWithCurrentFilter();
+    await refreshSidebarCounts();
+  }
+  async function refreshSidebarCounts() {
+    try {
+      trashCount.value = unwrapIpc(await window.api.tasks.countTrash());
+    } catch {
+      trashCount.value = 0;
+    }
+    try {
+      doneCount.value = unwrapIpc(await window.api.tasks.countDone());
+    } catch {
+      doneCount.value = 0;
+    }
+  }
+  async function refreshTrashCount() {
+    await refreshSidebarCounts();
+  }
+  async function restoreFromTrash(id) {
+    const task = unwrapIpc(await window.api.tasks.restore(id));
+    removeTaskFromList(id);
+    await fetchWithCurrentFilter();
+    await refreshSidebarCounts();
+    return task;
+  }
+  async function purgeFromTrash(id, options) {
+    unwrapIpc(await window.api.tasks.permanentDelete(id, options));
+    removeTaskFromList(id);
+    await fetchWithCurrentFilter();
+    await refreshSidebarCounts();
+  }
+  async function emptyTrashBin() {
+    const n = unwrapIpc(await window.api.tasks.emptyTrash());
+    tasks.value = [];
+    await refreshSidebarCounts();
+    return n;
+  }
+  return {
+    tasks,
+    loading,
+    trashCount,
+    doneCount,
+    filter,
+    load,
+    navigate,
+    afterSave,
+    syncTaskInList,
+    reloadAfterSave,
+    setHideDone,
+    create,
+    quickCreate,
+    cycleStatus,
+    update,
+    reorder,
+    remove,
+    refreshTrashCount,
+    refreshSidebarCounts,
+    restoreFromTrash,
+    purgeFromTrash,
+    emptyTrashBin
   };
 });
 const DESKTOP_THEME_IDS = [
@@ -2631,7 +3087,10 @@ const UI_PREFERENCE_STORAGE_KEYS = [
   "aitodo_task_list_meta_visibility",
   "aitodo_kanban_config",
   "aitodo_kanban_board_mode",
-  "aitodo_selected_view_id"
+  "aitodo_selected_view_id",
+  "aitodo_visible_lists_all",
+  "aitodo_visible_lists_calendar",
+  "aitodo_visible_lists_matrix"
 ];
 function collectUiPreferences() {
   const prefs = {};
@@ -2657,11 +3116,13 @@ function applyUiPreferences(prefs) {
     }
   }
 }
-const _sfc_main$V = /* @__PURE__ */ defineComponent({
+const _sfc_main$W = /* @__PURE__ */ defineComponent({
   __name: "App",
   setup(__props) {
     const router2 = useRouter();
     const shortcutStore = useShortcutStore();
+    const categoryStore = useCategoryStore();
+    const taskStore = useTaskStore();
     const { dispatch } = useDesktopActions();
     const closeDialogVisible = ref(false);
     function isEditableTarget(target) {
@@ -2702,6 +3163,7 @@ const _sfc_main$V = /* @__PURE__ */ defineComponent({
     let cleanupNavigate;
     let cleanupCloseRequest;
     let cleanupUiPrefs;
+    let cleanupAuthCompleted;
     onMounted(async () => {
       initDesktopTheme();
       await shortcutStore.load();
@@ -2715,6 +3177,10 @@ const _sfc_main$V = /* @__PURE__ */ defineComponent({
       cleanupUiPrefs = window.api.sync.onUiPreferencesApplied((prefs) => {
         applyUiPreferences(prefs);
       });
+      cleanupAuthCompleted = window.api.sync.onAuthCompleted(() => {
+        void categoryStore.load();
+        void taskStore.load();
+      });
       try {
         unwrapIpc(await window.api.sync.reportUiPreferences(collectUiPreferences()));
       } catch {
@@ -2727,6 +3193,7 @@ const _sfc_main$V = /* @__PURE__ */ defineComponent({
       cleanupNavigate?.();
       cleanupCloseRequest?.();
       cleanupUiPrefs?.();
+      cleanupAuthCompleted?.();
     });
     return (_ctx, _cache) => {
       const _component_router_view = resolveComponent("router-view");
@@ -2740,34 +3207,6 @@ const _sfc_main$V = /* @__PURE__ */ defineComponent({
       ], 64);
     };
   }
-});
-const useCategoryStore = /* @__PURE__ */ defineStore("categories", () => {
-  const categories = ref([]);
-  async function load() {
-    categories.value = unwrapIpc(await window.api.categories.list());
-  }
-  async function create(name, options) {
-    unwrapIpc(
-      await window.api.categories.create({
-        name,
-        color: options?.color,
-        keywords: options?.keywords
-      })
-    );
-    await load();
-  }
-  async function update(id, patch) {
-    unwrapIpc(await window.api.categories.update(id, patch));
-    await load();
-  }
-  async function reorder(ids) {
-    categories.value = unwrapIpc(await window.api.categories.reorder(ids));
-  }
-  async function remove(id) {
-    unwrapIpc(await window.api.categories.delete(id));
-    await load();
-  }
-  return { categories, load, create, update, reorder, remove };
 });
 const SELECTED_VIEW_KEY = "aitodo_selected_view_id";
 function readSelectedViewId() {
@@ -3302,13 +3741,13 @@ const _hoisted_17$a = {
   key: 0,
   class: "app-message-panel__empty"
 };
-const _hoisted_18$9 = {
+const _hoisted_18$a = {
   key: 1,
   class: "app-message-panel__list"
 };
-const _hoisted_19$6 = ["onClick"];
-const _hoisted_20$6 = { class: "app-message-panel__content" };
-const _hoisted_21$6 = { class: "app-message-panel__head" };
+const _hoisted_19$7 = ["onClick"];
+const _hoisted_20$7 = { class: "app-message-panel__content" };
+const _hoisted_21$7 = { class: "app-message-panel__head" };
 const _hoisted_22$6 = { class: "app-message-panel__title" };
 const _hoisted_23$6 = {
   key: 0,
@@ -3332,7 +3771,7 @@ const _hoisted_28$6 = {
   key: 0,
   class: "app-message-panel__footer"
 };
-const _sfc_main$U = /* @__PURE__ */ defineComponent({
+const _sfc_main$V = /* @__PURE__ */ defineComponent({
   __name: "AppMessagePanel",
   emits: ["open-task"],
   setup(__props, { emit: __emit }) {
@@ -3466,7 +3905,7 @@ const _sfc_main$U = /* @__PURE__ */ defineComponent({
               }), 128))
             ]))
           ], 64)) : (openBlock(), createElementBlock(Fragment$2, { key: 1 }, [
-            currentList.value.length === 0 && !unref(messageStore).loading ? (openBlock(), createElementBlock("div", _hoisted_17$a, toDisplayString(activeTab.value === "notification" ? "暂无通知" : "暂无动态"), 1)) : (openBlock(), createElementBlock("ul", _hoisted_18$9, [
+            currentList.value.length === 0 && !unref(messageStore).loading ? (openBlock(), createElementBlock("div", _hoisted_17$a, toDisplayString(activeTab.value === "notification" ? "暂无通知" : "暂无动态"), 1)) : (openBlock(), createElementBlock("ul", _hoisted_18$a, [
               (openBlock(true), createElementBlock(Fragment$2, null, renderList(currentList.value, (item) => {
                 return openBlock(), createElementBlock("li", {
                   key: item.id,
@@ -3484,8 +3923,8 @@ const _sfc_main$U = /* @__PURE__ */ defineComponent({
                       _: 2
                     }, 1024)
                   ], 2),
-                  createBaseVNode("div", _hoisted_20$6, [
-                    createBaseVNode("div", _hoisted_21$6, [
+                  createBaseVNode("div", _hoisted_20$7, [
+                    createBaseVNode("div", _hoisted_21$7, [
                       createBaseVNode("span", _hoisted_22$6, [
                         !item.readAt ? (openBlock(), createElementBlock("span", _hoisted_23$6)) : createCommentVNode("", true),
                         isSummaryMessage(item) ? (openBlock(), createElementBlock("span", _hoisted_24$6, "定时汇总")) : createCommentVNode("", true),
@@ -3496,7 +3935,7 @@ const _sfc_main$U = /* @__PURE__ */ defineComponent({
                     ]),
                     item.body ? (openBlock(), createElementBlock("p", _hoisted_27$6, toDisplayString(item.body), 1)) : createCommentVNode("", true)
                   ])
-                ], 10, _hoisted_19$6);
+                ], 10, _hoisted_19$7);
               }), 128))
             ]))
           ], 64))
@@ -3514,8 +3953,8 @@ const _sfc_main$U = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const AppMessagePanel = /* @__PURE__ */ _export_sfc(_sfc_main$U, [["__scopeId", "data-v-7f98819f"]]);
-const _sfc_main$T = /* @__PURE__ */ defineComponent({
+const AppMessagePanel = /* @__PURE__ */ _export_sfc(_sfc_main$V, [["__scopeId", "data-v-bf6de372"]]);
+const _sfc_main$U = /* @__PURE__ */ defineComponent({
   __name: "CategoryEditDialog",
   props: {
     modelValue: { type: Boolean },
@@ -3685,7 +4124,7 @@ const _sfc_main$T = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const CategoryEditDialog = /* @__PURE__ */ _export_sfc(_sfc_main$T, [["__scopeId", "data-v-f8991c49"]]);
+const CategoryEditDialog = /* @__PURE__ */ _export_sfc(_sfc_main$U, [["__scopeId", "data-v-f8991c49"]]);
 const _hoisted_1$Q = { class: "sidebar" };
 const _hoisted_2$N = {
   class: "sidebar__rail",
@@ -3725,13 +4164,13 @@ const _hoisted_17$9 = {
   key: 0,
   class: "sidebar__row-count"
 };
-const _hoisted_18$8 = ["onClick"];
-const _hoisted_19$5 = { class: "sidebar__row-label" };
-const _hoisted_20$5 = {
+const _hoisted_18$9 = ["onClick"];
+const _hoisted_19$6 = { class: "sidebar__row-label" };
+const _hoisted_20$6 = {
   key: 0,
   class: "sidebar__row-count"
 };
-const _hoisted_21$5 = { class: "sidebar__section-head" };
+const _hoisted_21$6 = { class: "sidebar__section-head" };
 const _hoisted_22$5 = { class: "sidebar__list" };
 const _hoisted_23$5 = {
   key: 0,
@@ -3766,7 +4205,7 @@ const _hoisted_34$2 = ["onClick"];
 const _hoisted_35 = { class: "sidebar__row-label" };
 const CATEGORY_DRAG_MIME = "application/x-ai-todo-category-reorder";
 const CATEGORY_KEYWORD_VISIBLE_MAX = 2;
-const _sfc_main$S = /* @__PURE__ */ defineComponent({
+const _sfc_main$T = /* @__PURE__ */ defineComponent({
   __name: "AppSidebar",
   props: {
     activeSmart: {},
@@ -4286,11 +4725,11 @@ const _sfc_main$S = /* @__PURE__ */ defineComponent({
                   ]),
                   _: 2
                 }, 1024),
-                createBaseVNode("span", _hoisted_19$5, toDisplayString(item.label), 1),
-                __props.taskCounts && item.key in __props.taskCounts ? (openBlock(), createElementBlock("span", _hoisted_20$5, toDisplayString(__props.taskCounts[item.key]), 1)) : createCommentVNode("", true)
-              ], 10, _hoisted_18$8);
+                createBaseVNode("span", _hoisted_19$6, toDisplayString(item.label), 1),
+                __props.taskCounts && item.key in __props.taskCounts ? (openBlock(), createElementBlock("span", _hoisted_20$6, toDisplayString(__props.taskCounts[item.key]), 1)) : createCommentVNode("", true)
+              ], 10, _hoisted_18$9);
             }), 128)),
-            createBaseVNode("div", _hoisted_21$5, [
+            createBaseVNode("div", _hoisted_21$6, [
               _cache[15] || (_cache[15] = createBaseVNode("span", { class: "sidebar__section-title" }, "清单", -1)),
               createBaseVNode("button", {
                 type: "button",
@@ -4483,7 +4922,7 @@ const _sfc_main$S = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const AppSidebar = /* @__PURE__ */ _export_sfc(_sfc_main$S, [["__scopeId", "data-v-0ede4cc5"]]);
+const AppSidebar = /* @__PURE__ */ _export_sfc(_sfc_main$T, [["__scopeId", "data-v-0ede4cc5"]]);
 const QUADRANT_GROUP_BY_LABELS = {
   status: "按状态（过期/已安排/已完成）",
   time: "按时间（今天/明天/本周…）",
@@ -4592,7 +5031,7 @@ const DEFAULTS = {
   showCompleted: false,
   enableGrouping: true,
   groupBy: "status",
-  sortBy: "time"
+  sortBy: "createdAt"
 };
 function readEnum$2(key, allowed, fallback) {
   try {
@@ -4655,7 +5094,7 @@ const VIEW_EDITOR_KANBAN_GROUP_OPTIONS = [
   { value: "time", label: "时间" },
   { value: "tag", label: "标签" }
 ];
-const _sfc_main$R = /* @__PURE__ */ defineComponent({
+const _sfc_main$S = /* @__PURE__ */ defineComponent({
   __name: "FilterCondRow",
   props: {
     cond: {},
@@ -5055,7 +5494,7 @@ const _sfc_main$R = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const FilterCondRow = /* @__PURE__ */ _export_sfc(_sfc_main$R, [["__scopeId", "data-v-be9bd3ee"]]);
+const FilterCondRow = /* @__PURE__ */ _export_sfc(_sfc_main$S, [["__scopeId", "data-v-be9bd3ee"]]);
 const _hoisted_1$P = { class: "view-filter-builder" };
 const _hoisted_2$M = { class: "view-filter-builder__toolbar" };
 const _hoisted_3$I = { class: "view-filter-builder__match" };
@@ -5079,7 +5518,7 @@ const _hoisted_9$h = {
   class: "view-filter-builder__list"
 };
 const _hoisted_10$f = { class: "view-filter-builder__row-index" };
-const _sfc_main$Q = /* @__PURE__ */ defineComponent({
+const _sfc_main$R = /* @__PURE__ */ defineComponent({
   __name: "ViewFilterBuilder",
   props: {
     modelValue: {},
@@ -5207,7 +5646,7 @@ const _sfc_main$Q = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const ViewFilterBuilder = /* @__PURE__ */ _export_sfc(_sfc_main$Q, [["__scopeId", "data-v-85a0ebf3"]]);
+const ViewFilterBuilder = /* @__PURE__ */ _export_sfc(_sfc_main$R, [["__scopeId", "data-v-85a0ebf3"]]);
 const _hoisted_1$O = { class: "task-view-editor__header" };
 const _hoisted_2$L = {
   class: "task-view-editor__header-icon",
@@ -5238,16 +5677,16 @@ const _hoisted_17$8 = {
   key: 1,
   class: "task-view-editor__option"
 };
-const _hoisted_18$7 = {
+const _hoisted_18$8 = {
   key: 2,
   class: "task-view-editor__option"
 };
-const _hoisted_19$4 = {
+const _hoisted_19$5 = {
   key: 3,
   class: "task-view-editor__option task-view-editor__option--full"
 };
-const _hoisted_20$4 = { class: "task-view-editor__switch-row" };
-const _hoisted_21$4 = { class: "task-view-editor__switch-row" };
+const _hoisted_20$5 = { class: "task-view-editor__switch-row" };
+const _hoisted_21$5 = { class: "task-view-editor__switch-row" };
 const _hoisted_22$4 = { class: "task-view-editor__option" };
 const _hoisted_23$4 = {
   key: 4,
@@ -5273,7 +5712,7 @@ const _hoisted_31$1 = { class: "task-view-editor__footer" };
 const _hoisted_32$1 = { key: 0 };
 const _hoisted_33$1 = { key: 1 };
 const _hoisted_34$1 = { class: "task-view-editor__actions" };
-const _sfc_main$P = /* @__PURE__ */ defineComponent({
+const _sfc_main$Q = /* @__PURE__ */ defineComponent({
   __name: "TaskViewEditor",
   props: {
     visible: { type: Boolean },
@@ -5624,7 +6063,7 @@ const _sfc_main$P = /* @__PURE__ */ defineComponent({
                     _: 1
                   }, 8, ["modelValue"])
                 ])) : createCommentVNode("", true),
-                layout.value === "kanban" ? (openBlock(), createElementBlock("div", _hoisted_18$7, [
+                layout.value === "kanban" ? (openBlock(), createElementBlock("div", _hoisted_18$8, [
                   _cache[20] || (_cache[20] = createBaseVNode("label", { class: "task-view-editor__field-label" }, "看板分组", -1)),
                   createVNode(_component_el_select, {
                     modelValue: kanbanBoardMode.value,
@@ -5644,15 +6083,15 @@ const _sfc_main$P = /* @__PURE__ */ defineComponent({
                     _: 1
                   }, 8, ["modelValue"])
                 ])) : createCommentVNode("", true),
-                layout.value === "quadrant" ? (openBlock(), createElementBlock("div", _hoisted_19$4, [
-                  createBaseVNode("div", _hoisted_20$4, [
+                layout.value === "quadrant" ? (openBlock(), createElementBlock("div", _hoisted_19$5, [
+                  createBaseVNode("div", _hoisted_20$5, [
                     _cache[21] || (_cache[21] = createBaseVNode("span", { class: "task-view-editor__field-label" }, "显示已完成", -1)),
                     createVNode(_component_el_switch, {
                       modelValue: quadrantOptions.value.showCompleted,
                       "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => quadrantOptions.value.showCompleted = $event)
                     }, null, 8, ["modelValue"])
                   ]),
-                  createBaseVNode("div", _hoisted_21$4, [
+                  createBaseVNode("div", _hoisted_21$5, [
                     _cache[22] || (_cache[22] = createBaseVNode("span", { class: "task-view-editor__field-label" }, "启用分组", -1)),
                     createVNode(_component_el_switch, {
                       modelValue: quadrantOptions.value.enableGrouping,
@@ -5779,7 +6218,7 @@ const _sfc_main$P = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TaskViewEditor = /* @__PURE__ */ _export_sfc(_sfc_main$P, [["__scopeId", "data-v-f900eacf"]]);
+const TaskViewEditor = /* @__PURE__ */ _export_sfc(_sfc_main$Q, [["__scopeId", "data-v-3018a906"]]);
 function formatTaskListTime(iso) {
   if (!iso) return "";
   const d = dayjs(iso);
@@ -5807,7 +6246,7 @@ function formatTrashTaskDate(iso) {
   return d.format("YYYY年M月D日");
 }
 const _hoisted_1$N = ["title"];
-const _sfc_main$O = /* @__PURE__ */ defineComponent({
+const _sfc_main$P = /* @__PURE__ */ defineComponent({
   __name: "TaskPriorityBadge",
   props: {
     priority: {}
@@ -5823,7 +6262,33 @@ const _sfc_main$O = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TaskPriorityBadge = /* @__PURE__ */ _export_sfc(_sfc_main$O, [["__scopeId", "data-v-8c2325b6"]]);
+const TaskPriorityBadge = /* @__PURE__ */ _export_sfc(_sfc_main$P, [["__scopeId", "data-v-8c2325b6"]]);
+const _sfc_main$O = /* @__PURE__ */ defineComponent({
+  __name: "TaskStatusCheckbox",
+  props: {
+    status: {}
+  },
+  emits: ["toggle"],
+  setup(__props, { emit: __emit }) {
+    const props = __props;
+    const emit = __emit;
+    const checkboxTitle = computed(() => {
+      const label = taskStatusLabel(props.status);
+      return `${label}（点击切换）`;
+    });
+    return (_ctx, _cache) => {
+      const _component_el_checkbox = resolveComponent("el-checkbox");
+      return openBlock(), createBlock(_component_el_checkbox, {
+        "model-value": __props.status === "DONE",
+        indeterminate: __props.status === "IN_PROGRESS",
+        title: checkboxTitle.value,
+        onClick: _cache[0] || (_cache[0] = withModifiers(() => {
+        }, ["stop"])),
+        onChange: _cache[1] || (_cache[1] = ($event) => emit("toggle"))
+      }, null, 8, ["model-value", "indeterminate", "title"]);
+    };
+  }
+});
 const _hoisted_1$M = { class: "task-list" };
 const _hoisted_2$K = {
   key: 0,
@@ -6080,13 +6545,12 @@ const _sfc_main$N = /* @__PURE__ */ defineComponent({
     }
     return (_ctx, _cache) => {
       const _component_el_icon = resolveComponent("el-icon");
-      const _component_el_checkbox = resolveComponent("el-checkbox");
       const _component_el_dropdown_item = resolveComponent("el-dropdown-item");
       const _component_el_dropdown_menu = resolveComponent("el-dropdown-menu");
       const _component_el_dropdown = resolveComponent("el-dropdown");
       const _directive_loading = resolveDirective("loading");
       return withDirectives((openBlock(), createElementBlock("div", _hoisted_1$M, [
-        !__props.loading && __props.layoutItems.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_2$K, [..._cache[1] || (_cache[1] = [
+        !__props.loading && __props.layoutItems.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_2$K, [..._cache[0] || (_cache[0] = [
           createBaseVNode("p", null, "暂无任务", -1),
           createBaseVNode("p", { class: "task-list__hint" }, "在上方输入框回车，或按 Ctrl+N 新建", -1)
         ])])) : (openBlock(), createElementBlock("ul", _hoisted_3$G, [
@@ -6107,7 +6571,7 @@ const _sfc_main$N = /* @__PURE__ */ defineComponent({
                           command: "move-up",
                           disabled: item.depth !== 0 || rootIndex(item.task.id) <= 0
                         }, {
-                          default: withCtx(() => [..._cache[2] || (_cache[2] = [
+                          default: withCtx(() => [..._cache[1] || (_cache[1] = [
                             createTextVNode(" 上移 ", -1)
                           ])]),
                           _: 1
@@ -6116,7 +6580,7 @@ const _sfc_main$N = /* @__PURE__ */ defineComponent({
                           command: "move-down",
                           disabled: item.depth !== 0 || rootIndex(item.task.id) >= rootTaskIds.value.length - 1
                         }, {
-                          default: withCtx(() => [..._cache[3] || (_cache[3] = [
+                          default: withCtx(() => [..._cache[2] || (_cache[2] = [
                             createTextVNode(" 下移 ", -1)
                           ])]),
                           _: 1
@@ -6158,12 +6622,10 @@ const _sfc_main$N = /* @__PURE__ */ defineComponent({
                           _: 2
                         }, 1024)
                       ], 8, _hoisted_7$w)) : (openBlock(), createElementBlock("span", _hoisted_8$l)),
-                      createVNode(_component_el_checkbox, {
-                        "model-value": item.task.status === "DONE",
-                        onClick: _cache[0] || (_cache[0] = withModifiers(() => {
-                        }, ["stop"])),
-                        onChange: () => emit("toggle-status", item.task)
-                      }, null, 8, ["model-value", "onChange"]),
+                      createVNode(_sfc_main$O, {
+                        status: item.task.status,
+                        onToggle: ($event) => emit("toggle-status", item.task)
+                      }, null, 8, ["status", "onToggle"]),
                       createBaseVNode("div", _hoisted_9$f, [
                         createBaseVNode("div", _hoisted_10$d, [
                           createVNode(TaskPriorityBadge, {
@@ -6200,7 +6662,7 @@ const _sfc_main$N = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TaskList$3 = /* @__PURE__ */ _export_sfc(_sfc_main$N, [["__scopeId", "data-v-ffb06d9b"]]);
+const TaskList$3 = /* @__PURE__ */ _export_sfc(_sfc_main$N, [["__scopeId", "data-v-d69019d9"]]);
 function groupByToKanbanBoardMode(groupBy) {
   if (groupBy === "priority") return "priority";
   if (groupBy === "time") return "time";
@@ -6383,13 +6845,13 @@ const _hoisted_17$7 = {
   key: 0,
   class: "task-kanban__quick-add"
 };
-const _hoisted_18$6 = {
+const _hoisted_18$7 = {
   key: 1,
   class: "task-kanban__drop-empty"
 };
-const _hoisted_19$3 = ["draggable", "onDragstart", "onClick"];
-const _hoisted_20$3 = { class: "task-kanban__card-top" };
-const _hoisted_21$3 = ["aria-expanded", "aria-label", "title", "onClick"];
+const _hoisted_19$4 = ["draggable", "onDragstart", "onClick"];
+const _hoisted_20$4 = { class: "task-kanban__card-top" };
+const _hoisted_21$4 = ["aria-expanded", "aria-label", "title", "onClick"];
 const _hoisted_22$3 = {
   key: 1,
   class: "task-kanban__expand-placeholder",
@@ -6919,7 +7381,6 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
       const _component_el_dropdown_item = resolveComponent("el-dropdown-item");
       const _component_el_dropdown_menu = resolveComponent("el-dropdown-menu");
       const _component_el_dropdown = resolveComponent("el-dropdown");
-      const _component_el_checkbox = resolveComponent("el-checkbox");
       const _directive_loading = resolveDirective("loading");
       return withDirectives((openBlock(), createElementBlock("div", _hoisted_1$L, [
         createBaseVNode("header", _hoisted_2$J, [
@@ -6936,7 +7397,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
               ]),
               _: 1
             }),
-            _cache[4] || (_cache[4] = createTextVNode(" 新分组 ", -1))
+            _cache[3] || (_cache[3] = createTextVNode(" 新分组 ", -1))
           ])) : createCommentVNode("", true)
         ]),
         !__props.loading && rootTasks.value.length === 0 && (boardMode.value === "status" || boardMode.value === "priority" || boardMode.value === "time" || boardMode.value === "tag" || customGroups.value.length === 0) ? (openBlock(), createElementBlock("div", _hoisted_4$E, " 暂无任务，点击列头 + 或「新分组」开始 ")) : (openBlock(), createElementBlock("div", _hoisted_5$D, [
@@ -6990,7 +7451,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
                       createVNode(_component_el_dropdown_menu, null, {
                         default: withCtx(() => [
                           createVNode(_component_el_dropdown_item, { command: "rename" }, {
-                            default: withCtx(() => [..._cache[5] || (_cache[5] = [
+                            default: withCtx(() => [..._cache[4] || (_cache[4] = [
                               createTextVNode("重命名", -1)
                             ])]),
                             _: 1
@@ -6999,13 +7460,13 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
                             key: 0,
                             command: "add-left"
                           }, {
-                            default: withCtx(() => [..._cache[6] || (_cache[6] = [
+                            default: withCtx(() => [..._cache[5] || (_cache[5] = [
                               createTextVNode(" 在左侧添加分组 ", -1)
                             ])]),
                             _: 1
                           })) : createCommentVNode("", true),
                           createVNode(_component_el_dropdown_item, { command: "add-right" }, {
-                            default: withCtx(() => [..._cache[7] || (_cache[7] = [
+                            default: withCtx(() => [..._cache[6] || (_cache[6] = [
                               createTextVNode("在右侧添加分组", -1)
                             ])]),
                             _: 1
@@ -7015,7 +7476,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
                             command: "delete",
                             divided: ""
                           }, {
-                            default: withCtx(() => [..._cache[8] || (_cache[8] = [
+                            default: withCtx(() => [..._cache[7] || (_cache[7] = [
                               createTextVNode(" 删除 ", -1)
                             ])]),
                             _: 1
@@ -7080,7 +7541,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
                     class: "task-kanban__quick-add-priority"
                   }, null, 8, ["modelValue"])) : createCommentVNode("", true)
                 ])) : createCommentVNode("", true),
-                !__props.loading && columnRows(col.id).length === 0 ? (openBlock(), createElementBlock("div", _hoisted_18$6, [..._cache[9] || (_cache[9] = [
+                !__props.loading && columnRows(col.id).length === 0 ? (openBlock(), createElementBlock("div", _hoisted_18$7, [..._cache[8] || (_cache[8] = [
                   createBaseVNode("span", null, "拖到这里", -1)
                 ])])) : createCommentVNode("", true),
                 (openBlock(true), createElementBlock(Fragment$2, null, renderList(columnRows(col.id), (row) => {
@@ -7098,7 +7559,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
                     onDragend: onDragEnd,
                     onClick: ($event) => emit("select", row.task.id)
                   }, [
-                    createBaseVNode("div", _hoisted_20$3, [
+                    createBaseVNode("div", _hoisted_20$4, [
                       childCount(row.task.id) > 0 ? (openBlock(), createElementBlock("button", {
                         key: 0,
                         type: "button",
@@ -7114,13 +7575,11 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
                           ]),
                           _: 2
                         }, 1024)
-                      ], 8, _hoisted_21$3)) : (openBlock(), createElementBlock("span", _hoisted_22$3)),
-                      createVNode(_component_el_checkbox, {
-                        "model-value": row.task.status === "DONE",
-                        onClick: _cache[3] || (_cache[3] = withModifiers(() => {
-                        }, ["stop"])),
-                        onChange: () => emit("toggle-status", row.task)
-                      }, null, 8, ["model-value", "onChange"]),
+                      ], 8, _hoisted_21$4)) : (openBlock(), createElementBlock("span", _hoisted_22$3)),
+                      createVNode(_sfc_main$O, {
+                        status: row.task.status,
+                        onToggle: ($event) => emit("toggle-status", row.task)
+                      }, null, 8, ["status", "onToggle"]),
                       createBaseVNode("span", _hoisted_23$3, toDisplayString(row.task.title), 1),
                       childCount(row.task.id) > 0 && !isExpanded(row.task.id) ? (openBlock(), createElementBlock("span", _hoisted_24$3, toDisplayString(childCount(row.task.id)), 1)) : createCommentVNode("", true)
                     ]),
@@ -7135,7 +7594,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
                         title: "截止时间"
                       }, " 截止 " + toDisplayString(dueMetaLabel(row.task)), 3)) : createCommentVNode("", true)
                     ])) : createCommentVNode("", true)
-                  ], 46, _hoisted_19$3);
+                  ], 46, _hoisted_19$4);
                 }), 128))
               ])
             ], 42, _hoisted_6$A);
@@ -7147,7 +7606,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TaskKanbanView = /* @__PURE__ */ _export_sfc(_sfc_main$M, [["__scopeId", "data-v-20c062f4"]]);
+const TaskKanbanView = /* @__PURE__ */ _export_sfc(_sfc_main$M, [["__scopeId", "data-v-2fc392ff"]]);
 const TIME_FIELDS = /* @__PURE__ */ new Set(["dueAt", "createdAt", "completedAt"]);
 function inferTimelineCalendarPreset(node) {
   if (!node) return null;
@@ -7306,13 +7765,13 @@ const _hoisted_14$8 = { class: "task-timeline__grid-lines" };
 const _hoisted_15$8 = ["data-date"];
 const _hoisted_16$7 = ["title", "onPointerdown"];
 const _hoisted_17$6 = { class: "task-timeline__grid-lines" };
-const _hoisted_18$5 = ["data-date"];
-const _hoisted_19$2 = ["title", "aria-label"];
-const _hoisted_20$2 = {
+const _hoisted_18$6 = ["data-date"];
+const _hoisted_19$3 = ["title", "aria-label"];
+const _hoisted_20$3 = {
   key: 0,
   class: "task-timeline__side-count"
 };
-const _hoisted_21$2 = { class: "task-timeline__side-head" };
+const _hoisted_21$3 = { class: "task-timeline__side-head" };
 const _hoisted_22$2 = { class: "task-timeline__side-head-title" };
 const _hoisted_23$2 = { class: "task-timeline__side-count" };
 const _hoisted_24$2 = {
@@ -7676,7 +8135,7 @@ const _sfc_main$L = /* @__PURE__ */ defineComponent({
                         class: normalizeClass(["task-timeline__grid-cell", { "is-focus": isFocusedDay(day) }]),
                         style: normalizeStyle({ width: `${DAY_WIDTH}px` }),
                         "data-date": day.format("YYYY-MM-DD")
-                      }, null, 14, _hoisted_18$5);
+                      }, null, 14, _hoisted_18$6);
                     }), 128))
                   ])
                 ], 4)
@@ -7702,9 +8161,9 @@ const _sfc_main$L = /* @__PURE__ */ defineComponent({
               _: 1
             }),
             _cache[9] || (_cache[9] = createBaseVNode("span", { class: "task-timeline__side-rail-label" }, "安排", -1)),
-            unscheduledTasks.value.length > 0 ? (openBlock(), createElementBlock("span", _hoisted_20$2, toDisplayString(unscheduledTasks.value.length), 1)) : createCommentVNode("", true)
-          ], 8, _hoisted_19$2)) : (openBlock(), createElementBlock(Fragment$2, { key: 1 }, [
-            createBaseVNode("div", _hoisted_21$2, [
+            unscheduledTasks.value.length > 0 ? (openBlock(), createElementBlock("span", _hoisted_20$3, toDisplayString(unscheduledTasks.value.length), 1)) : createCommentVNode("", true)
+          ], 8, _hoisted_19$3)) : (openBlock(), createElementBlock(Fragment$2, { key: 1 }, [
+            createBaseVNode("div", _hoisted_21$3, [
               createBaseVNode("span", _hoisted_22$2, [
                 _cache[10] || (_cache[10] = createTextVNode(" 安排任务 ", -1)),
                 createBaseVNode("span", _hoisted_23$2, toDisplayString(unscheduledTasks.value.length), 1)
@@ -7789,7 +8248,7 @@ const _hoisted_17$5 = {
   class: "completed-list__meta-item",
   title: "完成时间"
 };
-const _hoisted_18$4 = {
+const _hoisted_18$5 = {
   key: 2,
   class: "completed-list__meta-item",
   title: "截止时间"
@@ -7895,10 +8354,9 @@ const _sfc_main$K = /* @__PURE__ */ defineComponent({
     }
     return (_ctx, _cache) => {
       const _component_el_icon = resolveComponent("el-icon");
-      const _component_el_checkbox = resolveComponent("el-checkbox");
       const _directive_loading = resolveDirective("loading");
       return withDirectives((openBlock(), createElementBlock("div", _hoisted_1$J, [
-        !__props.loading && groups.value.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_2$H, [..._cache[1] || (_cache[1] = [
+        !__props.loading && groups.value.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_2$H, [..._cache[0] || (_cache[0] = [
           createBaseVNode("p", null, "暂无已完成任务", -1),
           createBaseVNode("p", { class: "completed-list__hint" }, "完成任务后，会按完成日期显示在这里", -1)
         ])])) : (openBlock(), createElementBlock("div", _hoisted_3$D, [
@@ -7947,12 +8405,10 @@ const _sfc_main$K = /* @__PURE__ */ defineComponent({
                           _: 2
                         }, 1024)
                       ], 8, _hoisted_9$c)) : (openBlock(), createElementBlock("span", _hoisted_10$a)),
-                      createVNode(_component_el_checkbox, {
-                        "model-value": true,
-                        onClick: _cache[0] || (_cache[0] = withModifiers(() => {
-                        }, ["stop"])),
-                        onChange: () => emit("toggle-status", item.task)
-                      }, null, 8, ["onChange"]),
+                      createVNode(_sfc_main$O, {
+                        status: item.task.status,
+                        onToggle: ($event) => emit("toggle-status", item.task)
+                      }, null, 8, ["status", "onToggle"]),
                       createBaseVNode("div", _hoisted_11$a, [
                         createBaseVNode("div", _hoisted_12$9, [
                           createBaseVNode("span", _hoisted_13$8, toDisplayString(displayTitle(item.task)), 1),
@@ -7961,7 +8417,7 @@ const _sfc_main$K = /* @__PURE__ */ defineComponent({
                         createBaseVNode("div", _hoisted_15$7, [
                           item.task.createdAt ? (openBlock(), createElementBlock("span", _hoisted_16$6, " 创建 " + toDisplayString(unref(formatTaskCreatedAt)(item.task.createdAt)), 1)) : createCommentVNode("", true),
                           item.task.completedAt ? (openBlock(), createElementBlock("span", _hoisted_17$5, " 完成 " + toDisplayString(unref(formatTaskListTime)(item.task.completedAt)), 1)) : createCommentVNode("", true),
-                          item.task.dueAt ? (openBlock(), createElementBlock("span", _hoisted_18$4, " 截止 " + toDisplayString(unref(formatTaskListTime)(item.task.dueAt)), 1)) : createCommentVNode("", true)
+                          item.task.dueAt ? (openBlock(), createElementBlock("span", _hoisted_18$5, " 截止 " + toDisplayString(unref(formatTaskListTime)(item.task.dueAt)), 1)) : createCommentVNode("", true)
                         ])
                       ])
                     ], 14, _hoisted_8$i)) : createCommentVNode("", true)
@@ -7979,7 +8435,7 @@ const _sfc_main$K = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const CompletedTaskList = /* @__PURE__ */ _export_sfc(_sfc_main$K, [["__scopeId", "data-v-2bb549f8"]]);
+const CompletedTaskList = /* @__PURE__ */ _export_sfc(_sfc_main$K, [["__scopeId", "data-v-97c89508"]]);
 const _hoisted_1$I = { class: "trash-list" };
 const _hoisted_2$G = {
   key: 0,
@@ -8180,7 +8636,7 @@ const _sfc_main$J = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TrashTaskList = /* @__PURE__ */ _export_sfc(_sfc_main$J, [["__scopeId", "data-v-97b36ceb"]]);
+const TrashTaskList = /* @__PURE__ */ _export_sfc(_sfc_main$J, [["__scopeId", "data-v-f0ab78c7"]]);
 const _hoisted_1$H = { class: "inbox-view" };
 const _hoisted_2$F = {
   key: 0,
@@ -8305,7 +8761,7 @@ const _sfc_main$I = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const InboxView = /* @__PURE__ */ _export_sfc(_sfc_main$I, [["__scopeId", "data-v-cf0f4dc1"]]);
+const InboxView = /* @__PURE__ */ _export_sfc(_sfc_main$I, [["__scopeId", "data-v-a801a1d5"]]);
 const _hoisted_1$G = { class: "inbox-note-panel__head" };
 const _hoisted_2$E = {
   key: 0,
@@ -8484,19 +8940,19 @@ const _hoisted_17$4 = {
   key: 0,
   class: "quadrant-matrix__category"
 };
-const _hoisted_18$3 = {
+const _hoisted_18$4 = {
   key: 1,
   class: "quadrant-matrix__meta-item quadrant-matrix__meta-item--completed"
 };
-const _hoisted_19$1 = {
+const _hoisted_19$2 = {
   key: 2,
   class: "quadrant-matrix__meta-item"
 };
-const _hoisted_20$1 = {
+const _hoisted_20$2 = {
   key: 4,
   class: "quadrant-matrix__meta-item"
 };
-const _hoisted_21$1 = ["onClick"];
+const _hoisted_21$2 = ["onClick"];
 const _hoisted_22$1 = { class: "quadrant-matrix__group-count" };
 const _hoisted_23$1 = { class: "quadrant-matrix__tasks" };
 const _hoisted_24$1 = ["draggable", "onDragstart", "onClick"];
@@ -8663,7 +9119,6 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
     }
     return (_ctx, _cache) => {
       const _component_el_icon = resolveComponent("el-icon");
-      const _component_el_checkbox = resolveComponent("el-checkbox");
       const _directive_loading = resolveDirective("loading");
       return withDirectives((openBlock(), createElementBlock("div", _hoisted_1$F, [
         createBaseVNode("div", _hoisted_2$D, [
@@ -8695,7 +9150,7 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                 }, " + ", 8, _hoisted_5$x)
               ]),
               !hasTasks(meta.value) ? (openBlock(), createElementBlock("div", _hoisted_6$u, [
-                _cache[2] || (_cache[2] = createTextVNode(" 没有任务 ", -1)),
+                _cache[0] || (_cache[0] = createTextVNode(" 没有任务 ", -1)),
                 dropTargetPriority.value === meta.value ? (openBlock(), createElementBlock("span", _hoisted_7$p, "松开放置到此象限")) : createCommentVNode("", true)
               ])) : (openBlock(), createElementBlock("div", _hoisted_8$g, [
                 layoutFor(meta.value).ungrouped.length ? (openBlock(), createElementBlock("ul", _hoisted_9$a, [
@@ -8723,12 +9178,10 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                           _: 2
                         }, 1024)
                       ], 8, _hoisted_11$8)) : (openBlock(), createElementBlock("span", _hoisted_12$7)),
-                      createVNode(_component_el_checkbox, {
-                        "model-value": task.status === "DONE",
-                        onClick: _cache[0] || (_cache[0] = withModifiers(() => {
-                        }, ["stop"])),
-                        onChange: () => emit("toggle-status", task)
-                      }, null, 8, ["model-value", "onChange"]),
+                      createVNode(_sfc_main$O, {
+                        status: task.status,
+                        onToggle: ($event) => emit("toggle-status", task)
+                      }, null, 8, ["status", "onToggle"]),
                       createBaseVNode("div", _hoisted_13$6, [
                         createBaseVNode("div", _hoisted_14$5, [
                           createVNode(TaskPriorityBadge, {
@@ -8741,19 +9194,19 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                         ]),
                         depth === 0 && hasTaskMeta(task) ? (openBlock(), createElementBlock("div", _hoisted_16$5, [
                           categoryName(task) ? (openBlock(), createElementBlock("span", _hoisted_17$4, [
-                            _cache[3] || (_cache[3] = createBaseVNode("span", {
+                            _cache[1] || (_cache[1] = createBaseVNode("span", {
                               class: "quadrant-matrix__folder",
                               "aria-hidden": "true"
                             }, "📁", -1)),
                             createTextVNode(" " + toDisplayString(categoryName(task)), 1)
                           ])) : createCommentVNode("", true),
-                          showCompletedAt(task) ? (openBlock(), createElementBlock("span", _hoisted_18$3, " 完成 " + toDisplayString(unref(formatTaskListTime)(task.completedAt)), 1)) : createCommentVNode("", true),
-                          showCreatedAt(task) ? (openBlock(), createElementBlock("span", _hoisted_19$1, " 创建 " + toDisplayString(unref(formatTaskCreatedAt)(task.createdAt)), 1)) : createCommentVNode("", true),
+                          showCompletedAt(task) ? (openBlock(), createElementBlock("span", _hoisted_18$4, " 完成 " + toDisplayString(unref(formatTaskListTime)(task.completedAt)), 1)) : createCommentVNode("", true),
+                          showCreatedAt(task) ? (openBlock(), createElementBlock("span", _hoisted_19$2, " 创建 " + toDisplayString(unref(formatTaskCreatedAt)(task.createdAt)), 1)) : createCommentVNode("", true),
                           showDueAt(task) ? (openBlock(), createElementBlock("span", {
                             key: 3,
                             class: normalizeClass(["quadrant-matrix__meta-item", { "is-overdue": isOverdue(task) }])
                           }, " 截止 " + toDisplayString(unref(formatTaskListTime)(task.dueAt)), 3)) : createCommentVNode("", true),
-                          showRemindAt(task) ? (openBlock(), createElementBlock("span", _hoisted_20$1, " 提醒 " + toDisplayString(unref(formatTaskListTime)(task.remindAt)), 1)) : createCommentVNode("", true)
+                          showRemindAt(task) ? (openBlock(), createElementBlock("span", _hoisted_20$2, " 提醒 " + toDisplayString(unref(formatTaskListTime)(task.remindAt)), 1)) : createCommentVNode("", true)
                         ])) : createCommentVNode("", true)
                       ])
                     ], 46, _hoisted_10$8);
@@ -8779,7 +9232,7 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                       }, 8, ["class"]),
                       createBaseVNode("span", null, toDisplayString(group.label), 1),
                       createBaseVNode("span", _hoisted_22$1, toDisplayString(group.tasks.length), 1)
-                    ], 8, _hoisted_21$1),
+                    ], 8, _hoisted_21$2),
                     withDirectives(createBaseVNode("ul", _hoisted_23$1, [
                       (openBlock(true), createElementBlock(Fragment$2, null, renderList(tasksWithChildren(group.tasks), ({ task, depth }) => {
                         return openBlock(), createElementBlock("li", {
@@ -8805,12 +9258,10 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                               _: 2
                             }, 1024)
                           ], 8, _hoisted_25$1)) : (openBlock(), createElementBlock("span", _hoisted_26$1)),
-                          createVNode(_component_el_checkbox, {
-                            "model-value": task.status === "DONE",
-                            onClick: _cache[1] || (_cache[1] = withModifiers(() => {
-                            }, ["stop"])),
-                            onChange: () => emit("toggle-status", task)
-                          }, null, 8, ["model-value", "onChange"]),
+                          createVNode(_sfc_main$O, {
+                            status: task.status,
+                            onToggle: ($event) => emit("toggle-status", task)
+                          }, null, 8, ["status", "onToggle"]),
                           createBaseVNode("div", _hoisted_27$1, [
                             createBaseVNode("div", _hoisted_28$1, [
                               createVNode(TaskPriorityBadge, {
@@ -8823,7 +9274,7 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                             ]),
                             depth === 0 && hasTaskMeta(task) ? (openBlock(), createElementBlock("div", _hoisted_30, [
                               categoryName(task) ? (openBlock(), createElementBlock("span", _hoisted_31, [
-                                _cache[4] || (_cache[4] = createBaseVNode("span", {
+                                _cache[2] || (_cache[2] = createBaseVNode("span", {
                                   class: "quadrant-matrix__folder",
                                   "aria-hidden": "true"
                                 }, "📁", -1)),
@@ -8855,7 +9306,29 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const QuadrantMatrixView = /* @__PURE__ */ _export_sfc(_sfc_main$G, [["__scopeId", "data-v-5ad04d89"]]);
+const QuadrantMatrixView = /* @__PURE__ */ _export_sfc(_sfc_main$G, [["__scopeId", "data-v-07081df4"]]);
+const UNCATEGORIZED_LIST_KEY = "uncategorized";
+function taskMatchesSelectedLists(task, selectedKeys, taskById) {
+  if (selectedKeys.length === 0) return true;
+  const selected = new Set(selectedKeys);
+  let current = task;
+  const seen = /* @__PURE__ */ new Set();
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    if (!current.categoryId) {
+      if (selected.has(UNCATEGORIZED_LIST_KEY)) return true;
+    } else if (selected.has(current.categoryId)) {
+      return true;
+    }
+    current = current.parentId ? taskById.get(current.parentId) : void 0;
+  }
+  return false;
+}
+function filterTasksBySelectedLists(tasks, selectedKeys, taskById) {
+  if (selectedKeys.length === 0) return tasks;
+  const lookup = taskById ?? new Map(tasks.map((item) => [item.id, item]));
+  return tasks.filter((item) => taskMatchesSelectedLists(item, selectedKeys, lookup));
+}
 const _hoisted_1$E = { class: "task-view-menu" };
 const _hoisted_2$C = {
   type: "button",
@@ -8869,13 +9342,19 @@ const _hoisted_4$x = { class: "task-view-menu__sub" };
 const _hoisted_5$w = { class: "task-view-menu__sub" };
 const _sfc_main$F = /* @__PURE__ */ defineComponent({
   __name: "QuadrantMatrixMenu",
-  props: {
+  props: /* @__PURE__ */ mergeModels({
+    showListFilter: { type: Boolean, default: false },
+    categories: { default: () => [] }
+  }, {
     "metaVisibility": { required: true },
-    "metaVisibilityModifiers": {}
-  },
-  emits: /* @__PURE__ */ mergeModels(["change"], ["update:metaVisibility"]),
+    "metaVisibilityModifiers": {},
+    "visibleListIds": { default: () => [] },
+    "visibleListIdsModifiers": {}
+  }),
+  emits: /* @__PURE__ */ mergeModels(["change"], ["update:metaVisibility", "update:visibleListIds"]),
   setup(__props, { emit: __emit }) {
     const metaVisibility = useModel(__props, "metaVisibility");
+    const visibleListIds = useModel(__props, "visibleListIds");
     const emit = __emit;
     const visible = ref(false);
     const showDisplaySettings = ref(false);
@@ -8939,7 +9418,7 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
         default: withCtx(() => [
           createBaseVNode("div", _hoisted_1$E, [
             createBaseVNode("button", _hoisted_2$C, [
-              _cache[6] || (_cache[6] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "显示已完成", -1)),
+              _cache[7] || (_cache[7] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "显示已完成", -1)),
               createVNode(_component_el_switch, {
                 modelValue: prefs.showCompleted,
                 "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => prefs.showCompleted = $event),
@@ -8948,7 +9427,7 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
               }, null, 8, ["modelValue"])
             ]),
             createBaseVNode("button", _hoisted_3$y, [
-              _cache[7] || (_cache[7] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "启用分组", -1)),
+              _cache[8] || (_cache[8] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "启用分组", -1)),
               createVNode(_component_el_switch, {
                 modelValue: prefs.enableGrouping,
                 "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => prefs.enableGrouping = $event),
@@ -8957,7 +9436,7 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
               }, null, 8, ["modelValue"])
             ]),
             createBaseVNode("div", _hoisted_4$x, [
-              _cache[8] || (_cache[8] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "分组条件", -1)),
+              _cache[10] || (_cache[10] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "分组条件", -1)),
               createVNode(_component_el_select, {
                 modelValue: prefs.groupBy,
                 "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => prefs.groupBy = $event),
@@ -8977,7 +9456,7 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
                 ]),
                 _: 1
               }, 8, ["modelValue", "disabled"]),
-              _cache[9] || (_cache[9] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "排序", -1)),
+              _cache[11] || (_cache[11] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "排序", -1)),
               createVNode(_component_el_select, {
                 modelValue: prefs.sortBy,
                 "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => prefs.sortBy = $event),
@@ -8995,14 +9474,43 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
                   }), 128))
                 ]),
                 _: 1
-              }, 8, ["modelValue"])
+              }, 8, ["modelValue"]),
+              __props.showListFilter ? (openBlock(), createElementBlock(Fragment$2, { key: 0 }, [
+                _cache[9] || (_cache[9] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "显示清单", -1)),
+                createVNode(_component_el_select, {
+                  modelValue: visibleListIds.value,
+                  "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => visibleListIds.value = $event),
+                  multiple: "",
+                  clearable: "",
+                  "collapse-tags": "",
+                  "collapse-tags-tooltip": "",
+                  size: "small",
+                  class: "quadrant-menu__select",
+                  placeholder: "全部清单"
+                }, {
+                  default: withCtx(() => [
+                    createVNode(_component_el_option, {
+                      label: "未分类",
+                      value: unref(UNCATEGORIZED_LIST_KEY)
+                    }, null, 8, ["value"]),
+                    (openBlock(true), createElementBlock(Fragment$2, null, renderList(__props.categories, (cat) => {
+                      return openBlock(), createBlock(_component_el_option, {
+                        key: cat.id,
+                        label: cat.name,
+                        value: cat.id
+                      }, null, 8, ["label", "value"]);
+                    }), 128))
+                  ]),
+                  _: 1
+                }, 8, ["modelValue"])
+              ], 64)) : createCommentVNode("", true)
             ]),
             createBaseVNode("button", {
               type: "button",
               class: "task-view-menu__row",
-              onClick: _cache[5] || (_cache[5] = ($event) => showDisplaySettings.value = !showDisplaySettings.value)
+              onClick: _cache[6] || (_cache[6] = ($event) => showDisplaySettings.value = !showDisplaySettings.value)
             }, [
-              _cache[10] || (_cache[10] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "显示设置", -1)),
+              _cache[12] || (_cache[12] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "显示设置", -1)),
               createVNode(_component_el_icon, {
                 class: normalizeClass(["task-view-menu__chevron", { "is-open": showDisplaySettings.value }])
               }, {
@@ -9013,7 +9521,7 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
               }, 8, ["class"])
             ]),
             withDirectives(createBaseVNode("div", _hoisted_5$w, [
-              _cache[11] || (_cache[11] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "列表时间字段", -1)),
+              _cache[13] || (_cache[13] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "列表时间字段", -1)),
               (openBlock(), createElementBlock(Fragment$2, null, renderList(metaOptions, (opt) => {
                 return createBaseVNode("label", {
                   key: opt.key,
@@ -9036,7 +9544,7 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const QuadrantMatrixMenu = /* @__PURE__ */ _export_sfc(_sfc_main$F, [["__scopeId", "data-v-39e043b4"]]);
+const QuadrantMatrixMenu = /* @__PURE__ */ _export_sfc(_sfc_main$F, [["__scopeId", "data-v-9a889a5a"]]);
 const _hoisted_1$D = { class: "task-view-menu" };
 const _hoisted_2$B = { class: "task-view-menu__sub task-view-menu__sub--top" };
 const _hoisted_3$x = {
@@ -9052,7 +9560,10 @@ const _hoisted_5$v = { class: "task-view-menu__sub" };
 const _hoisted_6$t = { class: "task-view-menu__sub" };
 const _sfc_main$E = /* @__PURE__ */ defineComponent({
   __name: "TaskListViewMenu",
-  props: {
+  props: /* @__PURE__ */ mergeModels({
+    showListFilter: { type: Boolean, default: false },
+    categories: { default: () => [] }
+  }, {
     "hideDone": { type: Boolean, ...{ required: true } },
     "hideDoneModifiers": {},
     "detailStyle": { required: true },
@@ -9064,9 +9575,11 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
     "sortBy": { required: true },
     "sortByModifiers": {},
     "viewMode": { required: true },
-    "viewModeModifiers": {}
-  },
-  emits: ["update:hideDone", "update:detailStyle", "update:metaVisibility", "update:groupBy", "update:sortBy", "update:viewMode"],
+    "viewModeModifiers": {},
+    "visibleListIds": { default: () => [] },
+    "visibleListIdsModifiers": {}
+  }),
+  emits: ["update:hideDone", "update:detailStyle", "update:metaVisibility", "update:groupBy", "update:sortBy", "update:viewMode", "update:visibleListIds"],
   setup(__props) {
     const hideDone = useModel(__props, "hideDone");
     const detailStyle = useModel(__props, "detailStyle");
@@ -9074,6 +9587,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
     const groupBy = useModel(__props, "groupBy");
     const sortBy = useModel(__props, "sortBy");
     const viewMode = useModel(__props, "viewMode");
+    const visibleListIds = useModel(__props, "visibleListIds");
     const visible = ref(false);
     const showDisplaySettings = ref(false);
     const metaOptions = [
@@ -9162,7 +9676,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
         default: withCtx(() => [
           createBaseVNode("div", _hoisted_1$D, [
             createBaseVNode("div", _hoisted_2$B, [
-              _cache[12] || (_cache[12] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "展示模式", -1)),
+              _cache[13] || (_cache[13] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "展示模式", -1)),
               createVNode(_component_el_radio_group, {
                 modelValue: viewMode.value,
                 "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => viewMode.value = $event),
@@ -9171,13 +9685,13 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
               }, {
                 default: withCtx(() => [
                   createVNode(_component_el_radio, { value: "list" }, {
-                    default: withCtx(() => [..._cache[10] || (_cache[10] = [
+                    default: withCtx(() => [..._cache[11] || (_cache[11] = [
                       createTextVNode("列表", -1)
                     ])]),
                     _: 1
                   }),
                   createVNode(_component_el_radio, { value: "kanban" }, {
-                    default: withCtx(() => [..._cache[11] || (_cache[11] = [
+                    default: withCtx(() => [..._cache[12] || (_cache[12] = [
                       createTextVNode("看板", -1)
                     ])]),
                     _: 1
@@ -9193,7 +9707,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
                 ]),
                 _: 1
               }),
-              _cache[13] || (_cache[13] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "隐藏已完成", -1)),
+              _cache[14] || (_cache[14] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "隐藏已完成", -1)),
               createVNode(_component_el_switch, {
                 modelValue: hideDone.value,
                 "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => hideDone.value = $event),
@@ -9203,7 +9717,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
               }, null, 8, ["modelValue"])
             ]),
             viewMode.value === "list" ? (openBlock(), createElementBlock("button", _hoisted_4$w, [
-              _cache[14] || (_cache[14] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "启用分组", -1)),
+              _cache[15] || (_cache[15] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "启用分组", -1)),
               createVNode(_component_el_switch, {
                 modelValue: enableGrouping.value,
                 "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => enableGrouping.value = $event),
@@ -9213,7 +9727,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
               }, null, 8, ["modelValue"])
             ])) : createCommentVNode("", true),
             createBaseVNode("div", _hoisted_5$v, [
-              _cache[15] || (_cache[15] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "分组条件", -1)),
+              _cache[17] || (_cache[17] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "分组条件", -1)),
               createVNode(_component_el_select, {
                 modelValue: groupBy.value,
                 "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => groupBy.value = $event),
@@ -9233,7 +9747,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
                 ]),
                 _: 1
               }, 8, ["modelValue", "disabled"]),
-              _cache[16] || (_cache[16] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "排序", -1)),
+              _cache[18] || (_cache[18] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "排序", -1)),
               createVNode(_component_el_select, {
                 modelValue: sortBy.value,
                 "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => sortBy.value = $event),
@@ -9250,12 +9764,41 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
                   }), 128))
                 ]),
                 _: 1
-              }, 8, ["modelValue"])
+              }, 8, ["modelValue"]),
+              __props.showListFilter ? (openBlock(), createElementBlock(Fragment$2, { key: 0 }, [
+                _cache[16] || (_cache[16] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "显示清单", -1)),
+                createVNode(_component_el_select, {
+                  modelValue: visibleListIds.value,
+                  "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => visibleListIds.value = $event),
+                  multiple: "",
+                  clearable: "",
+                  "collapse-tags": "",
+                  "collapse-tags-tooltip": "",
+                  size: "small",
+                  class: "task-view-menu__select",
+                  placeholder: "全部清单"
+                }, {
+                  default: withCtx(() => [
+                    createVNode(_component_el_option, {
+                      label: "未分类",
+                      value: unref(UNCATEGORIZED_LIST_KEY)
+                    }, null, 8, ["value"]),
+                    (openBlock(true), createElementBlock(Fragment$2, null, renderList(__props.categories, (cat) => {
+                      return openBlock(), createBlock(_component_el_option, {
+                        key: cat.id,
+                        label: cat.name,
+                        value: cat.id
+                      }, null, 8, ["label", "value"]);
+                    }), 128))
+                  ]),
+                  _: 1
+                }, 8, ["modelValue"])
+              ], 64)) : createCommentVNode("", true)
             ]),
             createBaseVNode("button", {
               type: "button",
               class: "task-view-menu__row",
-              onClick: _cache[8] || (_cache[8] = ($event) => showDisplaySettings.value = !showDisplaySettings.value)
+              onClick: _cache[9] || (_cache[9] = ($event) => showDisplaySettings.value = !showDisplaySettings.value)
             }, [
               createVNode(_component_el_icon, { class: "task-view-menu__row-icon" }, {
                 default: withCtx(() => [
@@ -9263,7 +9806,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
                 ]),
                 _: 1
               }),
-              _cache[17] || (_cache[17] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "显示设置", -1)),
+              _cache[19] || (_cache[19] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "显示设置", -1)),
               createVNode(_component_el_icon, {
                 class: normalizeClass(["task-view-menu__chevron", { "is-open": showDisplaySettings.value }])
               }, {
@@ -9274,7 +9817,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
               }, 8, ["class"])
             ]),
             withDirectives(createBaseVNode("div", _hoisted_6$t, [
-              _cache[20] || (_cache[20] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "列表时间字段", -1)),
+              _cache[22] || (_cache[22] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "列表时间字段", -1)),
               (openBlock(), createElementBlock(Fragment$2, null, renderList(metaOptions, (opt) => {
                 return createBaseVNode("label", {
                   key: opt.key,
@@ -9287,22 +9830,22 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
                   createBaseVNode("span", null, toDisplayString(opt.label), 1)
                 ]);
               }), 64)),
-              _cache[21] || (_cache[21] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "任务详情样式", -1)),
+              _cache[23] || (_cache[23] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "任务详情样式", -1)),
               createVNode(_component_el_radio_group, {
                 modelValue: detailStyle.value,
-                "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => detailStyle.value = $event),
+                "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => detailStyle.value = $event),
                 class: "task-view-menu__radio-group",
                 size: "small"
               }, {
                 default: withCtx(() => [
                   createVNode(_component_el_radio, { value: "sidebar" }, {
-                    default: withCtx(() => [..._cache[18] || (_cache[18] = [
+                    default: withCtx(() => [..._cache[20] || (_cache[20] = [
                       createTextVNode("侧边栏", -1)
                     ])]),
                     _: 1
                   }),
                   createVNode(_component_el_radio, { value: "dialog" }, {
-                    default: withCtx(() => [..._cache[19] || (_cache[19] = [
+                    default: withCtx(() => [..._cache[21] || (_cache[21] = [
                       createTextVNode("弹框详情", -1)
                     ])]),
                     _: 1
@@ -9320,7 +9863,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TaskListViewMenu = /* @__PURE__ */ _export_sfc(_sfc_main$E, [["__scopeId", "data-v-ad0260a1"]]);
+const TaskListViewMenu = /* @__PURE__ */ _export_sfc(_sfc_main$E, [["__scopeId", "data-v-1ef07b9b"]]);
 const _hoisted_1$C = { class: "summary-results" };
 const _hoisted_2$A = {
   key: 0,
@@ -9789,11 +10332,11 @@ const useScheduledSummaryStore = /* @__PURE__ */ defineStore("scheduledSummaries
   return { items, loading, load, create, update, remove, runNow };
 });
 function reportScheduledSummaryError(err, fallback) {
-  if (!(err instanceof Error)) {
-    ElMessage.error(fallback);
+  if (err instanceof IpcUnwrapError) {
     return;
   }
-  if (/^[A-Z_]+$/.test(err.message)) {
+  if (!(err instanceof Error)) {
+    ElMessage.error(fallback);
     return;
   }
   const message = err.message;
@@ -9843,10 +10386,10 @@ const _hoisted_14$4 = { class: "template-option__desc" };
 const _hoisted_15$4 = { class: "report-sections" };
 const _hoisted_16$4 = { class: "report-section__head" };
 const _hoisted_17$3 = { class: "report-section__move" };
-const _hoisted_18$2 = { class: "report-section__row" };
-const _hoisted_19 = { class: "report-section__row" };
-const _hoisted_20 = { class: "report-section__row" };
-const _hoisted_21 = { class: "report-section__checks" };
+const _hoisted_18$3 = { class: "report-section__row" };
+const _hoisted_19$1 = { class: "report-section__row" };
+const _hoisted_20$1 = { class: "report-section__row" };
+const _hoisted_21$1 = { class: "report-section__checks" };
 const _hoisted_22 = { class: "free-template" };
 const _hoisted_23 = { class: "free-template__toolbar" };
 const _hoisted_24 = {
@@ -10558,7 +11101,7 @@ ${text2}` : text2;
                               placeholder: "区块标题",
                               onInput: markCustomTemplate
                             }, null, 8, ["modelValue", "onUpdate:modelValue"]),
-                            createBaseVNode("div", _hoisted_18$2, [
+                            createBaseVNode("div", _hoisted_18$3, [
                               createVNode(_component_el_select, {
                                 modelValue: section.query.status,
                                 "onUpdate:modelValue": ($event) => section.query.status = $event,
@@ -10594,7 +11137,7 @@ ${text2}` : text2;
                                 _: 1
                               }, 8, ["modelValue", "onUpdate:modelValue"])
                             ]),
-                            createBaseVNode("div", _hoisted_19, [
+                            createBaseVNode("div", _hoisted_19$1, [
                               createVNode(_component_el_select, {
                                 modelValue: section.query.listScope.mode,
                                 "onUpdate:modelValue": ($event) => section.query.listScope.mode = $event,
@@ -10641,7 +11184,7 @@ ${text2}` : text2;
                               ])]),
                               _: 1
                             }, 8, ["model-value", "onChange"]),
-                            createBaseVNode("div", _hoisted_20, [
+                            createBaseVNode("div", _hoisted_20$1, [
                               createVNode(_component_el_select, {
                                 modelValue: section.group.by,
                                 "onUpdate:modelValue": ($event) => section.group.by = $event,
@@ -10677,7 +11220,7 @@ ${text2}` : text2;
                                 _: 1
                               }, 8, ["modelValue", "onUpdate:modelValue"])
                             ]),
-                            createBaseVNode("div", _hoisted_21, [
+                            createBaseVNode("div", _hoisted_21$1, [
                               createVNode(_component_el_checkbox, {
                                 modelValue: section.render.showCount,
                                 "onUpdate:modelValue": ($event) => section.render.showCount = $event,
@@ -11051,364 +11594,7 @@ ${text2}` : text2;
     };
   }
 });
-const SettingsSummarySection = /* @__PURE__ */ _export_sfc(_sfc_main$C, [["__scopeId", "data-v-481a1f8b"]]);
-function cloneTaskListFilter(filter) {
-  const out = {};
-  if (typeof filter.hideDone === "boolean") {
-    out.hideDone = filter.hideDone;
-  }
-  if (filter.smartList) {
-    out.smartList = filter.smartList;
-  }
-  if (filter.status) {
-    out.status = filter.status;
-  }
-  if (filter.search?.trim()) {
-    out.search = filter.search.trim();
-  }
-  if (Object.prototype.hasOwnProperty.call(filter, "categoryId")) {
-    out.categoryId = filter.categoryId ?? null;
-  }
-  if (Object.prototype.hasOwnProperty.call(filter, "parentId")) {
-    out.parentId = filter.parentId ?? null;
-  }
-  if (filter.dateField) {
-    out.dateField = filter.dateField;
-  }
-  if (filter.doneTimeRange) {
-    out.doneTimeRange = filter.doneTimeRange;
-  }
-  if (filter.dateFrom) {
-    out.dateFrom = filter.dateFrom;
-  }
-  if (filter.dateTo) {
-    out.dateTo = filter.dateTo;
-  }
-  return out;
-}
-function isMatrixListFilter(filter) {
-  return filter.categoryId === void 0 && filter.smartList === void 0 && !Object.prototype.hasOwnProperty.call(filter, "parentId");
-}
-const HIDE_DONE_STORAGE_KEY = "aitodo_hide_done";
-function readHideDonePreference() {
-  try {
-    const raw = localStorage.getItem(HIDE_DONE_STORAGE_KEY);
-    if (raw === null) {
-      return true;
-    }
-    return raw === "true";
-  } catch {
-    return true;
-  }
-}
-function persistHideDone(hideDone) {
-  try {
-    localStorage.setItem(HIDE_DONE_STORAGE_KEY, String(hideDone));
-  } catch {
-  }
-}
-function mergeFilter(current, patch, options) {
-  const next = { ...current };
-  if (options?.clearSmartList) delete next.smartList;
-  if (options?.clearCategoryId) delete next.categoryId;
-  if (options?.clearSearch) delete next.search;
-  if (patch) {
-    Object.assign(next, patch);
-  }
-  return next;
-}
-function taskMatchesFilter(task, filter) {
-  if (filter.smartList === "trash") {
-    return Boolean(task.deletedAt);
-  }
-  if (task.deletedAt) {
-    return false;
-  }
-  if (filter.hideDone && task.status === "DONE") {
-    return false;
-  }
-  if (filter.categoryId !== void 0 && task.categoryId !== filter.categoryId) {
-    return false;
-  }
-  if (filter.search?.trim()) {
-    const q = filter.search.trim().toLowerCase();
-    if (!task.title.toLowerCase().includes(q)) {
-      return false;
-    }
-  }
-  if (isDueSmartList(filter.smartList)) {
-    return taskMatchesSmartListDate(task, filter.smartList, filter.dateField ?? "dueAt");
-  }
-  if (filter.smartList === "done" && task.status !== "DONE") {
-    return false;
-  }
-  if (filter.smartList === "done" && filter.doneTimeRange && filter.doneTimeRange !== "all") {
-    const bounds = doneTimeRangeBounds(filter.doneTimeRange, dayjs(), {
-      from: filter.dateFrom,
-      to: filter.dateTo
-    });
-    if (bounds && !taskDateIsoInRange(task, "completedAt", bounds)) {
-      return false;
-    }
-  }
-  if (filter.parentId !== void 0 && filter.parentId === null && task.parentId) {
-    return false;
-  }
-  return true;
-}
-const useTaskStore = /* @__PURE__ */ defineStore("tasks", () => {
-  const tasks = ref([]);
-  const loading = ref(false);
-  const trashCount = ref(0);
-  const doneCount = ref(0);
-  const filter = ref({
-    smartList: "all",
-    hideDone: readHideDonePreference()
-  });
-  let loadSeq = 0;
-  async function fetchWithCurrentFilter() {
-    const seq = ++loadSeq;
-    loading.value = true;
-    try {
-      const list2 = unwrapIpc(
-        await window.api.tasks.list(cloneTaskListFilter(filter.value))
-      );
-      if (seq !== loadSeq) {
-        return;
-      }
-      tasks.value = list2;
-    } catch (err) {
-      if (seq === loadSeq) {
-        console.error("[task-store] load failed", err);
-      }
-    } finally {
-      if (seq === loadSeq) {
-        loading.value = false;
-      }
-    }
-  }
-  async function load(patch, options) {
-    filter.value = mergeFilter(filter.value, patch, options);
-    await fetchWithCurrentFilter();
-  }
-  async function navigate(view) {
-    const hideDone = filter.value.hideDone;
-    if (view.kind === "smart") {
-      const next = { hideDone, smartList: view.smart };
-      if (view.dateField && isDueSmartList(view.smart)) {
-        next.dateField = view.dateField;
-      } else if (isDueSmartList(view.smart)) {
-        next.dateField = filter.value.dateField ?? "dueAt";
-      }
-      filter.value = next;
-    } else if (view.kind === "done") {
-      filter.value = {
-        hideDone: false,
-        smartList: "done",
-        doneTimeRange: view.doneTimeRange ?? filter.value.doneTimeRange ?? "all",
-        dateFrom: view.dateFrom ?? filter.value.dateFrom,
-        dateTo: view.dateTo ?? filter.value.dateTo
-      };
-    } else if (view.kind === "trash") {
-      filter.value = { smartList: "trash" };
-    } else if (view.kind === "category") {
-      filter.value = { hideDone, categoryId: view.categoryId };
-    } else if (view.kind === "uncategorized") {
-      filter.value = { hideDone, categoryId: null };
-    } else {
-      filter.value = { hideDone: false };
-    }
-    await fetchWithCurrentFilter();
-  }
-  function syncTaskInList(task) {
-    const visible = taskMatchesFilter(task, filter.value);
-    const idx = tasks.value.findIndex((t) => t.id === task.id);
-    if (!visible) {
-      if (idx >= 0) {
-        tasks.value = tasks.value.filter((t) => t.id !== task.id);
-      }
-      return;
-    }
-    if (idx >= 0) {
-      tasks.value = tasks.value.map((t) => t.id === task.id ? { ...task } : t);
-    } else {
-      tasks.value = [{ ...task }, ...tasks.value];
-    }
-  }
-  function removeTaskFromList(taskId) {
-    tasks.value = tasks.value.filter((t) => t.id !== taskId);
-  }
-  async function afterSave(task, mode) {
-    if (mode === "delete") {
-      if (task?.id) {
-        removeTaskFromList(task.id);
-      }
-      await fetchWithCurrentFilter();
-      await refreshSidebarCounts();
-      return;
-    }
-    if (!task) {
-      await fetchWithCurrentFilter();
-      await refreshSidebarCounts();
-      return;
-    }
-    if (mode === "create") {
-      await reloadAfterSave(task);
-      await refreshSidebarCounts();
-      return;
-    }
-    await fetchWithCurrentFilter();
-    syncTaskInList(task);
-    await refreshSidebarCounts();
-  }
-  async function reloadAfterSave(created) {
-    const hideDone = created.status === "DONE" ? false : filter.value.hideDone;
-    if (created.status === "DONE") {
-      persistHideDone(false);
-    }
-    const wasMatrix = isMatrixListFilter(filter.value);
-    if (wasMatrix) {
-      filter.value = { hideDone };
-    } else if (created.categoryId) {
-      filter.value = { hideDone, categoryId: created.categoryId };
-    } else {
-      filter.value = { hideDone, smartList: "all" };
-    }
-    await fetchWithCurrentFilter();
-    if (!tasks.value.some((t) => t.id === created.id) && !wasMatrix) {
-      filter.value = { hideDone: false, smartList: "all" };
-      await fetchWithCurrentFilter();
-    }
-    syncTaskInList(created);
-  }
-  async function setHideDone(hideDone) {
-    persistHideDone(hideDone);
-    filter.value = { ...filter.value, hideDone };
-    await fetchWithCurrentFilter();
-  }
-  async function create(title, options) {
-    const trimmed = title.trim();
-    if (!trimmed) {
-      throw new Error("title required");
-    }
-    const dto = { title: trimmed };
-    if (options?.parentId) {
-      dto.parentId = options.parentId;
-    }
-    if (options?.categoryId) {
-      dto.categoryId = options.categoryId;
-    }
-    const task = unwrapIpc(await window.api.tasks.create(dto));
-    await reloadAfterSave(task);
-    return task;
-  }
-  async function quickCreate(rawInput, options) {
-    const trimmed = rawInput.trim();
-    if (!trimmed) {
-      throw new Error("title required");
-    }
-    const cats = toParseCategories(options?.parseCategories ?? []);
-    const parsed = unwrapIpc(await window.api.app.parseTaskInput(trimmed, cats));
-    const dto = buildQuickCreateTaskDtoFromDraft(parsed.draft, trimmed, cats, {
-      categoryId: options?.categoryId ?? null,
-      ...options?.priority !== void 0 ? { priority: options.priority } : {},
-      ...options?.kanbanGroupId !== void 0 ? { kanbanGroupId: options.kanbanGroupId } : {},
-      ...options?.status !== void 0 ? { status: options.status } : {},
-      ...options?.triagedAt !== void 0 ? { triagedAt: options.triagedAt } : {}
-    });
-    if (options?.startAt !== void 0) dto.startAt = options.startAt;
-    if (options?.dueAt !== void 0) dto.dueAt = options.dueAt;
-    if (!dto.title.trim()) {
-      throw new Error("title required");
-    }
-    const task = unwrapIpc(await window.api.tasks.create(dto));
-    syncTaskInList(task);
-    await fetchWithCurrentFilter();
-    await refreshSidebarCounts();
-    return task;
-  }
-  async function update(id, patch) {
-    try {
-      const task = unwrapIpc(await window.api.tasks.update(id, patch));
-      await fetchWithCurrentFilter();
-      syncTaskInList(task);
-      await refreshSidebarCounts();
-      return task;
-    } catch {
-      throw new Error("update failed");
-    }
-  }
-  async function reorder(ids) {
-    const updated = unwrapIpc(await window.api.tasks.reorder(ids));
-    const byId = new Map(updated.map((t) => [t.id, t]));
-    tasks.value = tasks.value.map((t) => byId.get(t.id) ?? t);
-    await fetchWithCurrentFilter();
-    return updated;
-  }
-  async function remove(id, options) {
-    unwrapIpc(await window.api.tasks.delete(id, options));
-    removeTaskFromList(id);
-    await fetchWithCurrentFilter();
-    await refreshSidebarCounts();
-  }
-  async function refreshSidebarCounts() {
-    try {
-      trashCount.value = unwrapIpc(await window.api.tasks.countTrash());
-    } catch {
-      trashCount.value = 0;
-    }
-    try {
-      doneCount.value = unwrapIpc(await window.api.tasks.countDone());
-    } catch {
-      doneCount.value = 0;
-    }
-  }
-  async function refreshTrashCount() {
-    await refreshSidebarCounts();
-  }
-  async function restoreFromTrash(id) {
-    const task = unwrapIpc(await window.api.tasks.restore(id));
-    removeTaskFromList(id);
-    await fetchWithCurrentFilter();
-    await refreshSidebarCounts();
-    return task;
-  }
-  async function purgeFromTrash(id, options) {
-    unwrapIpc(await window.api.tasks.permanentDelete(id, options));
-    removeTaskFromList(id);
-    await fetchWithCurrentFilter();
-    await refreshSidebarCounts();
-  }
-  async function emptyTrashBin() {
-    const n = unwrapIpc(await window.api.tasks.emptyTrash());
-    tasks.value = [];
-    await refreshSidebarCounts();
-    return n;
-  }
-  return {
-    tasks,
-    loading,
-    trashCount,
-    doneCount,
-    filter,
-    load,
-    navigate,
-    afterSave,
-    syncTaskInList,
-    reloadAfterSave,
-    setHideDone,
-    create,
-    quickCreate,
-    update,
-    reorder,
-    remove,
-    refreshTrashCount,
-    refreshSidebarCounts,
-    restoreFromTrash,
-    purgeFromTrash,
-    emptyTrashBin
-  };
-});
+const SettingsSummarySection = /* @__PURE__ */ _export_sfc(_sfc_main$C, [["__scopeId", "data-v-a00be9d2"]]);
 function toPlainCreateTaskDto(dto) {
   return JSON.parse(JSON.stringify(dto));
 }
@@ -46828,7 +47014,7 @@ const _hoisted_14$2 = ["onClick"];
 const _hoisted_15$2 = { class: "task-panel__subtask-add" };
 const _hoisted_16$2 = { class: "task-panel__body task-panel__body--activity" };
 const _hoisted_17$2 = { class: "task-panel__footer" };
-const _hoisted_18$1 = { class: "task-panel__footer-right" };
+const _hoisted_18$2 = { class: "task-panel__footer-right" };
 const _sfc_main$p = /* @__PURE__ */ defineComponent({
   __name: "TaskDetailPanel",
   props: {
@@ -47062,7 +47248,7 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
     }
     async function toggleChildStatus(item) {
       if (!item.id || !item.status) return;
-      const next = item.status === "DONE" ? "TODO" : "DONE";
+      const next = nextTaskStatus(item.status);
       try {
         await taskStore.update(item.id, { status: next });
         await refreshChildTasks();
@@ -47186,7 +47372,6 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
       const _component_el_option = resolveComponent("el-option");
       const _component_el_select = resolveComponent("el-select");
       const _component_el_form_item = resolveComponent("el-form-item");
-      const _component_el_checkbox = resolveComponent("el-checkbox");
       const _component_el_tag = resolveComponent("el-tag");
       const _component_el_input = resolveComponent("el-input");
       const _component_el_form = resolveComponent("el-form");
@@ -47436,11 +47621,11 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
                         key: item.key,
                         class: "task-panel__subtask-row"
                       }, [
-                        !item.isDraft ? (openBlock(), createBlock(_component_el_checkbox, {
+                        !item.isDraft && item.status ? (openBlock(), createBlock(_sfc_main$O, {
                           key: 0,
-                          "model-value": item.status === "DONE",
-                          onChange: () => toggleChildStatus(item)
-                        }, null, 8, ["model-value", "onChange"])) : (openBlock(), createElementBlock("span", _hoisted_13$3)),
+                          status: item.status,
+                          onToggle: ($event) => toggleChildStatus(item)
+                        }, null, 8, ["status", "onToggle"])) : (openBlock(), createElementBlock("span", _hoisted_13$3)),
                         createBaseVNode("span", {
                           class: normalizeClass(["task-panel__subtask-title", { "is-done": item.status === "DONE" }])
                         }, toDisplayString(item.title), 3),
@@ -47521,7 +47706,7 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
               ])]),
               _: 1
             }, 8, ["disabled"])) : createCommentVNode("", true),
-            createBaseVNode("div", _hoisted_18$1, [
+            createBaseVNode("div", _hoisted_18$2, [
               createVNode(_component_el_button, {
                 disabled: saving.value,
                 onClick: onClose
@@ -47552,7 +47737,7 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TaskDetailPanel = /* @__PURE__ */ _export_sfc(_sfc_main$p, [["__scopeId", "data-v-01808a3f"]]);
+const TaskDetailPanel = /* @__PURE__ */ _export_sfc(_sfc_main$p, [["__scopeId", "data-v-66359e59"]]);
 const LIST_DATE_FIELD_KEY = "aitodo_list_date_field";
 const DONE_TIME_RANGE_KEY = "aitodo_done_time_range";
 const CALENDAR_DATE_FIELD_KEY = "aitodo_calendar_date_field";
@@ -47663,12 +47848,34 @@ function readTaskSortBy() {
   return readEnum$1(
     TASK_SORT_BY_KEY,
     ["custom", "time", "createdAt", "completedAt", "remindAt", "title", "tag", "priority"],
-    "custom"
+    "createdAt"
   );
 }
 function persistTaskSortBy(value) {
   try {
     localStorage.setItem(TASK_SORT_BY_KEY, value);
+  } catch {
+  }
+}
+const VISIBLE_LIST_STORAGE_KEYS = {
+  all: "aitodo_visible_lists_all",
+  calendar: "aitodo_visible_lists_calendar",
+  matrix: "aitodo_visible_lists_matrix"
+};
+function readVisibleListIds(scope) {
+  try {
+    const raw = localStorage.getItem(VISIBLE_LIST_STORAGE_KEYS[scope]);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => typeof item === "string" && item.length > 0);
+  } catch {
+    return [];
+  }
+}
+function persistVisibleListIds(scope, ids) {
+  try {
+    localStorage.setItem(VISIBLE_LIST_STORAGE_KEYS[scope], JSON.stringify(ids));
   } catch {
   }
 }
@@ -47902,6 +48109,8 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
     const taskGroupBy = ref(readTaskGroupBy());
     const taskSortBy = ref(readTaskSortBy());
     const quadrantPrefs = ref(readQuadrantViewPreferences());
+    const visibleListsAll = ref(readVisibleListIds("all"));
+    const visibleListsMatrix = ref(readVisibleListIds("matrix"));
     const quadrantLayoutOptions = computed(() => {
       const fromView = activeNavView.value?.quadrantOptions;
       if (isQuadrantViewLayout.value && fromView) {
@@ -47921,6 +48130,8 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
       persistTaskSortBy(v);
       saveCurrentNavListPrefs();
     });
+    watch(visibleListsAll, (ids) => persistVisibleListIds("all", ids), { deep: true });
+    watch(visibleListsMatrix, (ids) => persistVisibleListIds("matrix", ids), { deep: true });
     const taskListLayout = computed(
       () => buildTaskListLayout(listDisplayTasks.value, taskGroupBy.value, taskSortBy.value)
     );
@@ -48019,6 +48230,9 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
     const isMatrixView = computed(
       () => !navSummaryActive.value && navSmart.value === "matrix" && navCategoryId.value === void 0 && !navViewId.value
     );
+    const isAllTasksView = computed(
+      () => !navSummaryActive.value && navSmart.value === "all" && navCategoryId.value === void 0 && !navViewId.value
+    );
     const isQuadrantViewLayout = computed(
       () => isViewNav.value && activeNavView.value?.layout === "quadrant"
     );
@@ -48105,11 +48319,22 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
     }
     const listDisplayTasks = computed(() => {
       const all = taskStore.tasks;
-      if (isSpecialListView.value) return all;
-      const rule = activeNavView.value?.filterRule ?? null;
-      if (!isFilterRuleActive(rule)) return all;
-      const hasSubtasksById = buildHasSubtasksMap(all);
-      return all.filter((t) => matchTask(t, rule, { hasSubtasksById }));
+      let result = all;
+      if (!isSpecialListView.value) {
+        const rule = activeNavView.value?.filterRule ?? null;
+        if (isFilterRuleActive(rule)) {
+          const hasSubtasksById = buildHasSubtasksMap(all);
+          result = all.filter((t) => matchTask(t, rule, { hasSubtasksById }));
+        }
+      }
+      if (isAllTasksView.value) {
+        result = filterTasksBySelectedLists(
+          result,
+          visibleListsAll.value,
+          new Map(all.map((t) => [t.id, t]))
+        );
+      }
+      return result;
     });
     const kanbanDisplayTasks = computed(() => {
       const base2 = listDisplayTasks.value;
@@ -48127,14 +48352,22 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
       }
       const all = taskStore.tasks;
       const rule = activeNavView.value?.filterRule ?? null;
-      if (!isFilterRuleActive(rule)) {
-        return all;
+      let result = all;
+      if (isFilterRuleActive(rule)) {
+        const hasSubtasksById = buildHasSubtasksMap(all);
+        const matchedIds = new Set(
+          all.filter((t) => !t.parentId && matchTask(t, rule, { hasSubtasksById })).map((t) => t.id)
+        );
+        result = all.filter((t) => matchedIds.has(t.id) || t.parentId != null && matchedIds.has(t.parentId));
       }
-      const hasSubtasksById = buildHasSubtasksMap(all);
-      const matchedIds = new Set(
-        all.filter((t) => !t.parentId && matchTask(t, rule, { hasSubtasksById })).map((t) => t.id)
-      );
-      return all.filter((t) => matchedIds.has(t.id) || t.parentId != null && matchedIds.has(t.parentId));
+      if (isMatrixView.value) {
+        result = filterTasksBySelectedLists(
+          result,
+          visibleListsMatrix.value,
+          new Map(all.map((t) => [t.id, t]))
+        );
+      }
+      return result;
     });
     const headerTaskCounts = ref({ incomplete: 0, total: 0 });
     let headerCountSeq = 0;
@@ -48704,9 +48937,8 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
       if (!visible) closeDetail();
     }
     async function onToggleStatus(task) {
-      const next = task.status === "DONE" ? "TODO" : "DONE";
       try {
-        await taskStore.update(task.id, { status: next });
+        await taskStore.cycleStatus(task.id);
       } catch {
       }
     }
@@ -49012,22 +49244,30 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
                   key: 0,
                   "meta-visibility": taskListMetaVisibility.value,
                   "onUpdate:metaVisibility": _cache[5] || (_cache[5] = ($event) => taskListMetaVisibility.value = $event),
+                  "visible-list-ids": visibleListsMatrix.value,
+                  "onUpdate:visibleListIds": _cache[6] || (_cache[6] = ($event) => visibleListsMatrix.value = $event),
+                  "show-list-filter": isMatrixView.value,
+                  categories: unref(categoryStore).categories,
                   onChange: onQuadrantPrefsChange
-                }, null, 8, ["meta-visibility"])) : showListViewSettingsMenu.value ? (openBlock(), createBlock(TaskListViewMenu, {
+                }, null, 8, ["meta-visibility", "visible-list-ids", "show-list-filter", "categories"])) : showListViewSettingsMenu.value ? (openBlock(), createBlock(TaskListViewMenu, {
                   key: 1,
                   "hide-done": listHideDone.value,
-                  "onUpdate:hideDone": _cache[6] || (_cache[6] = ($event) => listHideDone.value = $event),
+                  "onUpdate:hideDone": _cache[7] || (_cache[7] = ($event) => listHideDone.value = $event),
                   "detail-style": taskDetailStyle.value,
-                  "onUpdate:detailStyle": _cache[7] || (_cache[7] = ($event) => taskDetailStyle.value = $event),
+                  "onUpdate:detailStyle": _cache[8] || (_cache[8] = ($event) => taskDetailStyle.value = $event),
                   "meta-visibility": taskListMetaVisibility.value,
-                  "onUpdate:metaVisibility": _cache[8] || (_cache[8] = ($event) => taskListMetaVisibility.value = $event),
+                  "onUpdate:metaVisibility": _cache[9] || (_cache[9] = ($event) => taskListMetaVisibility.value = $event),
                   "group-by": taskGroupBy.value,
-                  "onUpdate:groupBy": _cache[9] || (_cache[9] = ($event) => taskGroupBy.value = $event),
+                  "onUpdate:groupBy": _cache[10] || (_cache[10] = ($event) => taskGroupBy.value = $event),
                   "sort-by": taskSortBy.value,
-                  "onUpdate:sortBy": _cache[10] || (_cache[10] = ($event) => taskSortBy.value = $event),
+                  "onUpdate:sortBy": _cache[11] || (_cache[11] = ($event) => taskSortBy.value = $event),
                   "view-mode": gearViewMode.value,
-                  "onUpdate:viewMode": _cache[11] || (_cache[11] = ($event) => gearViewMode.value = $event)
-                }, null, 8, ["hide-done", "detail-style", "meta-visibility", "group-by", "sort-by", "view-mode"])) : createCommentVNode("", true),
+                  "onUpdate:viewMode": _cache[12] || (_cache[12] = ($event) => gearViewMode.value = $event),
+                  "visible-list-ids": visibleListsAll.value,
+                  "onUpdate:visibleListIds": _cache[13] || (_cache[13] = ($event) => visibleListsAll.value = $event),
+                  "show-list-filter": isAllTasksView.value,
+                  categories: unref(categoryStore).categories
+                }, null, 8, ["hide-done", "detail-style", "meta-visibility", "group-by", "sort-by", "view-mode", "visible-list-ids", "show-list-filter", "categories"])) : createCommentVNode("", true),
                 isTrashView.value ? (openBlock(), createBlock(_component_el_button, {
                   key: 2,
                   text: "",
@@ -49058,14 +49298,14 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
                 ref_key: "quickAddInputRef",
                 ref: quickAddInputRef,
                 modelValue: quickAddText.value,
-                "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => quickAddText.value = $event),
+                "onUpdate:modelValue": _cache[14] || (_cache[14] = ($event) => quickAddText.value = $event),
                 placeholder: quickAddPlaceholder.value,
                 categories: parseCategoriesForMatch.value,
                 onEnter: onQuickAdd
               }, null, 8, ["modelValue", "placeholder", "categories"]),
               createVNode(TaskPriorityFlagMenu, {
                 modelValue: quickAddPriority.value,
-                "onUpdate:modelValue": _cache[13] || (_cache[13] = ($event) => quickAddPriority.value = $event),
+                "onUpdate:modelValue": _cache[15] || (_cache[15] = ($event) => quickAddPriority.value = $event),
                 class: "home__quick-add-priority"
               }, null, 8, ["modelValue"])
             ])) : createCommentVNode("", true),
@@ -49113,7 +49353,7 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
             ])) : isSummaryResultsView.value ? (openBlock(), createBlock(SummaryResultsView, { key: 6 })) : listViewMode.value === "kanban" ? (openBlock(), createBlock(TaskKanbanView, {
               key: 7,
               "selected-column-id": kanbanSelectedColumnId.value,
-              "onUpdate:selectedColumnId": _cache[14] || (_cache[14] = ($event) => kanbanSelectedColumnId.value = $event),
+              "onUpdate:selectedColumnId": _cache[16] || (_cache[16] = ($event) => kanbanSelectedColumnId.value = $event),
               "board-mode": effectiveKanbanBoardMode.value,
               "sort-by": taskSortBy.value,
               "scope-key": kanbanScopeKeyValue.value,
@@ -49178,7 +49418,7 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
             "emphasize-category": isMatrixView.value,
             onClose: closeDetail,
             onSaved: onTaskSaved,
-            onPanelExpandedChange: _cache[15] || (_cache[15] = ($event) => detailPanelExpanded.value = $event)
+            onPanelExpandedChange: _cache[17] || (_cache[17] = ($event) => detailPanelExpanded.value = $event)
           }, null, 8, ["visible", "task-id", "default-category-id", "default-priority", "emphasize-category"])) : (openBlock(), createBlock(_component_el_dialog, {
             key: 3,
             "model-value": detailOpen.value,
@@ -49206,7 +49446,7 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
           }, 8, ["model-value"])),
           createVNode(TaskViewEditor, {
             visible: viewEditorVisible.value,
-            "onUpdate:visible": _cache[16] || (_cache[16] = ($event) => viewEditorVisible.value = $event),
+            "onUpdate:visible": _cache[18] || (_cache[18] = ($event) => viewEditorVisible.value = $event),
             mode: viewEditorMode.value,
             "view-id": viewEditorId.value,
             "initial-name": viewEditorName.value,
@@ -49228,7 +49468,7 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const HomeView = /* @__PURE__ */ _export_sfc(_sfc_main$o, [["__scopeId", "data-v-80ce4f1d"]]);
+const HomeView = /* @__PURE__ */ _export_sfc(_sfc_main$o, [["__scopeId", "data-v-99456c46"]]);
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 function normalizeCompletedOccurrenceDates(dates) {
   if (!dates?.length) return [];
@@ -49487,29 +49727,29 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
       () => props.showTime === false ? "" : formatTaskTimeHm(props.task, props.dateField ?? "dueAt")
     );
     return (_ctx, _cache) => {
-      const _component_el_checkbox = resolveComponent("el-checkbox");
       return openBlock(), createElementBlock("div", {
-        class: normalizeClass(["cal-task", { "is-done": __props.task.status === "DONE" }]),
+        class: normalizeClass(["cal-task", {
+          "is-done": __props.task.status === "DONE",
+          "is-progress": __props.task.status === "IN_PROGRESS"
+        }]),
         style: normalizeStyle({
           background: colors.value.bg,
           borderColor: colors.value.border
         }),
-        onClick: _cache[2] || (_cache[2] = ($event) => emit("select", __props.task.id))
+        onClick: _cache[1] || (_cache[1] = ($event) => emit("select", __props.task.id))
       }, [
-        createVNode(_component_el_checkbox, {
-          "model-value": __props.task.status === "DONE",
+        createVNode(_sfc_main$O, {
           class: "cal-task__check",
-          onClick: _cache[0] || (_cache[0] = withModifiers(() => {
-          }, ["stop"])),
-          onChange: _cache[1] || (_cache[1] = () => emit("toggle-status", __props.task))
-        }, null, 8, ["model-value"]),
+          status: __props.task.status,
+          onToggle: _cache[0] || (_cache[0] = ($event) => emit("toggle-status", __props.task))
+        }, null, 8, ["status"]),
         createBaseVNode("span", _hoisted_1$n, toDisplayString(__props.task.title), 1),
         timeLabel.value ? (openBlock(), createElementBlock("span", _hoisted_2$l, toDisplayString(timeLabel.value), 1)) : createCommentVNode("", true)
       ], 6);
     };
   }
 });
-const CalendarTaskChip = /* @__PURE__ */ _export_sfc(_sfc_main$n, [["__scopeId", "data-v-04f4bed5"]]);
+const CalendarTaskChip = /* @__PURE__ */ _export_sfc(_sfc_main$n, [["__scopeId", "data-v-fd057104"]]);
 const _hoisted_1$m = { class: "cal-month" };
 const _hoisted_2$k = { class: "cal-month__weekdays" };
 const _hoisted_3$i = { class: "cal-month__grid" };
@@ -50034,6 +50274,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
     const calendarDateField = ref(readCalendarDateField());
     const calendarRangePreset = ref(readCalendarRangePreset());
     const calendarCustomRange = ref(readCalendarCustomRange());
+    const visibleListsCalendar = ref(readVisibleListIds("calendar"));
     const effectiveViewMode = computed(() => {
       switch (calendarRangePreset.value) {
         case "day":
@@ -50096,18 +50337,25 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
         presetBounds.value
       );
       const rule = viewStore.selectedView?.filterRule;
-      if (!isFilterRuleActive(rule)) return expanded;
-      const hasSubtasksById = /* @__PURE__ */ new Map();
-      for (const t of active) {
-        if (t.parentId) hasSubtasksById.set(t.parentId, true);
-      }
-      return expanded.filter((instance) => {
-        const dateKey = instance.dueAt?.slice(0, 10) ?? void 0;
-        return matchTask(instance, rule, {
-          hasSubtasksById,
-          instanceDateKey: dateKey
+      let result = expanded;
+      if (isFilterRuleActive(rule)) {
+        const hasSubtasksById = /* @__PURE__ */ new Map();
+        for (const t of active) {
+          if (t.parentId) hasSubtasksById.set(t.parentId, true);
+        }
+        result = expanded.filter((instance) => {
+          const dateKey = instance.dueAt?.slice(0, 10) ?? void 0;
+          return matchTask(instance, rule, {
+            hasSubtasksById,
+            instanceDateKey: dateKey
+          });
         });
-      });
+      }
+      return filterTasksBySelectedLists(
+        result,
+        visibleListsCalendar.value,
+        new Map(active.map((t) => [t.id, t]))
+      );
     });
     function onCalendarViewChange(id) {
       viewStore.selectView(id ?? viewStore.selectedViewId);
@@ -50208,7 +50456,6 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
       activeTaskId.value = null;
     }
     async function onToggleStatus(task) {
-      const next = task.status === "DONE" ? "TODO" : "DONE";
       try {
         const rule = task.recurrence;
         const isRecurring = Boolean(rule && rule.type !== "none");
@@ -50216,12 +50463,13 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
         if (isRecurring && dateKey && calendarDateField.value === "dueAt") {
           const master = taskStore.tasks.find((t) => t.id === task.id);
           const current = master?.completedOccurrenceDates ?? task.completedOccurrenceDates ?? [];
+          const markingDone = task.status !== "DONE";
           await taskStore.update(task.id, {
-            completedOccurrenceDates: toggleCompletedOccurrenceDate(current, dateKey, next === "DONE")
+            completedOccurrenceDates: toggleCompletedOccurrenceDate(current, dateKey, markingDone)
           });
           return;
         }
-        await taskStore.update(task.id, { status: next });
+        await taskStore.cycleStatus(task.id);
       } catch {
       }
     }
@@ -50278,6 +50526,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
       } catch {
       }
     }
+    watch(visibleListsCalendar, (ids) => persistVisibleListIds("calendar", ids), { deep: true });
     watch([anchor, effectiveViewMode], () => {
       void loadHolidayMarks();
     });
@@ -50392,7 +50641,33 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
                   }), 128))
                 ]),
                 _: 1
-              }, 8, ["model-value"])
+              }, 8, ["model-value"]),
+              createVNode(_component_el_select, {
+                modelValue: visibleListsCalendar.value,
+                "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => visibleListsCalendar.value = $event),
+                multiple: "",
+                clearable: "",
+                "collapse-tags": "",
+                "collapse-tags-tooltip": "",
+                size: "small",
+                class: "calendar-page__filter calendar-page__filter--lists",
+                placeholder: "全部清单"
+              }, {
+                default: withCtx(() => [
+                  createVNode(_component_el_option, {
+                    label: "未分类",
+                    value: unref(UNCATEGORIZED_LIST_KEY)
+                  }, null, 8, ["value"]),
+                  (openBlock(true), createElementBlock(Fragment$2, null, renderList(unref(categoryStore).categories, (cat) => {
+                    return openBlock(), createBlock(_component_el_option, {
+                      key: cat.id,
+                      label: cat.name,
+                      value: cat.id
+                    }, null, 8, ["label", "value"]);
+                  }), 128))
+                ]),
+                _: 1
+              }, 8, ["modelValue"])
             ]),
             createBaseVNode("div", _hoisted_5$d, [
               createVNode(_component_el_button, {
@@ -50414,9 +50689,9 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
               createBaseVNode("div", _hoisted_6$b, [
                 createVNode(_component_el_button, {
                   size: "small",
-                  onClick: _cache[4] || (_cache[4] = ($event) => shift2(-1))
+                  onClick: _cache[5] || (_cache[5] = ($event) => shift2(-1))
                 }, {
-                  default: withCtx(() => [..._cache[6] || (_cache[6] = [
+                  default: withCtx(() => [..._cache[7] || (_cache[7] = [
                     createTextVNode("<", -1)
                   ])]),
                   _: 1
@@ -50425,16 +50700,16 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
                   size: "small",
                   onClick: goToday
                 }, {
-                  default: withCtx(() => [..._cache[7] || (_cache[7] = [
+                  default: withCtx(() => [..._cache[8] || (_cache[8] = [
                     createTextVNode("今天", -1)
                   ])]),
                   _: 1
                 }),
                 createVNode(_component_el_button, {
                   size: "small",
-                  onClick: _cache[5] || (_cache[5] = ($event) => shift2(1))
+                  onClick: _cache[6] || (_cache[6] = ($event) => shift2(1))
                 }, {
-                  default: withCtx(() => [..._cache[8] || (_cache[8] = [
+                  default: withCtx(() => [..._cache[9] || (_cache[9] = [
                     createTextVNode(">", -1)
                   ])]),
                   _: 1
@@ -50507,7 +50782,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const CalendarView = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-0bd9ba58"]]);
+const CalendarView = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-331d30b7"]]);
 const _hoisted_1$g = { class: "settings-section" };
 const _hoisted_2$e = { class: "settings-section__path" };
 const _hoisted_3$c = { class: "settings-section__row" };
@@ -50601,6 +50876,7 @@ ${path}
   }
 });
 const SettingsDataSection = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-18024fef"]]);
+const DEFAULT_SYNC_SERVER_URL = "https://aitodo.126w.com";
 const SYNC_INTERVAL_OPTIONS_MS = [3e4, 6e4, 12e4, 3e5];
 const DEFAULT_SYNC_PREFERENCES = {
   syncTasks: true,
@@ -50623,6 +50899,22 @@ function syncIntervalLabel(ms) {
       return `${ms} ms`;
   }
 }
+const SYNC_LAST_USERNAME_KEY = "aitodo_sync_last_username";
+function loadLastSyncUsername() {
+  try {
+    return localStorage.getItem(SYNC_LAST_USERNAME_KEY)?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+function saveLastSyncUsername(username) {
+  const trimmed = username.trim();
+  if (!trimmed) return;
+  try {
+    localStorage.setItem(SYNC_LAST_USERNAME_KEY, trimmed);
+  } catch {
+  }
+}
 const _hoisted_1$f = { class: "settings-section" };
 const _hoisted_2$d = { class: "settings-section__hint" };
 const _hoisted_3$b = { class: "settings-section__field settings-section__field--stack" };
@@ -50630,30 +50922,45 @@ const _hoisted_4$b = { class: "settings-section__row" };
 const _hoisted_5$b = { class: "settings-section__field settings-section__field--stack" };
 const _hoisted_6$a = { class: "settings-section__toggles" };
 const _hoisted_7$7 = { class: "settings-section__field" };
-const _hoisted_8$6 = { class: "settings-section__field settings-section__field--stack" };
+const _hoisted_8$6 = { class: "settings-section__auth-toggle" };
 const _hoisted_9$3 = { class: "settings-section__field settings-section__field--stack" };
-const _hoisted_10$3 = { class: "settings-section__actions" };
-const _hoisted_11$3 = { class: "settings-section__field" };
-const _hoisted_12$3 = { class: "settings-section__field" };
-const _hoisted_13$2 = { class: "settings-section__mono" };
+const _hoisted_10$3 = { class: "settings-section__field settings-section__field--stack" };
+const _hoisted_11$3 = { class: "settings-section__field settings-section__field--stack" };
+const _hoisted_12$3 = { class: "settings-section__field settings-section__field--stack" };
+const _hoisted_13$2 = { class: "settings-section__actions" };
 const _hoisted_14$1 = { class: "settings-section__field" };
 const _hoisted_15$1 = { class: "settings-section__field" };
-const _hoisted_16$1 = {
+const _hoisted_16$1 = { class: "settings-section__mono" };
+const _hoisted_17$1 = { class: "settings-section__field" };
+const _hoisted_18$1 = { class: "settings-section__field" };
+const _hoisted_19 = {
   key: 0,
   class: "settings-section__error"
 };
-const _hoisted_17$1 = { class: "settings-section__actions" };
+const _hoisted_20 = { class: "settings-section__actions" };
+const _hoisted_21 = { class: "settings-section__policy-lead" };
 const _sfc_main$f = /* @__PURE__ */ defineComponent({
   __name: "SettingsSyncSection",
   setup(__props) {
     const status = ref(null);
-    const serverUrl = ref("http://127.0.0.1:8088");
+    const serverUrl = ref(DEFAULT_SYNC_SERVER_URL);
+    const authMode = ref("login");
     const username = ref("");
     const password = ref("");
+    const email = ref("");
+    const phonenumber = ref("");
     const loading = ref(false);
     const saving = ref(false);
     const testing = ref(false);
     const prefs = reactive({ ...DEFAULT_SYNC_PREFERENCES });
+    const dataPolicyVisible = ref(false);
+    const dataPolicyUsername = ref("");
+    const dataPolicySummary = reactive({
+      taskCount: 0,
+      categoryCount: 0,
+      noteCount: 0
+    });
+    let dataPolicyResolver = null;
     const intervalOptions = SYNC_INTERVAL_OPTIONS_MS.map((value) => ({
       value,
       label: syncIntervalLabel(value)
@@ -50689,8 +50996,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
           })
         );
         Object.assign(prefs, next);
-      } catch (err) {
-        ElMessage.error(err instanceof Error ? err.message : "保存同步偏好失败");
+      } catch {
         await refreshStatus();
       } finally {
         saving.value = false;
@@ -50705,8 +51011,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
         } else {
           ElMessage.error(result.message);
         }
-      } catch (err) {
-        ElMessage.error(err instanceof Error ? err.message : "测试失败");
+      } catch {
       } finally {
         testing.value = false;
       }
@@ -50717,8 +51022,95 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
         serverUrl.value = unwrapIpc(await window.api.sync.setServerUrl(serverUrl.value));
         ElMessage.success("服务器地址已保存");
         await refreshStatus();
-      } catch (err) {
-        ElMessage.error(err instanceof Error ? err.message : "保存失败");
+      } catch {
+      } finally {
+        saving.value = false;
+      }
+    }
+    function waitForDataPolicy(username2, summary) {
+      dataPolicyUsername.value = username2;
+      dataPolicySummary.taskCount = summary.taskCount;
+      dataPolicySummary.categoryCount = summary.categoryCount;
+      dataPolicySummary.noteCount = summary.noteCount;
+      dataPolicyVisible.value = true;
+      return new Promise((resolve) => {
+        dataPolicyResolver = resolve;
+      });
+    }
+    function resolveDataPolicy(policy) {
+      dataPolicyVisible.value = false;
+      dataPolicyResolver?.(policy);
+      dataPolicyResolver = null;
+    }
+    async function finishAuthFlow(initial) {
+      if (initial.kind === "completed") {
+        return true;
+      }
+      if (initial.kind !== "needs_data_policy") {
+        return false;
+      }
+      saving.value = false;
+      const policy = await waitForDataPolicy(initial.username, initial.summary);
+      saving.value = true;
+      try {
+        const next = unwrapIpc(await window.api.sync.completeLogin({ policy }));
+        if (next.kind === "cancelled") {
+          ElMessage.info("已取消登录，本机数据未改动");
+          return false;
+        }
+        if (next.kind === "completed") {
+          if (policy === "clear") {
+            ElMessage.success("已清空本机数据并开始同步云端");
+          } else {
+            ElMessage.success("已合并本机数据并开始同步");
+          }
+          return true;
+        }
+        return false;
+      } finally {
+        saving.value = false;
+      }
+    }
+    async function registerAccount() {
+      const trimmedUser = username.value.trim();
+      const trimmedEmail = email.value.trim();
+      if (!trimmedUser || !password.value) {
+        ElMessage.warning("请填写用户名和密码");
+        return;
+      }
+      if (!trimmedEmail) {
+        ElMessage.warning("请填写邮箱");
+        return;
+      }
+      saving.value = true;
+      try {
+        await reportUiPrefs();
+        if (serverUrl.value.trim()) {
+          unwrapIpc(await window.api.sync.setServerUrl(serverUrl.value));
+        }
+        const dto = {
+          username: trimmedUser,
+          password: password.value,
+          email: trimmedEmail
+        };
+        const phone = phonenumber.value.trim();
+        if (phone) {
+          dto.phonenumber = phone;
+        }
+        const authResult = unwrapIpc(await window.api.sync.register(dto));
+        const ok = await finishAuthFlow(authResult);
+        if (!ok) {
+          return;
+        }
+        saveLastSyncUsername(trimmedUser);
+        password.value = "";
+        email.value = "";
+        phonenumber.value = "";
+        if (authResult.kind === "completed") {
+          ElMessage.success("注册成功，已开始同步");
+        }
+        await refreshStatus();
+      } catch {
       } finally {
         saving.value = false;
       }
@@ -50730,17 +51122,23 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
         if (serverUrl.value.trim()) {
           unwrapIpc(await window.api.sync.setServerUrl(serverUrl.value));
         }
-        unwrapIpc(
+        const authResult = unwrapIpc(
           await window.api.sync.login({
             username: username.value.trim(),
             password: password.value
           })
         );
+        const ok = await finishAuthFlow(authResult);
+        if (!ok) {
+          return;
+        }
+        saveLastSyncUsername(username.value.trim());
         password.value = "";
-        ElMessage.success("登录成功，已开始同步");
+        if (authResult.kind === "completed") {
+          ElMessage.success("登录成功，已开始同步");
+        }
         await refreshStatus();
-      } catch (err) {
-        ElMessage.error(err instanceof Error ? err.message : "登录失败");
+      } catch {
       } finally {
         saving.value = false;
       }
@@ -50751,8 +51149,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
         unwrapIpc(await window.api.sync.logout());
         ElMessage.success("已退出登录，自动同步已停止");
         await refreshStatus();
-      } catch (err) {
-        ElMessage.error(err instanceof Error ? err.message : "退出失败");
+      } catch {
       } finally {
         saving.value = false;
       }
@@ -50767,13 +51164,13 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
         } else {
           ElMessage.success("同步完成");
         }
-      } catch (err) {
-        ElMessage.error(err instanceof Error ? err.message : "同步失败");
+      } catch {
       } finally {
         saving.value = false;
       }
     }
     onMounted(async () => {
+      username.value = loadLastSyncUsername();
       await refreshStatus();
       await reportUiPrefs();
     });
@@ -50783,16 +51180,19 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
       const _component_el_checkbox = resolveComponent("el-checkbox");
       const _component_el_option = resolveComponent("el-option");
       const _component_el_select = resolveComponent("el-select");
+      const _component_el_radio_button = resolveComponent("el-radio-button");
+      const _component_el_radio_group = resolveComponent("el-radio-group");
+      const _component_el_dialog = resolveComponent("el-dialog");
       return openBlock(), createElementBlock("section", _hoisted_1$f, [
-        _cache[27] || (_cache[27] = createBaseVNode("h2", { class: "settings-section__title" }, "账号与同步", -1)),
+        _cache[46] || (_cache[46] = createBaseVNode("h2", { class: "settings-section__title" }, "账号与同步", -1)),
         createBaseVNode("p", _hoisted_2$d, toDisplayString(status.value?.loggedIn ? "已登录时可在多台桌面客户端间按下方范围同步（需自建 Sync Server）。" : "未登录时数据仅存本机，行为与此前纯本地版本一致。"), 1),
         createBaseVNode("div", _hoisted_3$b, [
-          _cache[10] || (_cache[10] = createBaseVNode("span", { class: "settings-section__label" }, "服务器地址", -1)),
+          _cache[17] || (_cache[17] = createBaseVNode("span", { class: "settings-section__label" }, "服务器地址", -1)),
           createBaseVNode("div", _hoisted_4$b, [
             createVNode(_component_el_input, {
               modelValue: serverUrl.value,
               "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => serverUrl.value = $event),
-              placeholder: "http://127.0.0.1:8088",
+              placeholder: "https://aitodo.126w.com",
               disabled: loading.value || saving.value || status.value?.loggedIn
             }, null, 8, ["modelValue", "disabled"]),
             createVNode(_component_el_button, {
@@ -50800,7 +51200,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
               disabled: loading.value || saving.value,
               onClick: testServer
             }, {
-              default: withCtx(() => [..._cache[8] || (_cache[8] = [
+              default: withCtx(() => [..._cache[15] || (_cache[15] = [
                 createTextVNode(" 测试连接 ", -1)
               ])]),
               _: 1
@@ -50809,7 +51209,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
               disabled: loading.value || saving.value || status.value?.loggedIn,
               onClick: saveServerUrl
             }, {
-              default: withCtx(() => [..._cache[9] || (_cache[9] = [
+              default: withCtx(() => [..._cache[16] || (_cache[16] = [
                 createTextVNode(" 保存 ", -1)
               ])]),
               _: 1
@@ -50817,7 +51217,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
           ])
         ]),
         createBaseVNode("div", _hoisted_5$b, [
-          _cache[15] || (_cache[15] = createBaseVNode("span", { class: "settings-section__label" }, "同步范围", -1)),
+          _cache[22] || (_cache[22] = createBaseVNode("span", { class: "settings-section__label" }, "同步范围", -1)),
           createBaseVNode("div", _hoisted_6$a, [
             createVNode(_component_el_checkbox, {
               modelValue: prefs.syncTasks,
@@ -50825,7 +51225,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
               disabled: loading.value || saving.value,
               onChange: savePrefs
             }, {
-              default: withCtx(() => [..._cache[11] || (_cache[11] = [
+              default: withCtx(() => [..._cache[18] || (_cache[18] = [
                 createTextVNode(" 任务（分类） ", -1)
               ])]),
               _: 1
@@ -50836,7 +51236,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
               disabled: loading.value || saving.value,
               onChange: savePrefs
             }, {
-              default: withCtx(() => [..._cache[12] || (_cache[12] = [
+              default: withCtx(() => [..._cache[19] || (_cache[19] = [
                 createTextVNode(" 配置 ", -1)
               ])]),
               _: 1
@@ -50847,7 +51247,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
               disabled: loading.value || saving.value,
               onChange: savePrefs
             }, {
-              default: withCtx(() => [..._cache[13] || (_cache[13] = [
+              default: withCtx(() => [..._cache[20] || (_cache[20] = [
                 createTextVNode(" 定时汇总结果 ", -1)
               ])]),
               _: 1
@@ -50858,16 +51258,16 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
               disabled: loading.value || saving.value,
               onChange: savePrefs
             }, {
-              default: withCtx(() => [..._cache[14] || (_cache[14] = [
+              default: withCtx(() => [..._cache[21] || (_cache[21] = [
                 createTextVNode(" 便签 ", -1)
               ])]),
               _: 1
             }, 8, ["modelValue", "disabled"])
           ]),
-          _cache[16] || (_cache[16] = createBaseVNode("p", { class: "settings-section__subhint" }, " 配置含快捷键、LLM（含 API Key）、提示词、关闭行为、动态保留、挂件启动项、界面偏好、自定义视图与定时汇总配置。定时汇总结果为站内「定时汇总」消息正文。 ", -1))
+          _cache[23] || (_cache[23] = createBaseVNode("p", { class: "settings-section__subhint" }, " 配置含快捷键、LLM（含 API Key）、提示词、关闭行为、动态保留、挂件启动项、界面偏好、自定义视图与定时汇总配置。定时汇总结果为站内「定时汇总」消息正文。 ", -1))
         ]),
         createBaseVNode("div", _hoisted_7$7, [
-          _cache[17] || (_cache[17] = createBaseVNode("span", { class: "settings-section__label" }, "同步频率", -1)),
+          _cache[24] || (_cache[24] = createBaseVNode("span", { class: "settings-section__label" }, "同步频率", -1)),
           createVNode(_component_el_select, {
             modelValue: prefs.syncIntervalMs,
             "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => prefs.syncIntervalMs = $event),
@@ -50889,64 +51289,122 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
         ]),
         !status.value?.loggedIn ? (openBlock(), createElementBlock(Fragment$2, { key: 0 }, [
           createBaseVNode("div", _hoisted_8$6, [
-            _cache[18] || (_cache[18] = createBaseVNode("span", { class: "settings-section__label" }, "用户名", -1)),
+            createVNode(_component_el_radio_group, {
+              modelValue: authMode.value,
+              "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => authMode.value = $event),
+              disabled: loading.value || saving.value
+            }, {
+              default: withCtx(() => [
+                createVNode(_component_el_radio_button, { value: "login" }, {
+                  default: withCtx(() => [..._cache[25] || (_cache[25] = [
+                    createTextVNode("登录", -1)
+                  ])]),
+                  _: 1
+                }),
+                createVNode(_component_el_radio_button, { value: "register" }, {
+                  default: withCtx(() => [..._cache[26] || (_cache[26] = [
+                    createTextVNode("注册", -1)
+                  ])]),
+                  _: 1
+                })
+              ]),
+              _: 1
+            }, 8, ["modelValue", "disabled"])
+          ]),
+          createBaseVNode("div", _hoisted_9$3, [
+            _cache[27] || (_cache[27] = createBaseVNode("span", { class: "settings-section__label" }, "用户名", -1)),
             createVNode(_component_el_input, {
               modelValue: username.value,
-              "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => username.value = $event),
+              "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => username.value = $event),
               disabled: loading.value || saving.value,
               autocomplete: "username"
             }, null, 8, ["modelValue", "disabled"])
           ]),
-          createBaseVNode("div", _hoisted_9$3, [
-            _cache[19] || (_cache[19] = createBaseVNode("span", { class: "settings-section__label" }, "密码", -1)),
+          createBaseVNode("div", _hoisted_10$3, [
+            _cache[28] || (_cache[28] = createBaseVNode("span", { class: "settings-section__label" }, "密码", -1)),
             createVNode(_component_el_input, {
               modelValue: password.value,
-              "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => password.value = $event),
+              "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => password.value = $event),
               type: "password",
               "show-password": "",
               disabled: loading.value || saving.value,
-              autocomplete: "current-password"
-            }, null, 8, ["modelValue", "disabled"])
+              autocomplete: authMode.value === "register" ? "new-password" : "current-password"
+            }, null, 8, ["modelValue", "disabled", "autocomplete"])
           ]),
-          createBaseVNode("div", _hoisted_10$3, [
-            createVNode(_component_el_button, {
+          authMode.value === "register" ? (openBlock(), createElementBlock(Fragment$2, { key: 0 }, [
+            createBaseVNode("div", _hoisted_11$3, [
+              _cache[29] || (_cache[29] = createBaseVNode("span", { class: "settings-section__label" }, "邮箱", -1)),
+              createVNode(_component_el_input, {
+                modelValue: email.value,
+                "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => email.value = $event),
+                type: "email",
+                placeholder: "用于找回账号与通知",
+                disabled: loading.value || saving.value,
+                autocomplete: "email"
+              }, null, 8, ["modelValue", "disabled"])
+            ]),
+            createBaseVNode("div", _hoisted_12$3, [
+              _cache[30] || (_cache[30] = createBaseVNode("span", { class: "settings-section__label" }, "手机号（选填）", -1)),
+              createVNode(_component_el_input, {
+                modelValue: phonenumber.value,
+                "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => phonenumber.value = $event),
+                placeholder: "可选",
+                disabled: loading.value || saving.value,
+                autocomplete: "tel"
+              }, null, 8, ["modelValue", "disabled"])
+            ])
+          ], 64)) : createCommentVNode("", true),
+          createBaseVNode("div", _hoisted_13$2, [
+            authMode.value === "login" ? (openBlock(), createBlock(_component_el_button, {
+              key: 0,
               type: "primary",
               loading: saving.value,
               disabled: loading.value,
               onClick: login
             }, {
-              default: withCtx(() => [..._cache[20] || (_cache[20] = [
+              default: withCtx(() => [..._cache[31] || (_cache[31] = [
                 createTextVNode(" 登录并同步 ", -1)
               ])]),
               _: 1
-            }, 8, ["loading", "disabled"])
+            }, 8, ["loading", "disabled"])) : (openBlock(), createBlock(_component_el_button, {
+              key: 1,
+              type: "primary",
+              loading: saving.value,
+              disabled: loading.value,
+              onClick: registerAccount
+            }, {
+              default: withCtx(() => [..._cache[32] || (_cache[32] = [
+                createTextVNode(" 注册并同步 ", -1)
+              ])]),
+              _: 1
+            }, 8, ["loading", "disabled"]))
           ])
         ], 64)) : (openBlock(), createElementBlock(Fragment$2, { key: 1 }, [
-          createBaseVNode("div", _hoisted_11$3, [
-            _cache[21] || (_cache[21] = createBaseVNode("span", { class: "settings-section__label" }, "当前账号", -1)),
+          createBaseVNode("div", _hoisted_14$1, [
+            _cache[33] || (_cache[33] = createBaseVNode("span", { class: "settings-section__label" }, "当前账号", -1)),
             createBaseVNode("span", null, toDisplayString(status.value.username), 1)
           ]),
-          createBaseVNode("div", _hoisted_12$3, [
-            _cache[22] || (_cache[22] = createBaseVNode("span", { class: "settings-section__label" }, "设备 ID", -1)),
-            createBaseVNode("span", _hoisted_13$2, toDisplayString(status.value.deviceId), 1)
+          createBaseVNode("div", _hoisted_15$1, [
+            _cache[34] || (_cache[34] = createBaseVNode("span", { class: "settings-section__label" }, "设备 ID", -1)),
+            createBaseVNode("span", _hoisted_16$1, toDisplayString(status.value.deviceId), 1)
           ]),
-          createBaseVNode("div", _hoisted_14$1, [
-            _cache[23] || (_cache[23] = createBaseVNode("span", { class: "settings-section__label" }, "待推送变更", -1)),
+          createBaseVNode("div", _hoisted_17$1, [
+            _cache[35] || (_cache[35] = createBaseVNode("span", { class: "settings-section__label" }, "待推送变更", -1)),
             createBaseVNode("span", null, toDisplayString(status.value.pendingCount), 1)
           ]),
-          createBaseVNode("div", _hoisted_15$1, [
-            _cache[24] || (_cache[24] = createBaseVNode("span", { class: "settings-section__label" }, "最近同步", -1)),
+          createBaseVNode("div", _hoisted_18$1, [
+            _cache[36] || (_cache[36] = createBaseVNode("span", { class: "settings-section__label" }, "最近同步", -1)),
             createBaseVNode("span", null, toDisplayString(status.value.lastSyncAt || "尚未同步"), 1)
           ]),
-          status.value.lastError ? (openBlock(), createElementBlock("div", _hoisted_16$1, toDisplayString(status.value.lastError), 1)) : createCommentVNode("", true),
-          createBaseVNode("div", _hoisted_17$1, [
+          status.value.lastError ? (openBlock(), createElementBlock("div", _hoisted_19, toDisplayString(status.value.lastError), 1)) : createCommentVNode("", true),
+          createBaseVNode("div", _hoisted_20, [
             createVNode(_component_el_button, {
               type: "primary",
               loading: saving.value,
               disabled: loading.value,
               onClick: triggerSync
             }, {
-              default: withCtx(() => [..._cache[25] || (_cache[25] = [
+              default: withCtx(() => [..._cache[37] || (_cache[37] = [
                 createTextVNode(" 立即同步 ", -1)
               ])]),
               _: 1
@@ -50955,18 +51413,84 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
               disabled: loading.value || saving.value,
               onClick: logout
             }, {
-              default: withCtx(() => [..._cache[26] || (_cache[26] = [
+              default: withCtx(() => [..._cache[38] || (_cache[38] = [
                 createTextVNode("退出登录", -1)
               ])]),
               _: 1
             }, 8, ["disabled"])
           ])
-        ], 64))
+        ], 64)),
+        createVNode(_component_el_dialog, {
+          modelValue: dataPolicyVisible.value,
+          "onUpdate:modelValue": _cache[14] || (_cache[14] = ($event) => dataPolicyVisible.value = $event),
+          title: "本机数据与当前账号不一致",
+          width: "480px",
+          "close-on-click-modal": false,
+          "show-close": false
+        }, {
+          footer: withCtx(() => [
+            createVNode(_component_el_button, {
+              disabled: saving.value,
+              onClick: _cache[11] || (_cache[11] = ($event) => resolveDataPolicy("cancel"))
+            }, {
+              default: withCtx(() => [..._cache[42] || (_cache[42] = [
+                createTextVNode("取消登录", -1)
+              ])]),
+              _: 1
+            }, 8, ["disabled"]),
+            createVNode(_component_el_button, {
+              type: "warning",
+              disabled: saving.value,
+              onClick: _cache[12] || (_cache[12] = ($event) => resolveDataPolicy("clear"))
+            }, {
+              default: withCtx(() => [..._cache[43] || (_cache[43] = [
+                createTextVNode(" 清空本机数据 ", -1)
+              ])]),
+              _: 1
+            }, 8, ["disabled"]),
+            createVNode(_component_el_button, {
+              type: "primary",
+              loading: saving.value,
+              onClick: _cache[13] || (_cache[13] = ($event) => resolveDataPolicy("merge"))
+            }, {
+              default: withCtx(() => [..._cache[44] || (_cache[44] = [
+                createTextVNode(" 合并到当前账号 ", -1)
+              ])]),
+              _: 1
+            }, 8, ["loading"])
+          ]),
+          default: withCtx(() => [
+            createBaseVNode("p", _hoisted_21, [
+              createTextVNode(" 账号「" + toDisplayString(dataPolicyUsername.value) + "」登录成功。本机仍有 ", 1),
+              createBaseVNode("strong", null, toDisplayString(dataPolicySummary.taskCount), 1),
+              _cache[39] || (_cache[39] = createTextVNode(" 条任务、 ", -1)),
+              createBaseVNode("strong", null, toDisplayString(dataPolicySummary.categoryCount), 1),
+              _cache[40] || (_cache[40] = createTextVNode(" 个分类、 ", -1)),
+              createBaseVNode("strong", null, toDisplayString(dataPolicySummary.noteCount), 1),
+              _cache[41] || (_cache[41] = createTextVNode(" 条便签等数据， 可能来自离线使用或其它账号。请选择如何处理： ", -1))
+            ]),
+            _cache[45] || (_cache[45] = createBaseVNode("ul", { class: "settings-section__policy-list" }, [
+              createBaseVNode("li", null, [
+                createBaseVNode("strong", null, "合并到当前账号"),
+                createTextVNode("：保留本机数据并上传到云端（可能与云端按时间合并）。")
+              ]),
+              createBaseVNode("li", null, [
+                createBaseVNode("strong", null, "清空本机数据"),
+                createTextVNode("：删除本机 Todo 数据，仅同步当前账号云端内容。")
+              ]),
+              createBaseVNode("li", null, [
+                createBaseVNode("strong", null, "取消登录"),
+                createTextVNode("：不保存登录状态，本机数据不变。")
+              ])
+            ], -1))
+          ]),
+          _: 1
+        }, 8, ["modelValue"])
       ]);
     };
   }
 });
-const SettingsSyncSection = /* @__PURE__ */ _export_sfc(_sfc_main$f, [["__scopeId", "data-v-8f86918a"]]);
+const SettingsSyncSection = /* @__PURE__ */ _export_sfc(_sfc_main$f, [["__scopeId", "data-v-09eec2e8"]]);
 const NOTIFY_EVENTS = ["task_reminder", "scheduled_summary"];
 const ACTIVE_NOTIFY_CHANNELS = ["iyuu", "webhook"];
 const DEFAULT_NOTIFICATION_CONFIG = {
@@ -51550,7 +52074,7 @@ const _sfc_main$e = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SettingsNotificationSection = /* @__PURE__ */ _export_sfc(_sfc_main$e, [["__scopeId", "data-v-8cc2d79f"]]);
+const SettingsNotificationSection = /* @__PURE__ */ _export_sfc(_sfc_main$e, [["__scopeId", "data-v-1f932e38"]]);
 const _hoisted_1$d = { class: "shortcut-editor" };
 const _sfc_main$d = /* @__PURE__ */ defineComponent({
   __name: "ShortcutEditor",
@@ -53794,7 +54318,7 @@ const _sfc_main$3 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SettingsWidgetSection = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-2d967216"]]);
+const SettingsWidgetSection = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-5afd972c"]]);
 const _hoisted_1$2 = { class: "settings-section" };
 const _hoisted_2$2 = { class: "settings-section__version" };
 const _hoisted_3$2 = { class: "settings-section__update" };
@@ -53960,7 +54484,7 @@ const _sfc_main$1 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SettingsThemeSection = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-f9fd240e"]]);
+const SettingsThemeSection = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-987089b3"]]);
 const _hoisted_1 = { class: "settings-layout" };
 const _hoisted_2 = { class: "settings-layout__nav" };
 const _hoisted_3 = { class: "settings-layout__nav-head" };
@@ -54045,7 +54569,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SettingsView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-a1a61e2d"]]);
+const SettingsView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-91e6617b"]]);
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
@@ -54055,7 +54579,7 @@ const router = createRouter({
   ]
 });
 initDesktopTheme();
-const app = createApp(_sfc_main$V);
+const app = createApp(_sfc_main$W);
 app.use(createPinia());
 app.use(router);
 app.use(element_plus_default);

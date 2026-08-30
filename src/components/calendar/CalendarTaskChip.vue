@@ -1,18 +1,20 @@
 <template>
   <div
     class="cal-task"
-    :class="{ 'is-done': task.status === 'DONE' }"
+    :class="{
+      'is-done': task.status === 'DONE',
+      'is-progress': task.status === 'IN_PROGRESS'
+    }"
     :style="{
       background: colors.bg,
       borderColor: colors.border
     }"
     @click="emit('select', task.id)"
   >
-    <el-checkbox
-      :model-value="task.status === 'DONE'"
+    <TaskStatusCheckbox
       class="cal-task__check"
-      @click.stop
-      @change="() => emit('toggle-status', task)"
+      :status="task.status"
+      @toggle="emit('toggle-status', task)"
     />
     <span class="cal-task__title">{{ task.title }}</span>
     <span v-if="timeLabel" class="cal-task__time">{{ timeLabel }}</span>
@@ -24,6 +26,7 @@ import { computed } from 'vue'
 import type { Task } from '@shared/types'
 import { calendarTaskColors, formatTaskTimeHm } from '@shared/calendar-tasks'
 import type { TaskDateField } from '@shared/date-filter'
+import TaskStatusCheckbox from '@/components/TaskStatusCheckbox.vue'
 
 const props = defineProps<{
   task: Task
