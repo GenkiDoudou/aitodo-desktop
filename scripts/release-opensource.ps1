@@ -152,6 +152,15 @@ try {
     }
 
     Write-Host ">>> push tag $tag -> $r"
+    $remoteTagLine = git ls-remote $r "refs/tags/${tag}" 2>$null
+    if ($remoteTagLine) {
+      $remoteSha = ($remoteTagLine -split '\s+')[0]
+      if ($remoteSha -eq $tip) {
+        Write-Host "[skip] $r already has $tag at same commit ($tip)"
+        continue
+      }
+      throw "remote tag $tag on $r points to $remoteSha != $tip. Delete remote tag or use a new version."
+    }
     git push $r "refs/tags/${tag}:refs/tags/${tag}"
     if ($LASTEXITCODE -ne 0) {
       throw "push tag to $r failed"

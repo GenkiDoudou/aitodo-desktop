@@ -68,7 +68,19 @@ jobs:
           fi
           git remote remove gitee 2>/dev/null || true
           git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/GenkiDoudou/aitodo-desktop.git"
-          git push gitee "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          TAG="${GITHUB_REF_NAME}"
+          LOCAL_SHA="$(git rev-parse "${TAG}")"
+          REMOTE_SHA="$(git ls-remote gitee "refs/tags/${TAG}" | awk '{print $1}' || true)"
+          if [ -n "${REMOTE_SHA}" ]; then
+            if [ "${REMOTE_SHA}" = "${LOCAL_SHA}" ]; then
+              echo "Tag ${TAG} already on Gitee at same commit (${LOCAL_SHA}); skip tag push"
+            else
+              echo "Tag ${TAG} exists on Gitee with different commit: remote=${REMOTE_SHA} local=${LOCAL_SHA}"
+              exit 1
+            fi
+          else
+            git push gitee "refs/tags/${TAG}:refs/tags/${TAG}"
+          fi
           git push gitee HEAD:main || true
 
       - name: Upload Gitee Release assets
