@@ -22,6 +22,31 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Invoke-Git {
+  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GitArgs)
+  $oldEap = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $out = & git @GitArgs 2>&1
+    return @{
+      Output   = $out
+      ExitCode = $LASTEXITCODE
+    }
+  } finally {
+    $ErrorActionPreference = $oldEap
+  }
+}
+
+function Write-GitOutput {
+  param($Output)
+  if ($null -eq $Output) { return }
+  foreach ($line in $Output) {
+    if ($null -ne $line) {
+      Write-Host $line
+    }
+  }
+}
+
 function Find-RepoRoot {
   $dir = (Get-Location).Path
   if (Test-Path (Join-Path $dir 'desktop\package.json')) {
@@ -111,14 +136,16 @@ function Invoke-ForceSubtreePush {
   Push-Location $RepoRoot
   try {
     Write-Host ">>> git subtree split --prefix=desktop -b $splitBranch"
-    git subtree split --prefix=desktop -b $splitBranch
-    if ($LASTEXITCODE -ne 0) {
+    $split = Invoke-Git subtree split --prefix=desktop -b $splitBranch
+    Write-GitOutput $split.Output
+    if ($split.ExitCode -ne 0) {
       throw 'subtree split failed'
     }
     Write-Host ">>> git push $RemoteName ${splitBranch}:main --force"
-    git push $RemoteName "${splitBranch}:main" --force
-    if ($LASTEXITCODE -ne 0) {
-      throw "force push to $RemoteName failed (exit $LASTEXITCODE)"
+    $force = Invoke-Git push $RemoteName "${splitBranch}:main" --force
+    Write-GitOutput $force.Output
+    if ($force.ExitCode -ne 0) {
+      throw "force push to $RemoteName failed (exit $($force.ExitCode))"
     }
     Write-Host "[ok] force-pushed desktop/ to $RemoteName main"
   } finally {
@@ -136,16 +163,14 @@ function Push-Subtree {
   Push-Location $RepoRoot
   try {
     Write-Host ">>> git subtree push --prefix=desktop $RemoteName main"
-    $pushOut = git subtree push --prefix=desktop $RemoteName main 2>&1
-    $pushText = ($pushOut | Out-String)
-    if ($pushText.Trim()) {
-      Write-Host $pushText.TrimEnd()
-    }
-    if ($LASTEXITCODE -eq 0) {
+    $push = Invoke-Git subtree push --prefix=desktop $RemoteName main
+    Write-GitOutput $push.Output
+    if ($push.ExitCode -eq 0) {
       Write-Host "[ok] pushed desktop/ to $RemoteName main"
       return
     }
 
+    $pushText = ($push.Output | Out-String)
     $diverged = $pushText -match 'non-fast-forward|\[rejected\]|rejected'
     if ($Force -or $diverged) {
       Write-Host "[warn] remote $RemoteName/main diverged or behind; force push (private monorepo desktop/ wins)"
@@ -153,7 +178,7 @@ function Push-Subtree {
       return
     }
 
-    throw "subtree push to $RemoteName failed (exit $LASTEXITCODE)"
+    throw "subtree push to $RemoteName failed (exit $($push.ExitCode))"
   } finally {
     Pop-Location
   }
