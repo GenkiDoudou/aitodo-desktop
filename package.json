@@ -1,6 +1,6 @@
 {
   "name": "ai-todo-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "小柒todo 纯本地桌面客户端（Electron + Vue3 + SQLite）",
   "main": "./out/main/index.js",
   "author": "小柒todo",
@@ -13,6 +13,8 @@
     "build:win": "npm run build && electron-builder --win && node scripts/generate-portable-yml.cjs",
     "build:mac": "npm run build && electron-builder --mac",
     "generate:portable-yml": "node scripts/generate-portable-yml.cjs",
+    "sync:opensource": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/sync-opensource.ps1",
+    "release:opensource": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/release-opensource.ps1",
     "test": "electron ./node_modules/vitest/vitest.mjs run",
     "postinstall": "npm run rebuild:native"
   },

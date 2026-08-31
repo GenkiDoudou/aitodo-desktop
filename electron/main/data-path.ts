@@ -10,6 +10,8 @@ import type { AiPromptConfig } from '@shared/ai-prompt-config'
 import { mergeAiPromptConfig } from '@shared/ai-prompt-config'
 import type { CloseBehavior } from '@shared/close-behavior'
 import { mergeCloseBehavior } from '@shared/close-behavior'
+import type { LaunchAtLoginPrefs } from '@shared/launch-at-login'
+import { mergeLaunchAtLoginPrefs } from '@shared/launch-at-login'
 import type { TaskActivityRetentionPolicy } from '@shared/types'
 import { mergeTaskActivityRetention } from '@shared/task-activity-retention'
 
@@ -26,6 +28,8 @@ interface DesktopConfig {
   aiPrompt?: Partial<AiPromptConfig>
   /** 关闭主窗口时的行为 */
   closeBehavior?: CloseBehavior
+  /** 开机自启偏好（系统登录项另由 setLoginItemSettings 生效） */
+  launchAtLogin?: Partial<LaunchAtLoginPrefs>
   /** 任务动态全局保留策略 */
   taskActivityRetention?: Partial<TaskActivityRetentionPolicy>
 }
@@ -289,6 +293,32 @@ export function saveCloseBehavior(behavior: CloseBehavior): void {
     }
   }
   const next: DesktopConfig = { ...existing, closeBehavior: mergeCloseBehavior(behavior) }
+  fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
+}
+
+/** 读取开机自启偏好 */
+export function readLaunchAtLoginPrefs(): LaunchAtLoginPrefs {
+  const cfg = readActiveConfig()
+  return mergeLaunchAtLoginPrefs(cfg.launchAtLogin)
+}
+
+/** 持久化开机自启偏好（不写系统登录项，由调用方 apply） */
+export function saveLaunchAtLoginPrefs(prefs: LaunchAtLoginPrefs): void {
+  const defaultDir = getDefaultDataDir()
+  fs.mkdirSync(defaultDir, { recursive: true })
+  const configPath = path.join(defaultDir, CONFIG_FILE)
+  let existing: DesktopConfig = {}
+  if (fs.existsSync(configPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as DesktopConfig
+    } catch {
+      existing = {}
+    }
+  }
+  const next: DesktopConfig = {
+    ...existing,
+    launchAtLogin: mergeLaunchAtLoginPrefs(prefs)
+  }
   fs.writeFileSync(configPath, JSON.stringify(next, null, 2), 'utf-8')
 }
 

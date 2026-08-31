@@ -30,6 +30,7 @@ import type { ShortcutActionId, ShortcutBindings } from './shortcuts'
 import type { LlmConfig } from './llm-config'
 import type { AiPromptConfig } from './ai-prompt-config'
 import type { CloseBehavior, ConfirmClosePayload } from './close-behavior'
+import type { LaunchAtLoginPrefs } from './launch-at-login'
 import type { UserConfigImportResult } from '@shared/user-config-export'
 import type { HolidayCalendarDay, HolidayCacheStatus } from '@shared/timor-holiday'
 import type { FilterNode } from '@shared/task-filter-ast'
@@ -192,6 +193,11 @@ export interface DesktopApi {
     ): Promise<IpcResult<ParseTaskInputResult>>
     getCloseBehavior(): Promise<IpcResult<CloseBehavior>>
     setCloseBehavior(behavior: CloseBehavior): Promise<IpcResult<CloseBehavior>>
+    /** 开机自启偏好；packaged/syncedFromSystem 供设置页提示 */
+    getLaunchAtLogin(): Promise<
+      IpcResult<LaunchAtLoginPrefs & { packaged: boolean; syncedFromSystem: boolean }>
+    >
+    setLaunchAtLogin(prefs: LaunchAtLoginPrefs): Promise<IpcResult<LaunchAtLoginPrefs>>
     confirmClose(payload: ConfirmClosePayload): Promise<IpcResult<void>>
     showWindow(): Promise<IpcResult<void>>
     openMain(route?: string): Promise<IpcResult<void>>

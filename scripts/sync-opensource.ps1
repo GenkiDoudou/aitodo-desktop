@@ -1,0 +1,119 @@
+# 将 monorepo 中已提交的 desktop/ 用 subtree 推送到两个开源仓。
+# 目标:
+#   https://github.com/GenkiDoudou/aitodo-desktop.git
+#   https://gitee.com/GenkiDoudou/aitodo-desktop.git
+# 可从 desktop/ 或仓库根执行。仅推送已 commit 的 desktop/。
+#
+# 示例:
+#   .\scripts\sync-opensource.ps1 -SetupRemotesOnly
+#   .\scripts\sync-opensource.ps1
+#   .\scripts\sync-opensource.ps1 -Remote github
+[CmdletBinding()]
+param(
+  [switch]$SetupRemotesOnly,
+  [ValidateSet('both', 'github', 'gitee')]
+  [string]$Remote = 'both'
+)
+
+$ErrorActionPreference = 'Stop'
+
+function Find-RepoRoot {
+  $dir = (Get-Location).Path
+  if (Test-Path (Join-Path $dir 'desktop\package.json')) {
+    return $dir
+  }
+  $parent = Split-Path $dir -Parent
+  if ((Split-Path $dir -Leaf) -eq 'desktop' -and (Test-Path (Join-Path $parent 'desktop\package.json'))) {
+    return $parent
+  }
+  throw "未找到 monorepo 根（需存在 desktop/package.json）。当前目录: $dir"
+}
+
+function Ensure-DesktopRemotes {
+  param([string]$RepoRoot)
+  Push-Location $RepoRoot
+  try {
+    # 去掉误加的 monorepo 发版 remote（若存在）
+    $obsolete = git remote | Where-Object { $_ -eq 'gitee-ai-todo' }
+    if ($obsolete) {
+      git remote remove gitee-ai-todo
+      Write-Host '[ok] removed obsolete remote gitee-ai-todo'
+    }
+
+    $remotes = @(git remote)
+    if ($remotes -notcontains 'desktop-github') {
+      git remote add desktop-github https://github.com/GenkiDoudou/aitodo-desktop.git
+      Write-Host '[ok] added remote desktop-github'
+    } else {
+      git remote set-url desktop-github https://github.com/GenkiDoudou/aitodo-desktop.git
+      Write-Host '[skip] remote desktop-github exists (url refreshed)'
+    }
+    if ($remotes -notcontains 'desktop-gitee') {
+      git remote add desktop-gitee https://gitee.com/GenkiDoudou/aitodo-desktop.git
+      Write-Host '[ok] added remote desktop-gitee'
+    } else {
+      git remote set-url desktop-gitee https://gitee.com/GenkiDoudou/aitodo-desktop.git
+      Write-Host '[skip] remote desktop-gitee exists (url refreshed)'
+    }
+  } finally {
+    Pop-Location
+  }
+}
+
+function Assert-DesktopCommitted {
+  param([string]$RepoRoot)
+  Push-Location $RepoRoot
+  try {
+    $dirty = git status --porcelain -- desktop
+    if ($dirty) {
+      Write-Host $dirty
+      throw 'desktop/ has uncommitted changes. Commit first; subtree only pushes committed files.'
+    }
+  } finally {
+    Pop-Location
+  }
+}
+
+function Push-Subtree {
+  param(
+    [string]$RepoRoot,
+    [string]$RemoteName
+  )
+  Push-Location $RepoRoot
+  try {
+    Write-Host ">>> git subtree push --prefix=desktop $RemoteName main"
+    git subtree push --prefix=desktop $RemoteName main
+    if ($LASTEXITCODE -ne 0) {
+      throw "subtree push to $RemoteName failed (exit $LASTEXITCODE)"
+    }
+    Write-Host "[ok] pushed desktop/ to $RemoteName main"
+  } finally {
+    Pop-Location
+  }
+}
+
+$repoRoot = Find-RepoRoot
+Write-Host "repo root: $repoRoot"
+Write-Host 'targets: GitHub + Gitee GenkiDoudou/aitodo-desktop (desktop/ only)'
+
+Ensure-DesktopRemotes -RepoRoot $repoRoot
+
+if ($SetupRemotesOnly) {
+  Write-Host 'remotes configured only; done.'
+  exit 0
+}
+
+Assert-DesktopCommitted -RepoRoot $repoRoot
+
+$targets = @()
+if ($Remote -eq 'both' -or $Remote -eq 'github') { $targets += 'desktop-github' }
+if ($Remote -eq 'both' -or $Remote -eq 'gitee') { $targets += 'desktop-gitee' }
+
+foreach ($r in $targets) {
+  Push-Subtree -RepoRoot $repoRoot -RemoteName $r
+}
+
+Write-Host ''
+Write-Host 'Sync done. To release (tag + Actions build):'
+Write-Host '  pnpm run release:opensource'
+Write-Host '  or: .\scripts\release-opensource.ps1'

@@ -50,18 +50,23 @@ import {
   readLlmConfig,
   readAiPromptConfig,
   readCloseBehavior,
+  readLaunchAtLoginPrefs,
   relocateDataDir,
   saveLlmConfig,
   saveAiPromptConfig,
   saveCloseBehavior,
+  saveLaunchAtLoginPrefs,
   saveShortcutBindings
 } from '../data-path'
+import { applyLaunchAtLoginToSystem, reconcileLaunchAtLoginPrefs } from '../launch-at-login'
 import { registerGlobalShortcuts, createDefaultShortcutHandlers } from '../shortcuts'
 import type { ShortcutBindings } from '@shared/shortcuts'
 import { findShortcutConflicts, formatShortcutConflictMessage, mergeShortcutBindings } from '@shared/shortcuts'
 import type { LlmConfig } from '@shared/llm-config'
 import type { AiPromptConfig } from '@shared/ai-prompt-config'
 import type { CloseBehavior, ConfirmClosePayload } from '@shared/close-behavior'
+import type { LaunchAtLoginPrefs } from '@shared/launch-at-login'
+import { mergeLaunchAtLoginPrefs } from '@shared/launch-at-login'
 import { AppError } from '@shared/types'
 import { wrapIpc, wrapIpcAsync } from './wrap'
 import { cloneTaskListFilter } from '@shared/task-list-filter'
@@ -437,6 +442,35 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       saveCloseBehavior(behavior)
       notifyAppSettingsChanged()
       return readCloseBehavior()
+    })
+  )
+
+  ipcMain.handle(IPC.APP_GET_LAUNCH_AT_LOGIN, () =>
+    wrapIpc(() => {
+      const local = readLaunchAtLoginPrefs()
+      const { prefs, syncedFromSystem } = reconcileLaunchAtLoginPrefs(local, app)
+      if (syncedFromSystem) {
+        saveLaunchAtLoginPrefs(prefs)
+      }
+      return {
+        ...prefs,
+        packaged: app.isPackaged,
+        syncedFromSystem
+      }
+    })
+  )
+
+  ipcMain.handle(IPC.APP_SET_LAUNCH_AT_LOGIN, (_e, prefs: LaunchAtLoginPrefs) =>
+    wrapIpc(() => {
+      const merged = mergeLaunchAtLoginPrefs(prefs)
+      try {
+        applyLaunchAtLoginToSystem(merged, app)
+      } catch (err) {
+        throw new Error(err instanceof Error ? err.message : '设置开机自启失败')
+      }
+      saveLaunchAtLoginPrefs(merged)
+      notifyAppSettingsChanged()
+      return merged
     })
   )
 

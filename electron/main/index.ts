@@ -25,7 +25,8 @@ import { ensureSyncState, readSyncCredentials } from './db/sync-state'
 import { HolidayService } from './services/holiday-service'
 import { TaskActivityService } from './services/task-activity-service'
 import { bindMinimizeToTray, createTray, destroyTray, markQuitting, setTrayUpdateReady } from './tray'
-import { resolveDataDir } from './data-path'
+import { readLaunchAtLoginPrefs, resolveDataDir } from './data-path'
+import { shouldStartHidden } from '@shared/launch-at-login'
 import { registerGlobalShortcuts, unregisterGlobalShortcuts, createDefaultShortcutHandlers } from './shortcuts'
 import { getWidgetWindowManager } from './widget-window-manager'
 import { getQuickCaptureWindowManager } from './quick-capture-window-manager'
@@ -45,7 +46,8 @@ let summarySchedulerService: SummarySchedulerService | null = null
 
 registerNotificationSupport()
 
-function createWindow(): BrowserWindow {
+function createWindow(options?: { startHidden?: boolean }): BrowserWindow {
+  const startHidden = Boolean(options?.startHidden)
   const win = new BrowserWindow({
     width: 1100,
     height: 720,
@@ -54,6 +56,8 @@ function createWindow(): BrowserWindow {
     title: '小柒todo',
     /** 不显示系统菜单栏（File / Edit / View …） */
     autoHideMenuBar: true,
+    /** 登录项静默托盘启动时不闪主窗 */
+    show: !startHidden,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -129,7 +133,13 @@ app.whenReady().then(() => {
   } catch {
     /* 启动清理失败不阻塞应用 */
   }
-  mainWindow = createWindow()
+  mainWindow = createWindow({
+    startHidden: shouldStartHidden(
+      process.argv,
+      app.getLoginItemSettings(),
+      readLaunchAtLoginPrefs()
+    )
+  })
   registerGlobalShortcuts(mainWindow, createDefaultShortcutHandlers(() => mainWindow))
 
   const db = getDatabase()

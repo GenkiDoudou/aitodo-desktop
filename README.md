@@ -60,6 +60,24 @@ npm run build:mac    # macOS：dmg + zip（需在 macOS 上执行）
 
 产物输出在 `desktop/dist/`。自动更新相关资产与双仓上传步骤见 [`docs/auto-update-release.md`](docs/auto-update-release.md)。
 
+### 推送到公开仓并发版（自更新）
+
+仅同步 **desktop/** 到：
+
+- https://github.com/GenkiDoudou/aitodo-desktop
+- https://gitee.com/GenkiDoudou/aitodo-desktop
+
+```bash
+cd desktop
+# 同步已提交的 desktop/（subtree）
+pnpm run sync:opensource
+
+# 同步 + 打 v* tag，触发 Actions 打包（客户端即可检查更新）
+pnpm run release:opensource
+```
+
+详见 [`docs/opensource-subtree.md`](docs/opensource-subtree.md)。
+
 ### 自动更新（概要）
 
 - **NSIS / macOS**：`electron-updater` + `latest.yml` / `latest-mac.yml`

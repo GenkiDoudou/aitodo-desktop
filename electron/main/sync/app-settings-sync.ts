@@ -3,23 +3,31 @@ import { mergeAiPromptConfig } from '@shared/ai-prompt-config'
 import { mergeLlmConfig } from '@shared/llm-config'
 import { mergeShortcutBindings } from '@shared/shortcuts'
 import { mergeCloseBehavior, type CloseBehavior } from '@shared/close-behavior'
+import {
+  mergeLaunchAtLoginPrefs,
+  type LaunchAtLoginPrefs
+} from '@shared/launch-at-login'
 import { mergeTaskActivityRetention } from '@shared/task-activity-retention'
 import type { TaskActivityRetentionPolicy } from '@shared/types'
 import type { SyncOutbox } from '../db/sync-outbox'
 import {
   readAiPromptConfig,
   readCloseBehavior,
+  readLaunchAtLoginPrefs,
   readLlmConfig,
   readShortcutBindings,
   readTaskActivityRetention,
   saveAiPromptConfig,
   saveCloseBehavior,
+  saveLaunchAtLoginPrefs,
   saveLlmConfig,
   saveShortcutBindings,
   saveTaskActivityRetention
 } from '../data-path'
 import type { WidgetNoteRepository } from '../db/widget-note-repository'
 import { writeUiPreferencesSnapshot } from '../db/ui-preferences-snapshot'
+import { applyLaunchAtLoginToSystem } from '../launch-at-login'
+import { app } from 'electron'
 
 /**
  * 个人配置在同步协议中的单实体 id。
@@ -38,6 +46,8 @@ export interface AppSettingsSyncPayload {
   llm: ReturnType<typeof readLlmConfig>
   aiPrompt: ReturnType<typeof readAiPromptConfig>
   closeBehavior: CloseBehavior
+  /** 开机自启偏好备份；本机仍需 setLoginItemSettings 才真正注册登录项 */
+  launchAtLogin: LaunchAtLoginPrefs
   taskActivityRetention: TaskActivityRetentionPolicy
   widget: { openOnStartup: boolean }
   /** 渲染进程 UI 偏好（可选，定时同步时可能为空） */
@@ -57,6 +67,7 @@ export function buildAppSettingsPayload(
     llm: readLlmConfig(),
     aiPrompt: readAiPromptConfig(),
     closeBehavior: readCloseBehavior(),
+    launchAtLogin: readLaunchAtLoginPrefs(),
     taskActivityRetention: readTaskActivityRetention(),
     widget: { openOnStartup: settings.openOnStartup },
     ...(uiPreferences ? { uiPreferences } : {})
@@ -100,6 +111,15 @@ export function applyAppSettingsPayload(
   }
   if (payload.closeBehavior && typeof payload.closeBehavior === 'object') {
     saveCloseBehavior(mergeCloseBehavior(payload.closeBehavior as never))
+  }
+  if (payload.launchAtLogin && typeof payload.launchAtLogin === 'object') {
+    const merged = mergeLaunchAtLoginPrefs(payload.launchAtLogin as Partial<LaunchAtLoginPrefs>)
+    saveLaunchAtLoginPrefs(merged)
+    try {
+      applyLaunchAtLoginToSystem(merged, app)
+    } catch {
+      /* 同步拉回时写登录项失败不阻塞其它配置 */
+    }
   }
   if (payload.taskActivityRetention && typeof payload.taskActivityRetention === 'object') {
     saveTaskActivityRetention(mergeTaskActivityRetention(payload.taskActivityRetention as never))

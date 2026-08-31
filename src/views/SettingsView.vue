@@ -130,7 +130,7 @@ const menuItems: MenuItem[] = [
   { id: 'prompt', label: '提示词', icon: Document },
   { id: 'importExport', label: '导入导出', icon: FolderOpened },
   { id: 'taskActivity', label: '任务动态', icon: Timer },
-  { id: 'closeBehavior', label: '关闭行为', icon: SwitchButton },
+  { id: 'closeBehavior', label: '窗口与启动', icon: SwitchButton },
   { id: 'workday', label: '工作日', icon: Calendar },
   { id: 'theme', label: '风格切换', icon: Brush },
   { id: 'widget', label: '桌面挂件', icon: Monitor },

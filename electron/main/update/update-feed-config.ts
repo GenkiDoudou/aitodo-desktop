@@ -1,5 +1,5 @@
 /**
- * 更新源仓库配置（开源公开仓）。
+ * 更新源仓库配置（开源公开仓，仅含 desktop/）。
  * 默认：Gitee / GitHub 的 GenkiDoudou/aitodo-desktop
  * 可用环境变量覆盖（一般不必）。
  */
