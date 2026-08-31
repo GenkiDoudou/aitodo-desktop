@@ -1,16 +1,19 @@
-# 将 monorepo 中已提交的 desktop/ 用 subtree 推送到两个开源仓。
+# 将 monorepo 中 desktop/ 用 subtree 推送到两个开源仓。
 # 目标:
 #   https://github.com/GenkiDoudou/aitodo-desktop.git
 #   https://gitee.com/GenkiDoudou/aitodo-desktop.git
-# 可从 desktop/ 或仓库根执行。仅推送已 commit 的 desktop/。
+# 可从 desktop/ 或仓库根执行。
+# 默认：若 desktop/ 有未提交改动，会先自动 git add/commit 再 push（仅 desktop/）。
 #
 # 示例:
 #   .\scripts\sync-opensource.ps1 -SetupRemotesOnly
 #   .\scripts\sync-opensource.ps1
 #   .\scripts\sync-opensource.ps1 -Remote github
+#   .\scripts\sync-opensource.ps1 -NoAutoCommit
 [CmdletBinding()]
 param(
   [switch]$SetupRemotesOnly,
+  [switch]$NoAutoCommit,
   [ValidateSet('both', 'github', 'gitee')]
   [string]$Remote = 'both'
 )
@@ -33,7 +36,6 @@ function Ensure-DesktopRemotes {
   param([string]$RepoRoot)
   Push-Location $RepoRoot
   try {
-    # 去掉误加的 monorepo 发版 remote（若存在）
     $obsolete = git remote | Where-Object { $_ -eq 'gitee-ai-todo' }
     if ($obsolete) {
       git remote remove gitee-ai-todo
@@ -60,15 +62,37 @@ function Ensure-DesktopRemotes {
   }
 }
 
-function Assert-DesktopCommitted {
-  param([string]$RepoRoot)
+# 确保 desktop/ 已提交：默认自动 commit；-NoAutoCommit 时遇脏文件则失败。
+function Ensure-DesktopCommitted {
+  param(
+    [string]$RepoRoot,
+    [switch]$NoAutoCommit
+  )
   Push-Location $RepoRoot
   try {
     $dirty = git status --porcelain -- desktop
-    if ($dirty) {
-      Write-Host $dirty
-      throw 'desktop/ has uncommitted changes. Commit first; subtree only pushes committed files.'
+    if (-not $dirty) {
+      Write-Host '[ok] desktop/ clean'
+      return
     }
+    Write-Host $dirty
+    if ($NoAutoCommit) {
+      throw 'desktop/ has uncommitted changes. Commit first, or omit -NoAutoCommit to auto-commit.'
+    }
+    Write-Host '>>> auto-commit desktop/ before subtree push'
+    git add -- desktop/
+    if ($LASTEXITCODE -ne 0) {
+      throw 'git add desktop/ failed'
+    }
+    $staged = git diff --cached --name-only -- desktop
+    if (-not $staged) {
+      throw 'desktop/ dirty but nothing staged after git add; check .gitignore'
+    }
+    git commit -m "chore(desktop): auto-commit before opensource sync"
+    if ($LASTEXITCODE -ne 0) {
+      throw 'auto-commit desktop/ failed'
+    }
+    Write-Host '[ok] auto-committed desktop/'
   } finally {
     Pop-Location
   }
@@ -103,7 +127,7 @@ if ($SetupRemotesOnly) {
   exit 0
 }
 
-Assert-DesktopCommitted -RepoRoot $repoRoot
+Ensure-DesktopCommitted -RepoRoot $repoRoot -NoAutoCommit:$NoAutoCommit
 
 $targets = @()
 if ($Remote -eq 'both' -or $Remote -eq 'github') { $targets += 'desktop-github' }

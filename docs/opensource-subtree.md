@@ -25,7 +25,7 @@ git remote add desktop-gitee https://gitee.com/GenkiDoudou/aitodo-desktop.git
 
 ## 日常同步（只推已提交的 desktop/）
 
-**重要**：subtree 只包含 **已 commit** 的 `desktop/`；未提交改动不会出现在公开仓。
+**重要**：subtree 只推送已 commit 的 `desktop/`。脚本**默认会自动** `git add desktop/` 并 commit（信息：`chore(desktop): auto-commit before opensource sync`）。若不想自动提交，加 `-NoAutoCommit`。
 
 ```powershell
 cd desktop

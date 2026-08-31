@@ -2,14 +2,17 @@
 # 目标仓:
 #   https://github.com/GenkiDoudou/aitodo-desktop.git
 #   https://gitee.com/GenkiDoudou/aitodo-desktop.git
+# 默认会自动 commit desktop/ 未提交改动（含版本号 bump）。
 #
 # 示例:
 #   .\scripts\release-opensource.ps1
-#   .\scripts\release-opensource.ps1 -Version 1.1.0 -CommitBump
+#   .\scripts\release-opensource.ps1 -Version 1.1.0
+#   .\scripts\release-opensource.ps1 -NoAutoCommit
 [CmdletBinding()]
 param(
   [string]$Version = '',
   [switch]$CommitBump,
+  [switch]$NoAutoCommit,
   [switch]$SkipSync,
   [switch]$SkipTag,
   [ValidateSet('both', 'github', 'gitee')]
@@ -76,20 +79,19 @@ Write-Host "release version: $target"
 if ($target -ne $current) {
   Write-Host ">>> write package.json version -> $target"
   Set-PackageVersion -PackageJsonPath $packageJson -NewVersion $target
-  if ($CommitBump) {
-    Push-Location $repoRoot
-    try {
-      git add -- desktop/package.json
-      git commit -m "chore(desktop): bump version to $target"
-      if ($LASTEXITCODE -ne 0) {
-        throw 'auto commit version bump failed'
-      }
-      Write-Host '[ok] committed desktop/package.json version bump'
-    } finally {
-      Pop-Location
+  if ($NoAutoCommit -and -not $CommitBump) {
+    throw "package.json updated to $target but -NoAutoCommit set. Commit manually or omit -NoAutoCommit."
+  }
+  Push-Location $repoRoot
+  try {
+    git add -- desktop/package.json
+    git commit -m "chore(desktop): bump version to $target"
+    if ($LASTEXITCODE -ne 0) {
+      throw 'auto commit version bump failed'
     }
-  } else {
-    throw "package.json updated to $target but not committed. Commit it, then re-run; or use -Version $target -CommitBump"
+    Write-Host '[ok] committed desktop/package.json version bump'
+  } finally {
+    Pop-Location
   }
 }
 
@@ -97,7 +99,11 @@ $tag = "v$target"
 
 if (-not $SkipSync) {
   Write-Host ">>> subtree sync desktop/ (Remote=$Remote)"
-  & $syncScript -Remote $Remote
+  if ($NoAutoCommit) {
+    & $syncScript -Remote $Remote -NoAutoCommit
+  } else {
+    & $syncScript -Remote $Remote
+  }
   if ($LASTEXITCODE -ne 0) {
     throw 'sync-opensource.ps1 failed'
   }
