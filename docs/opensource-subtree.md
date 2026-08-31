@@ -19,9 +19,11 @@ pnpm run sync:opensource -- -SetupRemotesOnly
 等价手动（在 monorepo 根）：
 
 ```powershell
-git remote add desktop-github https://github.com/GenkiDoudou/aitodo-desktop.git
-git remote add desktop-gitee https://gitee.com/GenkiDoudou/aitodo-desktop.git
+git remote add desktop-github git@github.com:GenkiDoudou/aitodo-desktop.git
+git remote add desktop-gitee git@gitee.com:GenkiDoudou/aitodo-desktop.git
 ```
+
+> 使用 **SSH**（本机已配置密钥）。若仍用 HTTPS，GitHub 不再接受密码，需 Personal Access Token。
 
 ## 日常同步（只推已提交的 desktop/）
 

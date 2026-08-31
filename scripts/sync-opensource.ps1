@@ -43,19 +43,21 @@ function Ensure-DesktopRemotes {
     }
 
     $remotes = @(git remote)
+    $githubUrl = 'git@github.com:GenkiDoudou/aitodo-desktop.git'
+    $giteeUrl = 'git@gitee.com:GenkiDoudou/aitodo-desktop.git'
     if ($remotes -notcontains 'desktop-github') {
-      git remote add desktop-github https://github.com/GenkiDoudou/aitodo-desktop.git
-      Write-Host '[ok] added remote desktop-github'
+      git remote add desktop-github $githubUrl
+      Write-Host '[ok] added remote desktop-github (ssh)'
     } else {
-      git remote set-url desktop-github https://github.com/GenkiDoudou/aitodo-desktop.git
-      Write-Host '[skip] remote desktop-github exists (url refreshed)'
+      git remote set-url desktop-github $githubUrl
+      Write-Host '[ok] desktop-github url -> ssh'
     }
     if ($remotes -notcontains 'desktop-gitee') {
-      git remote add desktop-gitee https://gitee.com/GenkiDoudou/aitodo-desktop.git
-      Write-Host '[ok] added remote desktop-gitee'
+      git remote add desktop-gitee $giteeUrl
+      Write-Host '[ok] added remote desktop-gitee (ssh)'
     } else {
-      git remote set-url desktop-gitee https://gitee.com/GenkiDoudou/aitodo-desktop.git
-      Write-Host '[skip] remote desktop-gitee exists (url refreshed)'
+      git remote set-url desktop-gitee $giteeUrl
+      Write-Host '[ok] desktop-gitee url -> ssh'
     }
   } finally {
     Pop-Location
