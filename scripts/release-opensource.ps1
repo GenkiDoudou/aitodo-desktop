@@ -122,7 +122,7 @@ try {
 
   $tagRemotes = @()
   if ($Remote -eq 'both' -or $Remote -eq 'github') { $tagRemotes += 'desktop-github' }
-  if ($Remote -eq 'both' -or $Remote -eq 'gitee') { $tagRemotes += 'desktop-gitee' }
+  # Gitee tag 由 GitHub Actions 在 gitee/main 上创建（subtree 双仓 commit SHA 必然不同，不可本地双推）
 
   foreach ($r in $tagRemotes) {
     Write-Host ">>> fetch $r"
