@@ -76,12 +76,8 @@ const timeLabel = computed(() =>
 
 .cal-task__check {
   flex-shrink: 0;
-  height: auto;
-
-  :deep(.el-checkbox__inner) {
-    width: 14px;
-    height: 14px;
-  }
+  width: 14px;
+  height: 14px;
 }
 
 .cal-task__title {

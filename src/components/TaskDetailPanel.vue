@@ -125,7 +125,7 @@
               size="small"
               class="task-panel__status-select"
               placeholder="状态"
-              title="列表勾选为完成/未完成二态；进行中请在此设置或用状态看板"
+              title="与列表圆圈一致：待办 / 进行中 / 已完成"
             >
               <el-option label="待办" value="TODO" />
               <el-option label="进行中" value="IN_PROGRESS" />
