@@ -1,4 +1,5 @@
-# 将 desktop/ subtree 同步到开源仓，并打 v* tag，触发 GitHub Actions 打包（供自更新）。
+# 将 desktop/ subtree 同步到开源仓，并在 GitHub 打 v* tag，触发 Actions 打包（供自更新）。
+# Gitee 不在此脚本推 tag：subtree 只同步 main；Gitee Release/tag 由 Actions 内 publish-gitee-release.cjs 创建。
 # 目标仓:
 #   https://github.com/GenkiDoudou/aitodo-desktop.git
 #   https://gitee.com/GenkiDoudou/aitodo-desktop.git
@@ -122,7 +123,7 @@ try {
 
   $tagRemotes = @()
   if ($Remote -eq 'both' -or $Remote -eq 'github') { $tagRemotes += 'desktop-github' }
-  # Gitee tag 由 GitHub Actions 在 gitee/main 上创建（subtree 双仓 commit SHA 必然不同，不可本地双推）
+  # 不在此推 Gitee tag（subtree 双仓 commit SHA 不同；Gitee tag 由 Actions API 创建）
 
   foreach ($r in $tagRemotes) {
     Write-Host ">>> fetch $r"

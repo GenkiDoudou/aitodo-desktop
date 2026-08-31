@@ -2,7 +2,7 @@
 # 工作流位于 desktop/.github，经 subtree 同步后会出现在公开仓根目录 .github/
 #
 # 仓库 Secrets 需配置：
-#   GITEE_TOKEN — Gitee 私人令牌（需 projects 权限，用于创建 Release / 上传附件 / 推送 tag）
+#   GITEE_TOKEN — Gitee 私人令牌（需 projects 权限，用于创建 Release / 上传附件）
 
 name: Release
 
@@ -56,34 +56,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push tag to Gitee
-        env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${GITEE_TOKEN:-}" ]; then
-            echo "GITEE_TOKEN secret is empty; skip Gitee sync"
-            exit 1
-          fi
-          git remote remove gitee 2>/dev/null || true
-          git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/GenkiDoudou/aitodo-desktop.git"
-          TAG="${GITHUB_REF_NAME}"
-          git fetch gitee main --tags
-          REMOTE_TAG="$(git ls-remote gitee "refs/tags/${TAG}^{}" | awk '{print $1}' || true)"
-          if [ -z "${REMOTE_TAG}" ]; then
-            REMOTE_TAG="$(git ls-remote gitee "refs/tags/${TAG}" | awk '{print $1}' || true)"
-          fi
-          if [ -n "${REMOTE_TAG}" ]; then
-            echo "Tag ${TAG} already on Gitee (${REMOTE_TAG}); skip tag push"
-          else
-            GITEE_TIP="$(git rev-parse gitee/main)"
-            echo "Create tag ${TAG} on gitee/main (${GITEE_TIP})"
-            git tag -a "${TAG}" "${GITEE_TIP}" -m "Release ${TAG}"
-            git push gitee "refs/tags/${TAG}:refs/tags/${TAG}"
-          fi
-          git push gitee gitee/main:main || true
-
+      # Gitee tag 不在此用 git push：checkout 已含 GitHub 的 v* tag，再 git tag 会冲突。
+      # 本机 release 脚本已 subtree 同步 main 到 Gitee；tag 由 publish-gitee-release.cjs 调 API 创建。
       - name: Upload Gitee Release assets
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
