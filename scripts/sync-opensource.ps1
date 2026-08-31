@@ -10,10 +10,12 @@
 #   .\scripts\sync-opensource.ps1
 #   .\scripts\sync-opensource.ps1 -Remote github
 #   .\scripts\sync-opensource.ps1 -NoAutoCommit
+#   .\scripts\sync-opensource.ps1 -Force   # 远程已分叉时强制以本地 desktop/ 覆盖
 [CmdletBinding()]
 param(
   [switch]$SetupRemotesOnly,
   [switch]$NoAutoCommit,
+  [switch]$Force,
   [ValidateSet('both', 'github', 'gitee')]
   [string]$Remote = 'both'
 )
@@ -100,19 +102,58 @@ function Ensure-DesktopCommitted {
   }
 }
 
-function Push-Subtree {
+function Invoke-ForceSubtreePush {
   param(
     [string]$RepoRoot,
     [string]$RemoteName
   )
+  $splitBranch = "subtree-split-$($RemoteName -replace '[^a-zA-Z0-9]', '-')-$(Get-Date -Format 'yyyyMMddHHmmss')"
+  Push-Location $RepoRoot
+  try {
+    Write-Host ">>> git subtree split --prefix=desktop -b $splitBranch"
+    git subtree split --prefix=desktop -b $splitBranch
+    if ($LASTEXITCODE -ne 0) {
+      throw 'subtree split failed'
+    }
+    Write-Host ">>> git push $RemoteName ${splitBranch}:main --force"
+    git push $RemoteName "${splitBranch}:main" --force
+    if ($LASTEXITCODE -ne 0) {
+      throw "force push to $RemoteName failed (exit $LASTEXITCODE)"
+    }
+    Write-Host "[ok] force-pushed desktop/ to $RemoteName main"
+  } finally {
+    git branch -D $splitBranch 2>$null | Out-Null
+    Pop-Location
+  }
+}
+
+function Push-Subtree {
+  param(
+    [string]$RepoRoot,
+    [string]$RemoteName,
+    [switch]$Force
+  )
   Push-Location $RepoRoot
   try {
     Write-Host ">>> git subtree push --prefix=desktop $RemoteName main"
-    git subtree push --prefix=desktop $RemoteName main
-    if ($LASTEXITCODE -ne 0) {
-      throw "subtree push to $RemoteName failed (exit $LASTEXITCODE)"
+    $pushOut = git subtree push --prefix=desktop $RemoteName main 2>&1
+    $pushText = ($pushOut | Out-String)
+    if ($pushText.Trim()) {
+      Write-Host $pushText.TrimEnd()
     }
-    Write-Host "[ok] pushed desktop/ to $RemoteName main"
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "[ok] pushed desktop/ to $RemoteName main"
+      return
+    }
+
+    $diverged = $pushText -match 'non-fast-forward|\[rejected\]|rejected'
+    if ($Force -or $diverged) {
+      Write-Host "[warn] remote $RemoteName/main diverged or behind; force push (private monorepo desktop/ wins)"
+      Invoke-ForceSubtreePush -RepoRoot $RepoRoot -RemoteName $RemoteName
+      return
+    }
+
+    throw "subtree push to $RemoteName failed (exit $LASTEXITCODE)"
   } finally {
     Pop-Location
   }
@@ -136,7 +177,7 @@ if ($Remote -eq 'both' -or $Remote -eq 'github') { $targets += 'desktop-github' 
 if ($Remote -eq 'both' -or $Remote -eq 'gitee') { $targets += 'desktop-gitee' }
 
 foreach ($r in $targets) {
-  Push-Subtree -RepoRoot $repoRoot -RemoteName $r
+  Push-Subtree -RepoRoot $repoRoot -RemoteName $r -Force:$Force
 }
 
 Write-Host ''

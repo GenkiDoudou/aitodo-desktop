@@ -13,6 +13,7 @@ param(
   [string]$Version = '',
   [switch]$CommitBump,
   [switch]$NoAutoCommit,
+  [switch]$Force,
   [switch]$SkipSync,
   [switch]$SkipTag,
   [ValidateSet('both', 'github', 'gitee')]
@@ -99,11 +100,10 @@ $tag = "v$target"
 
 if (-not $SkipSync) {
   Write-Host ">>> subtree sync desktop/ (Remote=$Remote)"
-  if ($NoAutoCommit) {
-    & $syncScript -Remote $Remote -NoAutoCommit
-  } else {
-    & $syncScript -Remote $Remote
-  }
+  $syncArgs = @{ Remote = $Remote }
+  if ($NoAutoCommit) { $syncArgs.NoAutoCommit = $true }
+  if ($Force) { $syncArgs.Force = $true }
+  & $syncScript @syncArgs
   if ($LASTEXITCODE -ne 0) {
     throw 'sync-opensource.ps1 failed'
   }

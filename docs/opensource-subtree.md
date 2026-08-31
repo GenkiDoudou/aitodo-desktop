@@ -44,6 +44,8 @@ git subtree push --prefix=desktop desktop-gitee main
 
 公开仓默认分支应为 `main`。
 
+若出现 `non-fast-forward`，说明公开仓 `main` 与本地 subtree 历史不一致（例如在 GitHub/Gitee 上直接改过）。脚本会**自动 force push**，以私有仓 `desktop/` 为准覆盖远程。也可显式加 `-Force`。
+
 ## 发版（自动打包 + 自更新）
 
 公开仓 `.github/workflows/release.yml`：推送 `v*` tag 后自动 `build:win` 并上传 GitHub / Gitee Releases。
