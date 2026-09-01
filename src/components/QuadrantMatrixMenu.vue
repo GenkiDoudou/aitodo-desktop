@@ -30,6 +30,7 @@
           v-model="prefs.groupBy"
           size="small"
           class="quadrant-menu__select"
+          :teleported="false"
           :disabled="!prefs.enableGrouping"
           @change="emitPrefs"
         >
@@ -42,7 +43,13 @@
         </el-select>
 
         <div class="task-view-menu__sub-title">排序</div>
-        <el-select v-model="prefs.sortBy" size="small" class="quadrant-menu__select" @change="emitPrefs">
+        <el-select
+          v-model="prefs.sortBy"
+          size="small"
+          class="quadrant-menu__select"
+          :teleported="false"
+          @change="emitPrefs"
+        >
           <el-option
             v-for="(label, key) in sortByLabels"
             :key="key"
@@ -61,7 +68,9 @@
             collapse-tags-tooltip
             size="small"
             class="quadrant-menu__select"
+            :teleported="false"
             placeholder="全部清单"
+            @click.stop
           >
             <el-option label="未分类" :value="UNCATEGORIZED_LIST_KEY"></el-option>
             <el-option
@@ -255,5 +264,6 @@ emit('change', { ...prefs })
   padding: 8px !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+  overflow: visible !important;
 }
 </style>

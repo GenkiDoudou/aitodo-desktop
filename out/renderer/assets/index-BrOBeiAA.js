@@ -1894,19 +1894,19 @@ function useRouter() {
 function useRoute(_name) {
   return inject(routeLocationKey);
 }
-const _hoisted_1$S = {
+const _hoisted_1$T = {
   class: "close-behavior-dialog__options",
   role: "radiogroup",
   "aria-label": "关闭行为"
 };
 const _hoisted_2$P = ["onClick"];
-const _hoisted_3$L = {
+const _hoisted_3$M = {
   class: "close-behavior-dialog__option-icon",
   "aria-hidden": "true"
 };
-const _hoisted_4$K = { class: "close-behavior-dialog__option-body" };
-const _hoisted_5$J = { class: "close-behavior-dialog__option-title" };
-const _hoisted_6$G = { class: "close-behavior-dialog__option-desc" };
+const _hoisted_4$L = { class: "close-behavior-dialog__option-body" };
+const _hoisted_5$K = { class: "close-behavior-dialog__option-title" };
+const _hoisted_6$H = { class: "close-behavior-dialog__option-desc" };
 const _hoisted_7$B = { class: "close-behavior-dialog__remember" };
 const _hoisted_8$q = { class: "close-behavior-dialog__footer" };
 const _sfc_main$X = /* @__PURE__ */ defineComponent({
@@ -2009,7 +2009,7 @@ const _sfc_main$X = /* @__PURE__ */ defineComponent({
           ])
         ]),
         default: withCtx(() => [
-          createBaseVNode("div", _hoisted_1$S, [
+          createBaseVNode("div", _hoisted_1$T, [
             (openBlock(), createElementBlock(Fragment$2, null, renderList(options, (option) => {
               return createBaseVNode("button", {
                 key: option.value,
@@ -2017,10 +2017,10 @@ const _sfc_main$X = /* @__PURE__ */ defineComponent({
                 class: normalizeClass(["close-behavior-dialog__option", { "is-active": selectedBehavior.value === option.value }]),
                 onClick: ($event) => selectedBehavior.value = option.value
               }, [
-                createBaseVNode("span", _hoisted_3$L, toDisplayString(option.icon), 1),
-                createBaseVNode("span", _hoisted_4$K, [
-                  createBaseVNode("span", _hoisted_5$J, toDisplayString(option.title), 1),
-                  createBaseVNode("span", _hoisted_6$G, toDisplayString(option.desc), 1)
+                createBaseVNode("span", _hoisted_3$M, toDisplayString(option.icon), 1),
+                createBaseVNode("span", _hoisted_4$L, [
+                  createBaseVNode("span", _hoisted_5$K, toDisplayString(option.title), 1),
+                  createBaseVNode("span", _hoisted_6$H, toDisplayString(option.desc), 1)
                 ]),
                 _cache[4] || (_cache[4] = createBaseVNode("span", {
                   class: "close-behavior-dialog__option-check",
@@ -3700,21 +3700,21 @@ function nextMondayMorning() {
   const daysUntilMon = dow === 0 ? 1 : 8 - dow;
   return isoAt(now.add(daysUntilMon, "day").hour(9).minute(0).second(0));
 }
-const _hoisted_1$R = { class: "app-message-panel" };
+const _hoisted_1$S = { class: "app-message-panel" };
 const _hoisted_2$O = { class: "app-message-panel__tabs" };
-const _hoisted_3$K = {
+const _hoisted_3$L = {
   key: 0,
   class: "app-message-panel__tab-badge"
 };
-const _hoisted_4$J = {
+const _hoisted_4$K = {
   key: 0,
   class: "app-message-panel__tab-badge"
 };
-const _hoisted_5$I = {
+const _hoisted_5$J = {
   key: 0,
   class: "app-message-panel__tab-badge"
 };
-const _hoisted_6$F = { class: "app-message-panel__body" };
+const _hoisted_6$G = { class: "app-message-panel__body" };
 const _hoisted_7$A = {
   key: 0,
   class: "app-message-panel__empty"
@@ -3847,7 +3847,7 @@ const _sfc_main$V = /* @__PURE__ */ defineComponent({
     return (_ctx, _cache) => {
       const _component_el_icon = resolveComponent("el-icon");
       const _directive_loading = resolveDirective("loading");
-      return openBlock(), createElementBlock("div", _hoisted_1$R, [
+      return openBlock(), createElementBlock("div", _hoisted_1$S, [
         createBaseVNode("div", _hoisted_2$O, [
           createBaseVNode("button", {
             type: "button",
@@ -3855,7 +3855,7 @@ const _sfc_main$V = /* @__PURE__ */ defineComponent({
             onClick: _cache[0] || (_cache[0] = ($event) => activeTab.value = "notification")
           }, [
             _cache[2] || (_cache[2] = createTextVNode(" 通知 ", -1)),
-            unref(messageStore).unreadNotifications > 0 ? (openBlock(), createElementBlock("span", _hoisted_3$K, toDisplayString(unref(messageStore).unreadNotifications), 1)) : createCommentVNode("", true)
+            unref(messageStore).unreadNotifications > 0 ? (openBlock(), createElementBlock("span", _hoisted_3$L, toDisplayString(unref(messageStore).unreadNotifications), 1)) : createCommentVNode("", true)
           ], 2),
           createBaseVNode("button", {
             type: "button",
@@ -3863,7 +3863,7 @@ const _sfc_main$V = /* @__PURE__ */ defineComponent({
             onClick: _cache[1] || (_cache[1] = ($event) => activeTab.value = "activity")
           }, [
             _cache[3] || (_cache[3] = createTextVNode(" 动态 ", -1)),
-            unref(messageStore).unreadActivities > 0 ? (openBlock(), createElementBlock("span", _hoisted_4$J, toDisplayString(unref(messageStore).unreadActivities), 1)) : createCommentVNode("", true)
+            unref(messageStore).unreadActivities > 0 ? (openBlock(), createElementBlock("span", _hoisted_4$K, toDisplayString(unref(messageStore).unreadActivities), 1)) : createCommentVNode("", true)
           ], 2),
           createBaseVNode("button", {
             type: "button",
@@ -3871,10 +3871,10 @@ const _sfc_main$V = /* @__PURE__ */ defineComponent({
             onClick: switchPending
           }, [
             _cache[4] || (_cache[4] = createTextVNode(" 待发送 ", -1)),
-            pendingItems.value.length > 0 ? (openBlock(), createElementBlock("span", _hoisted_5$I, toDisplayString(pendingItems.value.length), 1)) : createCommentVNode("", true)
+            pendingItems.value.length > 0 ? (openBlock(), createElementBlock("span", _hoisted_5$J, toDisplayString(pendingItems.value.length), 1)) : createCommentVNode("", true)
           ], 2)
         ]),
-        withDirectives((openBlock(), createElementBlock("div", _hoisted_6$F, [
+        withDirectives((openBlock(), createElementBlock("div", _hoisted_6$G, [
           activeTab.value === "pending" ? (openBlock(), createElementBlock(Fragment$2, { key: 0 }, [
             pendingItems.value.length === 0 && !pendingLoading.value ? (openBlock(), createElementBlock("div", _hoisted_7$A, " 暂无待发送 ")) : (openBlock(), createElementBlock("ul", _hoisted_8$p, [
               (openBlock(true), createElementBlock(Fragment$2, null, renderList(pendingItems.value, (item) => {
@@ -4125,15 +4125,15 @@ const _sfc_main$U = /* @__PURE__ */ defineComponent({
   }
 });
 const CategoryEditDialog = /* @__PURE__ */ _export_sfc(_sfc_main$U, [["__scopeId", "data-v-f8991c49"]]);
-const _hoisted_1$Q = { class: "sidebar" };
+const _hoisted_1$R = { class: "sidebar" };
 const _hoisted_2$N = {
   class: "sidebar__rail",
   "aria-label": "主导航"
 };
-const _hoisted_3$J = { class: "sidebar__rail-main" };
-const _hoisted_4$I = ["title", "onClick"];
-const _hoisted_5$H = { class: "sidebar__rail-footer" };
-const _hoisted_6$E = {
+const _hoisted_3$K = { class: "sidebar__rail-main" };
+const _hoisted_4$J = ["title", "onClick"];
+const _hoisted_5$I = { class: "sidebar__rail-footer" };
+const _hoisted_6$F = {
   key: 0,
   class: "sidebar__rail-badge"
 };
@@ -4490,7 +4490,7 @@ const _sfc_main$T = /* @__PURE__ */ defineComponent({
       const _component_el_dropdown_menu = resolveComponent("el-dropdown-menu");
       const _component_el_dropdown = resolveComponent("el-dropdown");
       const _component_el_tooltip = resolveComponent("el-tooltip");
-      return openBlock(), createElementBlock("aside", _hoisted_1$Q, [
+      return openBlock(), createElementBlock("aside", _hoisted_1$R, [
         createBaseVNode("nav", _hoisted_2$N, [
           createBaseVNode("button", {
             type: "button",
@@ -4503,7 +4503,7 @@ const _sfc_main$T = /* @__PURE__ */ defineComponent({
               "aria-hidden": "true"
             }, null, -1)
           ])]),
-          createBaseVNode("div", _hoisted_3$J, [
+          createBaseVNode("div", _hoisted_3$K, [
             (openBlock(), createElementBlock(Fragment$2, null, renderList(primaryItems, (item) => {
               return createBaseVNode("button", {
                 key: item.key,
@@ -4518,10 +4518,10 @@ const _sfc_main$T = /* @__PURE__ */ defineComponent({
                   ]),
                   _: 2
                 }, 1024)
-              ], 10, _hoisted_4$I);
+              ], 10, _hoisted_4$J);
             }), 64))
           ]),
-          createBaseVNode("div", _hoisted_5$H, [
+          createBaseVNode("div", _hoisted_5$I, [
             createVNode(_component_el_popover, {
               visible: messagePopoverOpen.value,
               "onUpdate:visible": _cache[1] || (_cache[1] = ($event) => messagePopoverOpen.value = $event),
@@ -4543,7 +4543,7 @@ const _sfc_main$T = /* @__PURE__ */ defineComponent({
                     ]),
                     _: 1
                   }),
-                  unref(messageStore).totalUnread > 0 ? (openBlock(), createElementBlock("span", _hoisted_6$E)) : createCommentVNode("", true)
+                  unref(messageStore).totalUnread > 0 ? (openBlock(), createElementBlock("span", _hoisted_6$F)) : createCommentVNode("", true)
                 ], 2)
               ]),
               default: withCtx(() => [
@@ -5495,16 +5495,16 @@ const _sfc_main$S = /* @__PURE__ */ defineComponent({
   }
 });
 const FilterCondRow = /* @__PURE__ */ _export_sfc(_sfc_main$S, [["__scopeId", "data-v-be9bd3ee"]]);
-const _hoisted_1$P = { class: "view-filter-builder" };
+const _hoisted_1$Q = { class: "view-filter-builder" };
 const _hoisted_2$M = { class: "view-filter-builder__toolbar" };
-const _hoisted_3$I = { class: "view-filter-builder__match" };
-const _hoisted_4$H = {
+const _hoisted_3$J = { class: "view-filter-builder__match" };
+const _hoisted_4$I = {
   class: "view-filter-builder__match-pills",
   role: "radiogroup",
   "aria-label": "匹配规则"
 };
-const _hoisted_5$G = ["aria-checked"];
-const _hoisted_6$D = ["aria-checked"];
+const _hoisted_5$H = ["aria-checked"];
+const _hoisted_6$E = ["aria-checked"];
 const _hoisted_7$y = {
   key: 0,
   class: "view-filter-builder__empty"
@@ -5571,25 +5571,25 @@ const _sfc_main$R = /* @__PURE__ */ defineComponent({
     }
     return (_ctx, _cache) => {
       const _component_el_icon = resolveComponent("el-icon");
-      return openBlock(), createElementBlock("div", _hoisted_1$P, [
+      return openBlock(), createElementBlock("div", _hoisted_1$Q, [
         createBaseVNode("div", _hoisted_2$M, [
-          createBaseVNode("div", _hoisted_3$I, [
+          createBaseVNode("div", _hoisted_3$J, [
             _cache[2] || (_cache[2] = createBaseVNode("span", { class: "view-filter-builder__match-label" }, "匹配规则", -1)),
-            createBaseVNode("div", _hoisted_4$H, [
+            createBaseVNode("div", _hoisted_4$I, [
               createBaseVNode("button", {
                 type: "button",
                 class: normalizeClass(["view-filter-builder__pill", { "is-active": matchOp.value === "and" }]),
                 role: "radio",
                 "aria-checked": matchOp.value === "and",
                 onClick: _cache[0] || (_cache[0] = ($event) => matchOp.value = "and")
-              }, " 全部条件 ", 10, _hoisted_5$G),
+              }, " 全部条件 ", 10, _hoisted_5$H),
               createBaseVNode("button", {
                 type: "button",
                 class: normalizeClass(["view-filter-builder__pill", { "is-active": matchOp.value === "or" }]),
                 role: "radio",
                 "aria-checked": matchOp.value === "or",
                 onClick: _cache[1] || (_cache[1] = ($event) => matchOp.value = "or")
-              }, " 任一条件 ", 10, _hoisted_6$D)
+              }, " 任一条件 ", 10, _hoisted_6$E)
             ])
           ]),
           hasConditions.value ? (openBlock(), createElementBlock("button", {
@@ -5647,15 +5647,15 @@ const _sfc_main$R = /* @__PURE__ */ defineComponent({
   }
 });
 const ViewFilterBuilder = /* @__PURE__ */ _export_sfc(_sfc_main$R, [["__scopeId", "data-v-85a0ebf3"]]);
-const _hoisted_1$O = { class: "task-view-editor__header" };
+const _hoisted_1$P = { class: "task-view-editor__header" };
 const _hoisted_2$L = {
   class: "task-view-editor__header-icon",
   "aria-hidden": "true"
 };
-const _hoisted_3$H = { class: "task-view-editor__header-text" };
-const _hoisted_4$G = { class: "task-view-editor__title" };
-const _hoisted_5$F = { class: "task-view-editor__body" };
-const _hoisted_6$C = { class: "task-view-editor__section" };
+const _hoisted_3$I = { class: "task-view-editor__header-text" };
+const _hoisted_4$H = { class: "task-view-editor__title" };
+const _hoisted_5$G = { class: "task-view-editor__body" };
+const _hoisted_6$D = { class: "task-view-editor__section" };
 const _hoisted_7$x = { class: "task-view-editor__name-wrap" };
 const _hoisted_8$m = { class: "task-view-editor__field" };
 const _hoisted_9$g = {
@@ -5913,7 +5913,7 @@ const _sfc_main$Q = /* @__PURE__ */ defineComponent({
         "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => emit("update:visible", $event))
       }, {
         header: withCtx(() => [
-          createBaseVNode("div", _hoisted_1$O, [
+          createBaseVNode("div", _hoisted_1$P, [
             createBaseVNode("div", _hoisted_2$L, [
               createVNode(_component_el_icon, null, {
                 default: withCtx(() => [
@@ -5922,8 +5922,8 @@ const _sfc_main$Q = /* @__PURE__ */ defineComponent({
                 _: 1
               })
             ]),
-            createBaseVNode("div", _hoisted_3$H, [
-              createBaseVNode("h2", _hoisted_4$G, toDisplayString(dialogTitle.value), 1),
+            createBaseVNode("div", _hoisted_3$I, [
+              createBaseVNode("h2", _hoisted_4$H, toDisplayString(dialogTitle.value), 1),
               _cache[13] || (_cache[13] = createBaseVNode("p", { class: "task-view-editor__subtitle" }, "保存布局、筛选与排序，随时切换任务视角", -1))
             ])
           ])
@@ -5964,8 +5964,8 @@ const _sfc_main$Q = /* @__PURE__ */ defineComponent({
           ])
         ]),
         default: withCtx(() => [
-          createBaseVNode("div", _hoisted_5$F, [
-            createBaseVNode("section", _hoisted_6$C, [
+          createBaseVNode("div", _hoisted_5$G, [
+            createBaseVNode("section", _hoisted_6$D, [
               _cache[16] || (_cache[16] = createBaseVNode("h3", { class: "task-view-editor__section-title" }, "基础", -1)),
               createBaseVNode("div", _hoisted_7$x, [
                 _cache[14] || (_cache[14] = createBaseVNode("label", {
@@ -6245,7 +6245,7 @@ function formatTrashTaskDate(iso) {
   if (!d.isValid()) return iso;
   return d.format("YYYY年M月D日");
 }
-const _hoisted_1$N = ["title"];
+const _hoisted_1$O = ["title"];
 const _sfc_main$P = /* @__PURE__ */ defineComponent({
   __name: "TaskPriorityBadge",
   props: {
@@ -6258,11 +6258,12 @@ const _sfc_main$P = /* @__PURE__ */ defineComponent({
       return openBlock(), createElementBlock("span", {
         class: normalizeClass(["priority-badge", `is-p${meta.value.value}`]),
         title: `${meta.value.code} · ${meta.value.label}`
-      }, toDisplayString(meta.value.code), 11, _hoisted_1$N);
+      }, toDisplayString(meta.value.code), 11, _hoisted_1$O);
     };
   }
 });
 const TaskPriorityBadge = /* @__PURE__ */ _export_sfc(_sfc_main$P, [["__scopeId", "data-v-8c2325b6"]]);
+const _hoisted_1$N = ["title", "aria-label"];
 const _sfc_main$O = /* @__PURE__ */ defineComponent({
   __name: "TaskStatusCheckbox",
   props: {
@@ -6277,36 +6278,38 @@ const _sfc_main$O = /* @__PURE__ */ defineComponent({
       return `${label}（点击切换）`;
     });
     return (_ctx, _cache) => {
-      const _component_el_checkbox = resolveComponent("el-checkbox");
-      return openBlock(), createBlock(_component_el_checkbox, {
-        "model-value": __props.status === "DONE",
-        indeterminate: __props.status === "IN_PROGRESS",
+      return openBlock(), createElementBlock("button", {
+        type: "button",
+        class: normalizeClass(["task-status-check", {
+          "is-progress": __props.status === "IN_PROGRESS",
+          "is-done": __props.status === "DONE"
+        }]),
         title: checkboxTitle.value,
-        onClick: _cache[0] || (_cache[0] = withModifiers(() => {
-        }, ["stop"])),
-        onChange: _cache[1] || (_cache[1] = ($event) => emit("toggle"))
-      }, null, 8, ["model-value", "indeterminate", "title"]);
+        "aria-label": checkboxTitle.value,
+        onClick: _cache[0] || (_cache[0] = withModifiers(($event) => emit("toggle"), ["stop"]))
+      }, null, 10, _hoisted_1$N);
     };
   }
 });
+const TaskStatusCheckbox = /* @__PURE__ */ _export_sfc(_sfc_main$O, [["__scopeId", "data-v-19bc6c8c"]]);
 const _hoisted_1$M = { class: "task-list" };
 const _hoisted_2$K = {
   key: 0,
   class: "task-list__empty"
 };
-const _hoisted_3$G = {
+const _hoisted_3$H = {
   key: 1,
   class: "task-list__ul"
 };
-const _hoisted_4$F = {
+const _hoisted_4$G = {
   key: 0,
   class: "task-list__group"
 };
-const _hoisted_5$E = {
+const _hoisted_5$F = {
   key: 1,
   class: "task-list__item"
 };
-const _hoisted_6$B = ["draggable", "onClick", "onDragstart", "onDragover", "onDragleave", "onDrop"];
+const _hoisted_6$C = ["draggable", "onClick", "onDragstart", "onDragover", "onDragleave", "onDrop"];
 const _hoisted_7$w = ["aria-expanded", "aria-label", "onClick"];
 const _hoisted_8$l = {
   key: 1,
@@ -6553,12 +6556,12 @@ const _sfc_main$N = /* @__PURE__ */ defineComponent({
         !__props.loading && __props.layoutItems.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_2$K, [..._cache[0] || (_cache[0] = [
           createBaseVNode("p", null, "暂无任务", -1),
           createBaseVNode("p", { class: "task-list__hint" }, "在上方输入框回车，或按 Ctrl+N 新建", -1)
-        ])])) : (openBlock(), createElementBlock("ul", _hoisted_3$G, [
+        ])])) : (openBlock(), createElementBlock("ul", _hoisted_3$H, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(displayItems.value, (item, idx) => {
             return openBlock(), createElementBlock(Fragment$2, {
               key: itemKey(item, idx)
             }, [
-              item.type === "group" ? (openBlock(), createElementBlock("li", _hoisted_4$F, toDisplayString(item.label), 1)) : (openBlock(), createElementBlock("li", _hoisted_5$E, [
+              item.type === "group" ? (openBlock(), createElementBlock("li", _hoisted_4$G, toDisplayString(item.label), 1)) : (openBlock(), createElementBlock("li", _hoisted_5$F, [
                 createVNode(_component_el_dropdown, {
                   trigger: "contextmenu",
                   class: "task-list__dropdown",
@@ -6622,7 +6625,7 @@ const _sfc_main$N = /* @__PURE__ */ defineComponent({
                           _: 2
                         }, 1024)
                       ], 8, _hoisted_7$w)) : (openBlock(), createElementBlock("span", _hoisted_8$l)),
-                      createVNode(_sfc_main$O, {
+                      createVNode(TaskStatusCheckbox, {
                         status: item.task.status,
                         onToggle: ($event) => emit("toggle-status", item.task)
                       }, null, 8, ["status", "onToggle"]),
@@ -6648,7 +6651,7 @@ const _sfc_main$N = /* @__PURE__ */ defineComponent({
                           showRemindAt(item.task) ? (openBlock(), createElementBlock("span", _hoisted_16$9, " 提醒 " + toDisplayString(unref(formatTaskListTime)(item.task.remindAt)), 1)) : createCommentVNode("", true)
                         ])) : createCommentVNode("", true)
                       ])
-                    ], 46, _hoisted_6$B)
+                    ], 46, _hoisted_6$C)
                   ]),
                   _: 2
                 }, 1032, ["onCommand"])
@@ -6811,20 +6814,20 @@ function savedAttachmentToFileMeta(saved) {
 }
 const _hoisted_1$L = { class: "task-kanban" };
 const _hoisted_2$J = { class: "task-kanban__toolbar" };
-const _hoisted_3$F = {
+const _hoisted_3$G = {
   key: 0,
   class: "task-kanban__drag-indicator",
   title: "正在拖动任务"
 };
-const _hoisted_4$E = {
+const _hoisted_4$F = {
   key: 0,
   class: "task-kanban__empty"
 };
-const _hoisted_5$D = {
+const _hoisted_5$E = {
   key: 1,
   class: "task-kanban__board"
 };
-const _hoisted_6$A = ["data-column-id", "onDragenter", "onDragleave", "onDrop"];
+const _hoisted_6$B = ["data-column-id", "onDragenter", "onDragleave", "onDrop"];
 const _hoisted_7$v = { class: "task-kanban__col-head" };
 const _hoisted_8$k = ["title", "onClick", "onKeydown"];
 const _hoisted_9$e = { class: "task-kanban__col-title" };
@@ -7384,7 +7387,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
       const _directive_loading = resolveDirective("loading");
       return withDirectives((openBlock(), createElementBlock("div", _hoisted_1$L, [
         createBaseVNode("header", _hoisted_2$J, [
-          draggingTaskId.value ? (openBlock(), createElementBlock("div", _hoisted_3$F, " 正在拖动… ")) : createCommentVNode("", true),
+          draggingTaskId.value ? (openBlock(), createElementBlock("div", _hoisted_3$G, " 正在拖动… ")) : createCommentVNode("", true),
           boardMode.value === "group" ? (openBlock(), createElementBlock("button", {
             key: 1,
             type: "button",
@@ -7400,7 +7403,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
             _cache[3] || (_cache[3] = createTextVNode(" 新分组 ", -1))
           ])) : createCommentVNode("", true)
         ]),
-        !__props.loading && rootTasks.value.length === 0 && (boardMode.value === "status" || boardMode.value === "priority" || boardMode.value === "time" || boardMode.value === "tag" || customGroups.value.length === 0) ? (openBlock(), createElementBlock("div", _hoisted_4$E, " 暂无任务，点击列头 + 或「新分组」开始 ")) : (openBlock(), createElementBlock("div", _hoisted_5$D, [
+        !__props.loading && rootTasks.value.length === 0 && (boardMode.value === "status" || boardMode.value === "priority" || boardMode.value === "time" || boardMode.value === "tag" || customGroups.value.length === 0) ? (openBlock(), createElementBlock("div", _hoisted_4$F, " 暂无任务，点击列头 + 或「新分组」开始 ")) : (openBlock(), createElementBlock("div", _hoisted_5$E, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(displayColumns.value, (col) => {
             return openBlock(), createElementBlock("section", {
               key: col.id,
@@ -7576,7 +7579,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
                           _: 2
                         }, 1024)
                       ], 8, _hoisted_21$4)) : (openBlock(), createElementBlock("span", _hoisted_22$3)),
-                      createVNode(_sfc_main$O, {
+                      createVNode(TaskStatusCheckbox, {
                         status: row.task.status,
                         onToggle: ($event) => emit("toggle-status", row.task)
                       }, null, 8, ["status", "onToggle"]),
@@ -7597,7 +7600,7 @@ const _sfc_main$M = /* @__PURE__ */ defineComponent({
                   ], 46, _hoisted_19$4);
                 }), 128))
               ])
-            ], 42, _hoisted_6$A);
+            ], 42, _hoisted_6$B);
           }), 128))
         ]))
       ])), [
@@ -7744,10 +7747,10 @@ function applyTimelineResizeRight(span, newEndKey) {
 }
 const _hoisted_1$K = { class: "task-timeline" };
 const _hoisted_2$I = { class: "task-timeline__main" };
-const _hoisted_3$E = { class: "task-timeline__scroll" };
-const _hoisted_4$D = { class: "task-timeline__header" };
-const _hoisted_5$C = ["title", "onClick"];
-const _hoisted_6$z = { class: "task-timeline__day-num" };
+const _hoisted_3$F = { class: "task-timeline__scroll" };
+const _hoisted_4$E = { class: "task-timeline__header" };
+const _hoisted_5$D = ["title", "onClick"];
+const _hoisted_6$A = { class: "task-timeline__day-num" };
 const _hoisted_7$u = { class: "task-timeline__day-wd" };
 const _hoisted_8$j = {
   key: 0,
@@ -8021,8 +8024,8 @@ const _sfc_main$L = /* @__PURE__ */ defineComponent({
       const _directive_loading = resolveDirective("loading");
       return withDirectives((openBlock(), createElementBlock("div", _hoisted_1$K, [
         createBaseVNode("div", _hoisted_2$I, [
-          createBaseVNode("div", _hoisted_3$E, [
-            createBaseVNode("div", _hoisted_4$D, [
+          createBaseVNode("div", _hoisted_3$F, [
+            createBaseVNode("div", _hoisted_4$E, [
               _cache[6] || (_cache[6] = createBaseVNode("div", { class: "task-timeline__gutter" }, null, -1)),
               createBaseVNode("div", {
                 class: "task-timeline__days",
@@ -8041,9 +8044,9 @@ const _sfc_main$L = /* @__PURE__ */ defineComponent({
                     title: `查看 ${day.format("M月D日")} 的任务`,
                     onClick: ($event) => toggleFocusDay(day)
                   }, [
-                    createBaseVNode("span", _hoisted_6$z, toDisplayString(day.date()), 1),
+                    createBaseVNode("span", _hoisted_6$A, toDisplayString(day.date()), 1),
                     createBaseVNode("span", _hoisted_7$u, toDisplayString(weekdayShort(day)), 1)
-                  ], 14, _hoisted_5$C);
+                  ], 14, _hoisted_5$D);
                 }), 128))
               ], 4)
             ]),
@@ -8219,13 +8222,13 @@ const _hoisted_2$H = {
   key: 0,
   class: "completed-list__empty"
 };
-const _hoisted_3$D = {
+const _hoisted_3$E = {
   key: 1,
   class: "completed-list__groups"
 };
-const _hoisted_4$C = ["onClick"];
-const _hoisted_5$B = { class: "completed-list__group-label" };
-const _hoisted_6$y = { class: "completed-list__group-count" };
+const _hoisted_4$D = ["onClick"];
+const _hoisted_5$C = { class: "completed-list__group-label" };
+const _hoisted_6$z = { class: "completed-list__group-count" };
 const _hoisted_7$t = { class: "completed-list__ul" };
 const _hoisted_8$i = ["onClick"];
 const _hoisted_9$c = ["onClick"];
@@ -8359,7 +8362,7 @@ const _sfc_main$K = /* @__PURE__ */ defineComponent({
         !__props.loading && groups.value.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_2$H, [..._cache[0] || (_cache[0] = [
           createBaseVNode("p", null, "暂无已完成任务", -1),
           createBaseVNode("p", { class: "completed-list__hint" }, "完成任务后，会按完成日期显示在这里", -1)
-        ])])) : (openBlock(), createElementBlock("div", _hoisted_3$D, [
+        ])])) : (openBlock(), createElementBlock("div", _hoisted_3$E, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(groups.value, (group) => {
             return openBlock(), createElementBlock("section", {
               key: group.key,
@@ -8378,9 +8381,9 @@ const _sfc_main$K = /* @__PURE__ */ defineComponent({
                   ]),
                   _: 1
                 }, 8, ["class"]),
-                createBaseVNode("span", _hoisted_5$B, toDisplayString(group.label), 1),
-                createBaseVNode("span", _hoisted_6$y, toDisplayString(group.tasks.length), 1)
-              ], 8, _hoisted_4$C),
+                createBaseVNode("span", _hoisted_5$C, toDisplayString(group.label), 1),
+                createBaseVNode("span", _hoisted_6$z, toDisplayString(group.tasks.length), 1)
+              ], 8, _hoisted_4$D),
               withDirectives(createBaseVNode("ul", _hoisted_7$t, [
                 (openBlock(true), createElementBlock(Fragment$2, null, renderList(layoutItemsForGroup(group.tasks), (item, idx) => {
                   return openBlock(), createElementBlock(Fragment$2, {
@@ -8405,7 +8408,7 @@ const _sfc_main$K = /* @__PURE__ */ defineComponent({
                           _: 2
                         }, 1024)
                       ], 8, _hoisted_9$c)) : (openBlock(), createElementBlock("span", _hoisted_10$a)),
-                      createVNode(_sfc_main$O, {
+                      createVNode(TaskStatusCheckbox, {
                         status: item.task.status,
                         onToggle: ($event) => emit("toggle-status", item.task)
                       }, null, 8, ["status", "onToggle"]),
@@ -8441,13 +8444,13 @@ const _hoisted_2$G = {
   key: 0,
   class: "trash-list__empty"
 };
-const _hoisted_3$C = {
+const _hoisted_3$D = {
   key: 1,
   class: "trash-list__ul"
 };
-const _hoisted_4$B = ["onClick"];
-const _hoisted_5$A = ["onClick"];
-const _hoisted_6$x = {
+const _hoisted_4$C = ["onClick"];
+const _hoisted_5$B = ["onClick"];
+const _hoisted_6$y = {
   key: 1,
   class: "trash-list__expand-placeholder"
 };
@@ -8560,7 +8563,7 @@ const _sfc_main$J = /* @__PURE__ */ defineComponent({
         !__props.loading && layoutItems.value.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_2$G, [..._cache[1] || (_cache[1] = [
           createBaseVNode("p", null, "垃圾桶是空的", -1),
           createBaseVNode("p", { class: "trash-list__hint" }, "删除的任务会保留在这里，可恢复或彻底删除", -1)
-        ])])) : (openBlock(), createElementBlock("ul", _hoisted_3$C, [
+        ])])) : (openBlock(), createElementBlock("ul", _hoisted_3$D, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(displayItems.value, (item, idx) => {
             return openBlock(), createElementBlock(Fragment$2, {
               key: itemKey(item, idx)
@@ -8583,7 +8586,7 @@ const _sfc_main$J = /* @__PURE__ */ defineComponent({
                     ]),
                     _: 2
                   }, 1024)
-                ], 8, _hoisted_5$A)) : (openBlock(), createElementBlock("span", _hoisted_6$x)),
+                ], 8, _hoisted_5$B)) : (openBlock(), createElementBlock("span", _hoisted_6$y)),
                 createVNode(_component_el_checkbox, {
                   "model-value": item.task.status === "DONE",
                   disabled: "",
@@ -8626,7 +8629,7 @@ const _sfc_main$J = /* @__PURE__ */ defineComponent({
                     _: 1
                   }, 8, ["onClick"])
                 ])
-              ], 14, _hoisted_4$B)) : createCommentVNode("", true)
+              ], 14, _hoisted_4$C)) : createCommentVNode("", true)
             ], 64);
           }), 128))
         ]))
@@ -8642,10 +8645,10 @@ const _hoisted_2$F = {
   key: 0,
   class: "inbox-view__section"
 };
-const _hoisted_3$B = { class: "inbox-view__section-head" };
-const _hoisted_4$A = { class: "inbox-view__section-count" };
-const _hoisted_5$z = { class: "inbox-view__note-list" };
-const _hoisted_6$w = ["onClick"];
+const _hoisted_3$C = { class: "inbox-view__section-head" };
+const _hoisted_4$B = { class: "inbox-view__section-count" };
+const _hoisted_5$A = { class: "inbox-view__note-list" };
+const _hoisted_6$x = ["onClick"];
 const _hoisted_7$r = { class: "inbox-view__note-text" };
 const _hoisted_8$h = { class: "inbox-view__note-actions" };
 const _hoisted_9$b = { class: "inbox-view__section" };
@@ -8687,11 +8690,11 @@ const _sfc_main$I = /* @__PURE__ */ defineComponent({
       const _component_el_button = resolveComponent("el-button");
       return openBlock(), createElementBlock("div", _hoisted_1$H, [
         __props.notes.length ? (openBlock(), createElementBlock("section", _hoisted_2$F, [
-          createBaseVNode("header", _hoisted_3$B, [
+          createBaseVNode("header", _hoisted_3$C, [
             _cache[0] || (_cache[0] = createBaseVNode("h2", { class: "inbox-view__section-title" }, "便签", -1)),
-            createBaseVNode("span", _hoisted_4$A, toDisplayString(__props.notes.length), 1)
+            createBaseVNode("span", _hoisted_4$B, toDisplayString(__props.notes.length), 1)
           ]),
-          createBaseVNode("ul", _hoisted_5$z, [
+          createBaseVNode("ul", _hoisted_5$A, [
             (openBlock(true), createElementBlock(Fragment$2, null, renderList(__props.notes, (note) => {
               return openBlock(), createElementBlock("li", {
                 key: note.id,
@@ -8703,7 +8706,7 @@ const _sfc_main$I = /* @__PURE__ */ defineComponent({
                   onClick: ($event) => emit("select-note", note.id)
                 }, [
                   createBaseVNode("p", _hoisted_7$r, toDisplayString(notePreview(note.content)), 1)
-                ], 8, _hoisted_6$w),
+                ], 8, _hoisted_6$x),
                 createBaseVNode("div", _hoisted_8$h, [
                   createVNode(_component_el_button, {
                     size: "small",
@@ -8767,10 +8770,10 @@ const _hoisted_2$E = {
   key: 0,
   class: "inbox-note-panel__empty"
 };
-const _hoisted_3$A = { class: "inbox-note-panel__toolbar" };
-const _hoisted_4$z = { class: "inbox-note-panel__colors" };
-const _hoisted_5$y = ["title", "onClick"];
-const _hoisted_6$v = { class: "inbox-note-panel__actions" };
+const _hoisted_3$B = { class: "inbox-note-panel__toolbar" };
+const _hoisted_4$A = { class: "inbox-note-panel__colors" };
+const _hoisted_5$z = ["title", "onClick"];
+const _hoisted_6$w = { class: "inbox-note-panel__actions" };
 const _hoisted_7$q = {
   key: 0,
   class: "inbox-note-panel__status"
@@ -8850,8 +8853,8 @@ const _sfc_main$H = /* @__PURE__ */ defineComponent({
           }, "×")
         ]),
         !__props.note ? (openBlock(), createElementBlock("div", _hoisted_2$E, "选择一张便签查看全文")) : (openBlock(), createElementBlock(Fragment$2, { key: 1 }, [
-          createBaseVNode("div", _hoisted_3$A, [
-            createBaseVNode("div", _hoisted_4$z, [
+          createBaseVNode("div", _hoisted_3$B, [
+            createBaseVNode("div", _hoisted_4$A, [
               (openBlock(true), createElementBlock(Fragment$2, null, renderList(unref(colors), (color) => {
                 return openBlock(), createElementBlock("button", {
                   key: color,
@@ -8859,10 +8862,10 @@ const _sfc_main$H = /* @__PURE__ */ defineComponent({
                   class: normalizeClass(["inbox-note-panel__color", [`is-${color}`, { "is-selected": __props.note.color === color }]]),
                   title: color,
                   onClick: ($event) => setColor(color)
-                }, null, 10, _hoisted_5$y);
+                }, null, 10, _hoisted_5$z);
               }), 128))
             ]),
-            createBaseVNode("div", _hoisted_6$v, [
+            createBaseVNode("div", _hoisted_6$w, [
               createBaseVNode("button", {
                 type: "button",
                 class: "inbox-note-panel__action",
@@ -8900,10 +8903,10 @@ const _sfc_main$H = /* @__PURE__ */ defineComponent({
 const InboxNotePanel = /* @__PURE__ */ _export_sfc(_sfc_main$H, [["__scopeId", "data-v-3750a4d9"]]);
 const _hoisted_1$F = { class: "quadrant-matrix" };
 const _hoisted_2$D = { class: "quadrant-matrix__grid" };
-const _hoisted_3$z = ["onDragover", "onDragleave", "onDrop"];
-const _hoisted_4$y = { class: "quadrant-matrix__card-head" };
-const _hoisted_5$x = ["title", "onClick"];
-const _hoisted_6$u = {
+const _hoisted_3$A = ["onDragover", "onDragleave", "onDrop"];
+const _hoisted_4$z = { class: "quadrant-matrix__card-head" };
+const _hoisted_5$y = ["title", "onClick"];
+const _hoisted_6$v = {
   key: 0,
   class: "quadrant-matrix__empty"
 };
@@ -9133,7 +9136,7 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
               onDragleave: ($event) => onCardDragLeave(meta.value),
               onDrop: withModifiers(($event) => onCardDrop($event, meta.value), ["prevent"])
             }, [
-              createBaseVNode("header", _hoisted_4$y, [
+              createBaseVNode("header", _hoisted_4$z, [
                 createBaseVNode("span", {
                   class: "quadrant-matrix__badge",
                   style: normalizeStyle({ background: meta.color })
@@ -9147,9 +9150,9 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                   class: "quadrant-matrix__add",
                   title: `在「${meta.quadrantTitle}」添加任务`,
                   onClick: ($event) => emit("create", meta.value)
-                }, " + ", 8, _hoisted_5$x)
+                }, " + ", 8, _hoisted_5$y)
               ]),
-              !hasTasks(meta.value) ? (openBlock(), createElementBlock("div", _hoisted_6$u, [
+              !hasTasks(meta.value) ? (openBlock(), createElementBlock("div", _hoisted_6$v, [
                 _cache[0] || (_cache[0] = createTextVNode(" 没有任务 ", -1)),
                 dropTargetPriority.value === meta.value ? (openBlock(), createElementBlock("span", _hoisted_7$p, "松开放置到此象限")) : createCommentVNode("", true)
               ])) : (openBlock(), createElementBlock("div", _hoisted_8$g, [
@@ -9178,7 +9181,7 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                           _: 2
                         }, 1024)
                       ], 8, _hoisted_11$8)) : (openBlock(), createElementBlock("span", _hoisted_12$7)),
-                      createVNode(_sfc_main$O, {
+                      createVNode(TaskStatusCheckbox, {
                         status: task.status,
                         onToggle: ($event) => emit("toggle-status", task)
                       }, null, 8, ["status", "onToggle"]),
@@ -9258,7 +9261,7 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                               _: 2
                             }, 1024)
                           ], 8, _hoisted_25$1)) : (openBlock(), createElementBlock("span", _hoisted_26$1)),
-                          createVNode(_sfc_main$O, {
+                          createVNode(TaskStatusCheckbox, {
                             status: task.status,
                             onToggle: ($event) => emit("toggle-status", task)
                           }, null, 8, ["status", "onToggle"]),
@@ -9297,7 +9300,7 @@ const _sfc_main$G = /* @__PURE__ */ defineComponent({
                   ]);
                 }), 128))
               ]))
-            ], 42, _hoisted_3$z);
+            ], 42, _hoisted_3$A);
           }), 128))
         ])
       ])), [
@@ -9334,12 +9337,12 @@ const _hoisted_2$C = {
   type: "button",
   class: "task-view-menu__row task-view-menu__row--static"
 };
-const _hoisted_3$y = {
+const _hoisted_3$z = {
   type: "button",
   class: "task-view-menu__row task-view-menu__row--static"
 };
-const _hoisted_4$x = { class: "task-view-menu__sub" };
-const _hoisted_5$w = { class: "task-view-menu__sub" };
+const _hoisted_4$y = { class: "task-view-menu__sub" };
+const _hoisted_5$x = { class: "task-view-menu__sub" };
 const _sfc_main$F = /* @__PURE__ */ defineComponent({
   __name: "QuadrantMatrixMenu",
   props: /* @__PURE__ */ mergeModels({
@@ -9426,7 +9429,7 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
                 onChange: emitPrefs
               }, null, 8, ["modelValue"])
             ]),
-            createBaseVNode("button", _hoisted_3$y, [
+            createBaseVNode("button", _hoisted_3$z, [
               _cache[8] || (_cache[8] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "启用分组", -1)),
               createVNode(_component_el_switch, {
                 modelValue: prefs.enableGrouping,
@@ -9435,7 +9438,7 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
                 onChange: emitPrefs
               }, null, 8, ["modelValue"])
             ]),
-            createBaseVNode("div", _hoisted_4$x, [
+            createBaseVNode("div", _hoisted_4$y, [
               _cache[10] || (_cache[10] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "分组条件", -1)),
               createVNode(_component_el_select, {
                 modelValue: prefs.groupBy,
@@ -9520,7 +9523,7 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
                 _: 1
               }, 8, ["class"])
             ]),
-            withDirectives(createBaseVNode("div", _hoisted_5$w, [
+            withDirectives(createBaseVNode("div", _hoisted_5$x, [
               _cache[13] || (_cache[13] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "列表时间字段", -1)),
               (openBlock(), createElementBlock(Fragment$2, null, renderList(metaOptions, (opt) => {
                 return createBaseVNode("label", {
@@ -9547,17 +9550,17 @@ const _sfc_main$F = /* @__PURE__ */ defineComponent({
 const QuadrantMatrixMenu = /* @__PURE__ */ _export_sfc(_sfc_main$F, [["__scopeId", "data-v-9a889a5a"]]);
 const _hoisted_1$D = { class: "task-view-menu" };
 const _hoisted_2$B = { class: "task-view-menu__sub task-view-menu__sub--top" };
-const _hoisted_3$x = {
+const _hoisted_3$y = {
   type: "button",
   class: "task-view-menu__row task-view-menu__row--static"
 };
-const _hoisted_4$w = {
+const _hoisted_4$x = {
   key: 0,
   type: "button",
   class: "task-view-menu__row task-view-menu__row--static"
 };
-const _hoisted_5$v = { class: "task-view-menu__sub" };
-const _hoisted_6$t = { class: "task-view-menu__sub" };
+const _hoisted_5$w = { class: "task-view-menu__sub" };
+const _hoisted_6$u = { class: "task-view-menu__sub" };
 const _sfc_main$E = /* @__PURE__ */ defineComponent({
   __name: "TaskListViewMenu",
   props: /* @__PURE__ */ mergeModels({
@@ -9700,7 +9703,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
                 _: 1
               }, 8, ["modelValue"])
             ]),
-            createBaseVNode("button", _hoisted_3$x, [
+            createBaseVNode("button", _hoisted_3$y, [
               createVNode(_component_el_icon, { class: "task-view-menu__row-icon" }, {
                 default: withCtx(() => [
                   createVNode(unref(circle_check_default))
@@ -9716,7 +9719,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
                 }, ["stop"]))
               }, null, 8, ["modelValue"])
             ]),
-            viewMode.value === "list" ? (openBlock(), createElementBlock("button", _hoisted_4$w, [
+            viewMode.value === "list" ? (openBlock(), createElementBlock("button", _hoisted_4$x, [
               _cache[15] || (_cache[15] = createBaseVNode("span", { class: "task-view-menu__row-label" }, "启用分组", -1)),
               createVNode(_component_el_switch, {
                 modelValue: enableGrouping.value,
@@ -9726,7 +9729,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
                 }, ["stop"]))
               }, null, 8, ["modelValue"])
             ])) : createCommentVNode("", true),
-            createBaseVNode("div", _hoisted_5$v, [
+            createBaseVNode("div", _hoisted_5$w, [
               _cache[17] || (_cache[17] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "分组条件", -1)),
               createVNode(_component_el_select, {
                 modelValue: groupBy.value,
@@ -9816,7 +9819,7 @@ const _sfc_main$E = /* @__PURE__ */ defineComponent({
                 _: 1
               }, 8, ["class"])
             ]),
-            withDirectives(createBaseVNode("div", _hoisted_6$t, [
+            withDirectives(createBaseVNode("div", _hoisted_6$u, [
               _cache[22] || (_cache[22] = createBaseVNode("div", { class: "task-view-menu__sub-title" }, "列表时间字段", -1)),
               (openBlock(), createElementBlock(Fragment$2, null, renderList(metaOptions, (opt) => {
                 return createBaseVNode("label", {
@@ -9869,10 +9872,10 @@ const _hoisted_2$A = {
   key: 0,
   class: "summary-results__empty"
 };
-const _hoisted_3$w = { class: "summary-results__head" };
-const _hoisted_4$v = { class: "summary-results__title" };
-const _hoisted_5$u = { class: "summary-results__time" };
-const _hoisted_6$s = {
+const _hoisted_3$x = { class: "summary-results__head" };
+const _hoisted_4$w = { class: "summary-results__title" };
+const _hoisted_5$v = { class: "summary-results__time" };
+const _hoisted_6$t = {
   key: 0,
   class: "summary-results__body"
 };
@@ -9917,11 +9920,11 @@ const _sfc_main$D = /* @__PURE__ */ defineComponent({
             key: report.id,
             class: normalizeClass(["summary-results__card", { "is-unread": !report.readAt }])
           }, [
-            createBaseVNode("header", _hoisted_3$w, [
-              createBaseVNode("h3", _hoisted_4$v, toDisplayString(displayTitle(report)), 1),
-              createBaseVNode("time", _hoisted_5$u, toDisplayString(formatTime(report.createdAt)), 1)
+            createBaseVNode("header", _hoisted_3$x, [
+              createBaseVNode("h3", _hoisted_4$w, toDisplayString(displayTitle(report)), 1),
+              createBaseVNode("time", _hoisted_5$v, toDisplayString(formatTime(report.createdAt)), 1)
             ]),
-            report.body ? (openBlock(), createElementBlock("pre", _hoisted_6$s, toDisplayString(report.body), 1)) : createCommentVNode("", true),
+            report.body ? (openBlock(), createElementBlock("pre", _hoisted_6$t, toDisplayString(report.body), 1)) : createCommentVNode("", true),
             !report.readAt ? (openBlock(), createElementBlock("footer", _hoisted_7$o, [
               createVNode(_component_el_button, {
                 size: "small",
@@ -10362,13 +10365,13 @@ const useAiPromptStore = /* @__PURE__ */ defineStore("aiPrompt", () => {
 });
 const _hoisted_1$B = { class: "settings-section__head" };
 const _hoisted_2$z = { key: 0 };
-const _hoisted_3$v = { class: "settings-section__list" };
-const _hoisted_4$u = {
+const _hoisted_3$w = { class: "settings-section__list" };
+const _hoisted_4$v = {
   key: 0,
   class: "settings-section__empty"
 };
-const _hoisted_5$t = { class: "summary-card__head" };
-const _hoisted_6$r = { class: "summary-card__title" };
+const _hoisted_5$u = { class: "summary-card__head" };
+const _hoisted_6$s = { class: "summary-card__title" };
 const _hoisted_7$n = { class: "summary-card__meta" };
 const _hoisted_8$f = { class: "summary-card__cats" };
 const _hoisted_9$9 = { class: "summary-card__report" };
@@ -10875,16 +10878,16 @@ ${text2}` : text2;
             _: 1
           })
         ]),
-        withDirectives((openBlock(), createElementBlock("div", _hoisted_3$v, [
-          !unref(summaryStore).loading && unref(summaryStore).items.length === 0 ? (openBlock(), createElementBlock("p", _hoisted_4$u, " 暂无汇总任务，点击「新建汇总」创建 ")) : createCommentVNode("", true),
+        withDirectives((openBlock(), createElementBlock("div", _hoisted_3$w, [
+          !unref(summaryStore).loading && unref(summaryStore).items.length === 0 ? (openBlock(), createElementBlock("p", _hoisted_4$v, " 暂无汇总任务，点击「新建汇总」创建 ")) : createCommentVNode("", true),
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(unref(summaryStore).items, (item) => {
             return openBlock(), createElementBlock("article", {
               key: item.id,
               class: "summary-card"
             }, [
-              createBaseVNode("header", _hoisted_5$t, [
+              createBaseVNode("header", _hoisted_5$u, [
                 createBaseVNode("div", null, [
-                  createBaseVNode("h3", _hoisted_6$r, toDisplayString(item.name), 1),
+                  createBaseVNode("h3", _hoisted_6$s, toDisplayString(item.name), 1),
                   createBaseVNode("p", _hoisted_7$n, toDisplayString(scheduleLabel(item)) + " · " + toDisplayString(sendTimeLabel(item)), 1)
                 ]),
                 createVNode(_component_el_switch, {
@@ -11667,10 +11670,10 @@ function remindFromDue(dueAt, offsetMinutes) {
 }
 const _hoisted_1$A = { class: "schedule-picker" };
 const _hoisted_2$y = { class: "schedule-picker__tabs" };
-const _hoisted_3$u = { class: "schedule-picker__quick" };
-const _hoisted_4$t = ["title", "onClick"];
-const _hoisted_5$s = ["data-icon"];
-const _hoisted_6$q = { class: "schedule-picker__calendar" };
+const _hoisted_3$v = { class: "schedule-picker__quick" };
+const _hoisted_4$u = ["title", "onClick"];
+const _hoisted_5$t = ["data-icon"];
+const _hoisted_6$r = { class: "schedule-picker__calendar" };
 const _hoisted_7$m = { class: "schedule-picker__month-bar" };
 const _hoisted_8$e = { class: "schedule-picker__month-label" };
 const _hoisted_9$8 = { class: "schedule-picker__weekdays" };
@@ -11777,7 +11780,7 @@ const _sfc_main$B = /* @__PURE__ */ defineComponent({
             onClick: _cache[2] || (_cache[2] = ($event) => tab.value = "time")
           }, " 时间 ", 2)
         ]),
-        createBaseVNode("div", _hoisted_3$u, [
+        createBaseVNode("div", _hoisted_3$v, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(unref(quickPresets), (item) => {
             return openBlock(), createElementBlock("button", {
               key: item.key,
@@ -11789,11 +11792,11 @@ const _sfc_main$B = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", {
                 class: "schedule-picker__quick-icon",
                 "data-icon": item.icon
-              }, null, 8, _hoisted_5$s)
-            ], 8, _hoisted_4$t);
+              }, null, 8, _hoisted_5$t)
+            ], 8, _hoisted_4$u);
           }), 128))
         ]),
-        withDirectives(createBaseVNode("div", _hoisted_6$q, [
+        withDirectives(createBaseVNode("div", _hoisted_6$r, [
           createBaseVNode("div", _hoisted_7$m, [
             createBaseVNode("button", {
               type: "button",
@@ -11883,16 +11886,16 @@ const _sfc_main$B = /* @__PURE__ */ defineComponent({
 const SchedulePickerPanel = /* @__PURE__ */ _export_sfc(_sfc_main$B, [["__scopeId", "data-v-a0eb913e"]]);
 const _hoisted_1$z = { class: "remind-offset-panel" };
 const _hoisted_2$x = { class: "remind-offset-panel__list" };
-const _hoisted_3$t = ["onClick"];
-const _hoisted_4$s = {
+const _hoisted_3$u = ["onClick"];
+const _hoisted_4$t = {
   key: 0,
   class: "remind-offset-panel__check"
 };
-const _hoisted_5$r = {
+const _hoisted_5$s = {
   key: 0,
   class: "remind-offset-panel__check"
 };
-const _hoisted_6$p = { class: "remind-offset-panel__actions" };
+const _hoisted_6$q = { class: "remind-offset-panel__actions" };
 const _hoisted_7$l = ["disabled"];
 const _sfc_main$A = /* @__PURE__ */ defineComponent({
   __name: "RemindOffsetPanel",
@@ -11940,18 +11943,18 @@ const _sfc_main$A = /* @__PURE__ */ defineComponent({
               onClick: ($event) => selectOffset(opt)
             }, [
               createBaseVNode("span", null, toDisplayString(opt.label), 1),
-              selectedKey.value === opt.key ? (openBlock(), createElementBlock("span", _hoisted_4$s, "✓")) : createCommentVNode("", true)
-            ], 10, _hoisted_3$t);
+              selectedKey.value === opt.key ? (openBlock(), createElementBlock("span", _hoisted_4$t, "✓")) : createCommentVNode("", true)
+            ], 10, _hoisted_3$u);
           }), 128)),
           createBaseVNode("li", {
             class: normalizeClass(["remind-offset-panel__item", { "is-selected": selectedKey.value === "custom" }]),
             onClick: _cache[0] || (_cache[0] = ($event) => emit("custom"))
           }, [
             _cache[2] || (_cache[2] = createBaseVNode("span", null, "自定义", -1)),
-            selectedKey.value === "custom" ? (openBlock(), createElementBlock("span", _hoisted_5$r, "✓")) : createCommentVNode("", true)
+            selectedKey.value === "custom" ? (openBlock(), createElementBlock("span", _hoisted_5$s, "✓")) : createCommentVNode("", true)
           ], 2)
         ]),
-        createBaseVNode("div", _hoisted_6$p, [
+        createBaseVNode("div", _hoisted_6$q, [
           createBaseVNode("button", {
             type: "button",
             class: "remind-offset-panel__btn remind-offset-panel__btn--ghost",
@@ -11971,7 +11974,7 @@ const _sfc_main$A = /* @__PURE__ */ defineComponent({
 const RemindOffsetPanel = /* @__PURE__ */ _export_sfc(_sfc_main$A, [["__scopeId", "data-v-936eb3a4"]]);
 const _hoisted_1$y = { class: "datetime-picker" };
 const _hoisted_2$w = { class: "datetime-picker__shortcuts" };
-const _hoisted_3$s = {
+const _hoisted_3$t = {
   key: 0,
   class: "datetime-picker__summary"
 };
@@ -12105,7 +12108,7 @@ const _sfc_main$z = /* @__PURE__ */ defineComponent({
             _: 1
           })) : createCommentVNode("", true)
         ]),
-        modelValue.value ? (openBlock(), createElementBlock("p", _hoisted_3$s, toDisplayString(unref(formatIsoReadable)(modelValue.value)), 1)) : createCommentVNode("", true),
+        modelValue.value ? (openBlock(), createElementBlock("p", _hoisted_3$t, toDisplayString(unref(formatIsoReadable)(modelValue.value)), 1)) : createCommentVNode("", true),
         createVNode(_component_el_dialog, {
           modelValue: customOpen.value,
           "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => customOpen.value = $event),
@@ -12150,13 +12153,13 @@ const _sfc_main$z = /* @__PURE__ */ defineComponent({
 const DatetimeShortcutPicker = /* @__PURE__ */ _export_sfc(_sfc_main$z, [["__scopeId", "data-v-0ae2b58d"]]);
 const _hoisted_1$x = { class: "remind-custom-offset" };
 const _hoisted_2$v = { class: "remind-custom-offset__row" };
-const _hoisted_3$r = ["onKeydown"];
-const _hoisted_4$r = {
+const _hoisted_3$s = ["onKeydown"];
+const _hoisted_4$s = {
   type: "button",
   class: "remind-custom-offset__unit"
 };
-const _hoisted_5$q = { class: "remind-custom-offset__preview" };
-const _hoisted_6$o = {
+const _hoisted_5$r = { class: "remind-custom-offset__preview" };
+const _hoisted_6$p = {
   key: 0,
   class: "remind-custom-offset__time"
 };
@@ -12213,7 +12216,7 @@ const _sfc_main$y = /* @__PURE__ */ defineComponent({
             min: "1",
             class: "remind-custom-offset__amount",
             onKeydown: withKeys(withModifiers(confirm, ["prevent"]), ["enter"])
-          }, null, 40, _hoisted_3$r), [
+          }, null, 40, _hoisted_3$s), [
             [
               vModelText,
               amount.value,
@@ -12245,7 +12248,7 @@ const _sfc_main$y = /* @__PURE__ */ defineComponent({
               })
             ]),
             default: withCtx(() => [
-              createBaseVNode("button", _hoisted_4$r, [
+              createBaseVNode("button", _hoisted_4$s, [
                 createBaseVNode("span", null, toDisplayString(unitLabel.value), 1),
                 createVNode(_component_el_icon, null, {
                   default: withCtx(() => [
@@ -12258,8 +12261,8 @@ const _sfc_main$y = /* @__PURE__ */ defineComponent({
             _: 1
           })
         ]),
-        createBaseVNode("p", _hoisted_5$q, "提前 " + toDisplayString(amount.value) + " " + toDisplayString(unitLabel.value), 1),
-        previewAt.value ? (openBlock(), createElementBlock("p", _hoisted_6$o, toDisplayString(previewAt.value), 1)) : createCommentVNode("", true),
+        createBaseVNode("p", _hoisted_5$r, "提前 " + toDisplayString(amount.value) + " " + toDisplayString(unitLabel.value), 1),
+        previewAt.value ? (openBlock(), createElementBlock("p", _hoisted_6$p, toDisplayString(previewAt.value), 1)) : createCommentVNode("", true),
         createBaseVNode("div", _hoisted_7$k, [
           createBaseVNode("button", {
             type: "button",
@@ -12279,13 +12282,13 @@ const _sfc_main$y = /* @__PURE__ */ defineComponent({
 const RemindCustomOffsetPanel = /* @__PURE__ */ _export_sfc(_sfc_main$y, [["__scopeId", "data-v-c1ece4a2"]]);
 const _hoisted_1$w = { class: "remind-multi-offset" };
 const _hoisted_2$u = { class: "remind-multi-offset__list" };
-const _hoisted_3$q = ["onClick"];
-const _hoisted_4$q = {
+const _hoisted_3$r = ["onClick"];
+const _hoisted_4$r = {
   key: 0,
   class: "remind-multi-offset__check"
 };
-const _hoisted_5$p = ["onClick"];
-const _hoisted_6$n = { class: "remind-multi-offset__continuous" };
+const _hoisted_5$q = ["onClick"];
+const _hoisted_6$o = { class: "remind-multi-offset__continuous" };
 const _hoisted_7$j = { class: "remind-multi-offset__actions" };
 const _sfc_main$x = /* @__PURE__ */ defineComponent({
   __name: "RemindMultiOffsetPanel",
@@ -12347,8 +12350,8 @@ const _sfc_main$x = /* @__PURE__ */ defineComponent({
                 onClick: ($event) => toggleMinutes(opt.minutes)
               }, [
                 createBaseVNode("span", null, toDisplayString(opt.label), 1),
-                selectedMinutes.value.has(opt.minutes) ? (openBlock(), createElementBlock("span", _hoisted_4$q, "✓")) : createCommentVNode("", true)
-              ], 10, _hoisted_3$q);
+                selectedMinutes.value.has(opt.minutes) ? (openBlock(), createElementBlock("span", _hoisted_4$r, "✓")) : createCommentVNode("", true)
+              ], 10, _hoisted_3$r);
             }), 128)),
             (openBlock(true), createElementBlock(Fragment$2, null, renderList(customMinutesList.value, (c) => {
               return openBlock(), createElementBlock("li", {
@@ -12358,7 +12361,7 @@ const _sfc_main$x = /* @__PURE__ */ defineComponent({
               }, [
                 createBaseVNode("span", null, toDisplayString(customLabel(c)), 1),
                 _cache[4] || (_cache[4] = createBaseVNode("span", { class: "remind-multi-offset__check" }, "✓", -1))
-              ], 8, _hoisted_5$p);
+              ], 8, _hoisted_5$q);
             }), 128)),
             createBaseVNode("li", {
               class: "remind-multi-offset__item",
@@ -12367,7 +12370,7 @@ const _sfc_main$x = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", null, "自定义", -1)
             ])])
           ]),
-          createBaseVNode("div", _hoisted_6$n, [
+          createBaseVNode("div", _hoisted_6$o, [
             _cache[6] || (_cache[6] = createBaseVNode("span", { class: "remind-multi-offset__continuous-label" }, "持续提醒", -1)),
             createVNode(_component_el_switch, {
               modelValue: draftContinuous.value,
@@ -12399,11 +12402,11 @@ const _sfc_main$x = /* @__PURE__ */ defineComponent({
 const RemindMultiOffsetPanel = /* @__PURE__ */ _export_sfc(_sfc_main$x, [["__scopeId", "data-v-b68190a3"]]);
 const _hoisted_1$v = { class: "remind-multi-picker" };
 const _hoisted_2$t = { class: "remind-multi-picker__trigger-row" };
-const _hoisted_3$p = {
+const _hoisted_3$q = {
   key: 0,
   class: "remind-multi-picker__summary"
 };
-const _hoisted_4$p = {
+const _hoisted_4$q = {
   key: 1,
   class: "remind-multi-picker__continuous-tag"
 };
@@ -12510,12 +12513,12 @@ const _sfc_main$w = /* @__PURE__ */ defineComponent({
             _: 1
           })) : createCommentVNode("", true)
         ]),
-        summaryLines.value.length ? (openBlock(), createElementBlock("ul", _hoisted_3$p, [
+        summaryLines.value.length ? (openBlock(), createElementBlock("ul", _hoisted_3$q, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(summaryLines.value, (line, i) => {
             return openBlock(), createElementBlock("li", { key: i }, toDisplayString(line), 1);
           }), 128))
         ])) : createCommentVNode("", true),
-        modelContinuous.value ? (openBlock(), createElementBlock("p", _hoisted_4$p, "持续提醒已开启")) : createCommentVNode("", true),
+        modelContinuous.value ? (openBlock(), createElementBlock("p", _hoisted_4$q, "持续提醒已开启")) : createCommentVNode("", true),
         createVNode(_component_el_dialog, {
           modelValue: dialogOpen.value,
           "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => dialogOpen.value = $event),
@@ -12552,16 +12555,16 @@ const _sfc_main$w = /* @__PURE__ */ defineComponent({
 const RemindMultiPicker = /* @__PURE__ */ _export_sfc(_sfc_main$w, [["__scopeId", "data-v-658038e1"]]);
 const _hoisted_1$u = { class: "task-recurrence-custom" };
 const _hoisted_2$s = { class: "task-recurrence-custom__row" };
-const _hoisted_3$o = ["onKeydown"];
-const _hoisted_4$o = {
+const _hoisted_3$p = ["onKeydown"];
+const _hoisted_4$p = {
   type: "button",
   class: "task-recurrence-custom__unit"
 };
-const _hoisted_5$o = {
+const _hoisted_5$p = {
   key: 0,
   class: "task-recurrence-custom__preview"
 };
-const _hoisted_6$m = { class: "task-recurrence-custom__actions" };
+const _hoisted_6$n = { class: "task-recurrence-custom__actions" };
 const _sfc_main$v = /* @__PURE__ */ defineComponent({
   __name: "TaskRecurrenceCustomPanel",
   props: {
@@ -12615,7 +12618,7 @@ const _sfc_main$v = /* @__PURE__ */ defineComponent({
             min: "1",
             class: "task-recurrence-custom__amount",
             onKeydown: withKeys(withModifiers(confirm, ["prevent"]), ["enter"])
-          }, null, 40, _hoisted_3$o), [
+          }, null, 40, _hoisted_3$p), [
             [
               vModelText,
               interval.value,
@@ -12647,7 +12650,7 @@ const _sfc_main$v = /* @__PURE__ */ defineComponent({
               })
             ]),
             default: withCtx(() => [
-              createBaseVNode("button", _hoisted_4$o, [
+              createBaseVNode("button", _hoisted_4$p, [
                 createBaseVNode("span", null, toDisplayString(unitLabel.value), 1),
                 createVNode(_component_el_icon, null, {
                   default: withCtx(() => [
@@ -12660,8 +12663,8 @@ const _sfc_main$v = /* @__PURE__ */ defineComponent({
             _: 1
           })
         ]),
-        __props.dueAt && previewNext.value ? (openBlock(), createElementBlock("p", _hoisted_5$o, " 下次：" + toDisplayString(previewNext.value), 1)) : createCommentVNode("", true),
-        createBaseVNode("div", _hoisted_6$m, [
+        __props.dueAt && previewNext.value ? (openBlock(), createElementBlock("p", _hoisted_5$p, " 下次：" + toDisplayString(previewNext.value), 1)) : createCommentVNode("", true),
+        createBaseVNode("div", _hoisted_6$n, [
           createBaseVNode("button", {
             type: "button",
             class: "task-recurrence-custom__btn task-recurrence-custom__btn--ghost",
@@ -46332,10 +46335,10 @@ const _hoisted_1$s = {
   class: "task-attachments"
 };
 const _hoisted_2$q = { class: "task-attachments__title" };
-const _hoisted_3$n = { class: "task-attachments__list" };
-const _hoisted_4$n = ["title", "onClick"];
-const _hoisted_5$n = { class: "task-attachments__actions" };
-const _hoisted_6$l = ["onClick"];
+const _hoisted_3$o = { class: "task-attachments__list" };
+const _hoisted_4$o = ["title", "onClick"];
+const _hoisted_5$o = { class: "task-attachments__actions" };
+const _hoisted_6$m = ["onClick"];
 const _hoisted_7$i = ["onClick"];
 const _hoisted_8$d = ["onClick"];
 const _sfc_main$t = /* @__PURE__ */ defineComponent({
@@ -46349,7 +46352,7 @@ const _sfc_main$t = /* @__PURE__ */ defineComponent({
     return (_ctx, _cache) => {
       return __props.attachments.length ? (openBlock(), createElementBlock("section", _hoisted_1$s, [
         createBaseVNode("h4", _hoisted_2$q, "附件（" + toDisplayString(__props.attachments.length) + "）", 1),
-        createBaseVNode("ul", _hoisted_3$n, [
+        createBaseVNode("ul", _hoisted_3$o, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(__props.attachments, (item, index) => {
             return openBlock(), createElementBlock("li", {
               key: item.uri,
@@ -46364,13 +46367,13 @@ const _sfc_main$t = /* @__PURE__ */ defineComponent({
                 class: "task-attachments__name",
                 title: item.name,
                 onClick: ($event) => emit("open", item)
-              }, toDisplayString(item.name), 9, _hoisted_4$n),
-              createBaseVNode("div", _hoisted_5$n, [
+              }, toDisplayString(item.name), 9, _hoisted_4$o),
+              createBaseVNode("div", _hoisted_5$o, [
                 createBaseVNode("button", {
                   type: "button",
                   class: "task-attachments__btn",
                   onClick: ($event) => emit("open", item)
-                }, "打开", 8, _hoisted_6$l),
+                }, "打开", 8, _hoisted_6$m),
                 createBaseVNode("button", {
                   type: "button",
                   class: "task-attachments__btn",
@@ -46392,10 +46395,10 @@ const _sfc_main$t = /* @__PURE__ */ defineComponent({
 const TaskAttachmentList = /* @__PURE__ */ _export_sfc(_sfc_main$t, [["__scopeId", "data-v-eb66fa48"]]);
 const _hoisted_1$r = { class: "task-body-editor__tabs" };
 const _hoisted_2$p = ["title"];
-const _hoisted_3$m = { class: "task-body-editor__toolbar" };
-const _hoisted_4$m = ["title", "disabled", "onMousedown"];
-const _hoisted_5$m = { class: "task-body-editor__main" };
-const _hoisted_6$k = { class: "task-body-editor__wysiwyg" };
+const _hoisted_3$n = { class: "task-body-editor__toolbar" };
+const _hoisted_4$n = ["title", "disabled", "onMousedown"];
+const _hoisted_5$n = { class: "task-body-editor__main" };
+const _hoisted_6$l = { class: "task-body-editor__wysiwyg" };
 const _hoisted_7$h = ["placeholder"];
 const _hoisted_8$c = { class: "task-body-editor__bar" };
 const _hoisted_9$7 = ["title"];
@@ -46636,7 +46639,7 @@ const _sfc_main$s = /* @__PURE__ */ defineComponent({
             })
           ], 8, _hoisted_2$p)
         ]),
-        createBaseVNode("div", _hoisted_3$m, [
+        createBaseVNode("div", _hoisted_3$n, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(unref(markdownTools), (tool) => {
             return openBlock(), createElementBlock("button", {
               key: tool.key,
@@ -46645,11 +46648,11 @@ const _sfc_main$s = /* @__PURE__ */ defineComponent({
               title: tool.label,
               disabled: viewMode.value === "source",
               onMousedown: withModifiers(($event) => onToolClick(tool), ["prevent"])
-            }, toDisplayString(tool.short), 41, _hoisted_4$m);
+            }, toDisplayString(tool.short), 41, _hoisted_4$n);
           }), 128))
         ]),
-        createBaseVNode("div", _hoisted_5$m, [
-          withDirectives(createBaseVNode("div", _hoisted_6$k, [
+        createBaseVNode("div", _hoisted_5$n, [
+          withDirectives(createBaseVNode("div", _hoisted_6$l, [
             unref(editor) ? (openBlock(), createBlock(unref(EditorContent), {
               key: 0,
               editor: unref(editor),
@@ -46874,16 +46877,16 @@ const _hoisted_2$o = {
   key: 0,
   class: "task-activity-list__empty"
 };
-const _hoisted_3$l = {
+const _hoisted_3$m = {
   key: 1,
   class: "task-activity-list__empty"
 };
-const _hoisted_4$l = {
+const _hoisted_4$m = {
   key: 2,
   class: "task-activity-list__timeline"
 };
-const _hoisted_5$l = { class: "task-activity-list__content" };
-const _hoisted_6$j = { class: "task-activity-list__head" };
+const _hoisted_5$m = { class: "task-activity-list__content" };
+const _hoisted_6$k = { class: "task-activity-list__head" };
 const _hoisted_7$g = { class: "task-activity-list__type" };
 const _hoisted_8$b = { class: "task-activity-list__time" };
 const _hoisted_9$6 = { class: "task-activity-list__summary" };
@@ -46954,15 +46957,15 @@ const _sfc_main$q = /* @__PURE__ */ defineComponent({
     return (_ctx, _cache) => {
       const _component_el_button = resolveComponent("el-button");
       return openBlock(), createElementBlock("div", _hoisted_1$q, [
-        loading.value && !items.value.length ? (openBlock(), createElementBlock("div", _hoisted_2$o, "加载中…")) : !items.value.length ? (openBlock(), createElementBlock("div", _hoisted_3$l, "暂无动态")) : (openBlock(), createElementBlock("ul", _hoisted_4$l, [
+        loading.value && !items.value.length ? (openBlock(), createElementBlock("div", _hoisted_2$o, "加载中…")) : !items.value.length ? (openBlock(), createElementBlock("div", _hoisted_3$m, "暂无动态")) : (openBlock(), createElementBlock("ul", _hoisted_4$m, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(items.value, (item) => {
             return openBlock(), createElementBlock("li", {
               key: item.id,
               class: "task-activity-list__item"
             }, [
               _cache[0] || (_cache[0] = createBaseVNode("div", { class: "task-activity-list__dot" }, null, -1)),
-              createBaseVNode("div", _hoisted_5$l, [
-                createBaseVNode("div", _hoisted_6$j, [
+              createBaseVNode("div", _hoisted_5$m, [
+                createBaseVNode("div", _hoisted_6$k, [
                   createBaseVNode("span", _hoisted_7$g, toDisplayString(typeLabel(item.type)), 1),
                   createBaseVNode("time", _hoisted_8$b, toDisplayString(formatTime(item.createdAt)), 1)
                 ]),
@@ -46993,10 +46996,10 @@ const _hoisted_2$n = {
   key: 0,
   class: "task-panel__tabs"
 };
-const _hoisted_3$k = { class: "task-panel__body" };
-const _hoisted_4$k = { class: "task-panel__editor" };
-const _hoisted_5$k = ["onKeydown"];
-const _hoisted_6$i = { class: "task-panel__meta-row" };
+const _hoisted_3$l = { class: "task-panel__body" };
+const _hoisted_4$l = { class: "task-panel__editor" };
+const _hoisted_5$l = ["onKeydown"];
+const _hoisted_6$j = { class: "task-panel__meta-row" };
 const _hoisted_7$f = { class: "task-panel__category-name" };
 const _hoisted_8$a = { class: "task-panel__category-option" };
 const _hoisted_9$5 = { class: "task-panel__section task-panel__section--collapse" };
@@ -47437,7 +47440,7 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
               onClick: _cache[3] || (_cache[3] = ($event) => activeTab.value = "activity")
             }, " 动态 ", 2)
           ])) : createCommentVNode("", true),
-          withDirectives(createBaseVNode("div", _hoisted_3$k, [
+          withDirectives(createBaseVNode("div", _hoisted_3$l, [
             createVNode(_component_el_form, {
               "label-position": "top",
               size: "default",
@@ -47445,16 +47448,16 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
               onSubmit: withModifiers(save, ["prevent"])
             }, {
               default: withCtx(() => [
-                createBaseVNode("section", _hoisted_4$k, [
+                createBaseVNode("section", _hoisted_4$l, [
                   withDirectives(createBaseVNode("input", {
                     "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => form.title = $event),
                     class: "task-panel__title",
                     placeholder: "任务标题",
                     onKeydown: withKeys(withModifiers(save, ["prevent"]), ["enter"])
-                  }, null, 40, _hoisted_5$k), [
+                  }, null, 40, _hoisted_5$l), [
                     [vModelText, form.title]
                   ]),
-                  withDirectives(createBaseVNode("div", _hoisted_6$i, [
+                  withDirectives(createBaseVNode("div", _hoisted_6$j, [
                     createVNode(_component_el_dropdown, {
                       trigger: "click",
                       class: "task-panel__category-dropdown",
@@ -47511,7 +47514,7 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
                       size: "small",
                       class: "task-panel__status-select",
                       placeholder: "状态",
-                      title: "列表勾选为完成/未完成二态；进行中请在此设置或用状态看板"
+                      title: "与列表圆圈一致：待办 / 进行中 / 已完成"
                     }, {
                       default: withCtx(() => [
                         createVNode(_component_el_option, {
@@ -47621,7 +47624,7 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
                         key: item.key,
                         class: "task-panel__subtask-row"
                       }, [
-                        !item.isDraft && item.status ? (openBlock(), createBlock(_sfc_main$O, {
+                        !item.isDraft && item.status ? (openBlock(), createBlock(TaskStatusCheckbox, {
                           key: 0,
                           status: item.status,
                           onToggle: ($event) => toggleChildStatus(item)
@@ -47737,7 +47740,7 @@ const _sfc_main$p = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TaskDetailPanel = /* @__PURE__ */ _export_sfc(_sfc_main$p, [["__scopeId", "data-v-66359e59"]]);
+const TaskDetailPanel = /* @__PURE__ */ _export_sfc(_sfc_main$p, [["__scopeId", "data-v-d5715ec1"]]);
 const LIST_DATE_FIELD_KEY = "aitodo_list_date_field";
 const DONE_TIME_RANGE_KEY = "aitodo_done_time_range";
 const CALENDAR_DATE_FIELD_KEY = "aitodo_calendar_date_field";
@@ -48019,10 +48022,10 @@ function persistNavListPrefs(scopeKey, prefs) {
 }
 const _hoisted_1$o = { class: "home" };
 const _hoisted_2$m = { class: "home__workspace" };
-const _hoisted_3$j = { class: "home__list-header" };
-const _hoisted_4$j = { class: "home__list-head-left" };
-const _hoisted_5$j = { class: "home__view-title" };
-const _hoisted_6$h = {
+const _hoisted_3$k = { class: "home__list-header" };
+const _hoisted_4$k = { class: "home__list-head-left" };
+const _hoisted_5$k = { class: "home__view-title" };
+const _hoisted_6$i = {
   key: 0,
   class: "home__view-count"
 };
@@ -49157,10 +49160,10 @@ const _sfc_main$o = /* @__PURE__ */ defineComponent({
               "is-detail-expanded": detailPanelExpanded.value && taskDetailStyle.value === "sidebar"
             }])
           }, [
-            createBaseVNode("header", _hoisted_3$j, [
-              createBaseVNode("div", _hoisted_4$j, [
-                createBaseVNode("h1", _hoisted_5$j, toDisplayString(viewTitle.value), 1),
-                !isSpecialListView.value ? (openBlock(), createElementBlock("span", _hoisted_6$h, " (" + toDisplayString(headerTaskCounts.value.incomplete) + "/" + toDisplayString(headerTaskCounts.value.total) + ") ", 1)) : createCommentVNode("", true),
+            createBaseVNode("header", _hoisted_3$k, [
+              createBaseVNode("div", _hoisted_4$k, [
+                createBaseVNode("h1", _hoisted_5$k, toDisplayString(viewTitle.value), 1),
+                !isSpecialListView.value ? (openBlock(), createElementBlock("span", _hoisted_6$i, " (" + toDisplayString(headerTaskCounts.value.incomplete) + "/" + toDisplayString(headerTaskCounts.value.total) + ") ", 1)) : createCommentVNode("", true),
                 showSmartDateFieldFilter.value ? (openBlock(), createBlock(_component_el_select, {
                   key: 1,
                   modelValue: listDateField.value,
@@ -49738,7 +49741,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
         }),
         onClick: _cache[1] || (_cache[1] = ($event) => emit("select", __props.task.id))
       }, [
-        createVNode(_sfc_main$O, {
+        createVNode(TaskStatusCheckbox, {
           class: "cal-task__check",
           status: __props.task.status,
           onToggle: _cache[0] || (_cache[0] = ($event) => emit("toggle-status", __props.task))
@@ -49749,13 +49752,13 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const CalendarTaskChip = /* @__PURE__ */ _export_sfc(_sfc_main$n, [["__scopeId", "data-v-fd057104"]]);
+const CalendarTaskChip = /* @__PURE__ */ _export_sfc(_sfc_main$n, [["__scopeId", "data-v-acf898ac"]]);
 const _hoisted_1$m = { class: "cal-month" };
 const _hoisted_2$k = { class: "cal-month__weekdays" };
-const _hoisted_3$i = { class: "cal-month__grid" };
-const _hoisted_4$i = { class: "cal-month__date" };
-const _hoisted_5$i = ["title"];
-const _hoisted_6$g = { class: "cal-month__tasks" };
+const _hoisted_3$j = { class: "cal-month__grid" };
+const _hoisted_4$j = { class: "cal-month__date" };
+const _hoisted_5$j = ["title"];
+const _hoisted_6$h = { class: "cal-month__tasks" };
 const _hoisted_7$d = ["onClick"];
 const _sfc_main$m = /* @__PURE__ */ defineComponent({
   __name: "CalendarMonthView",
@@ -49802,7 +49805,7 @@ const _sfc_main$m = /* @__PURE__ */ defineComponent({
             }, toDisplayString(w), 1);
           }), 64))
         ]),
-        createBaseVNode("div", _hoisted_3$i, [
+        createBaseVNode("div", _hoisted_3$j, [
           (openBlock(true), createElementBlock(Fragment$2, null, renderList(days.value, (day) => {
             return openBlock(), createElementBlock("div", {
               key: day.format("YYYY-MM-DD"),
@@ -49811,7 +49814,7 @@ const _sfc_main$m = /* @__PURE__ */ defineComponent({
                 "is-today": day.isSame(unref(today), "day")
               }])
             }, [
-              createBaseVNode("div", _hoisted_4$i, [
+              createBaseVNode("div", _hoisted_4$j, [
                 createBaseVNode("span", {
                   class: normalizeClass(["cal-month__date-num", { "is-today": day.isSame(unref(today), "day") }])
                 }, toDisplayString(day.date()), 3),
@@ -49819,9 +49822,9 @@ const _sfc_main$m = /* @__PURE__ */ defineComponent({
                   key: 0,
                   class: normalizeClass(["cal-month__mark", holidayOf(day).kind === "holiday" ? "is-off" : "is-work"]),
                   title: holidayOf(day).name
-                }, toDisplayString(holidayOf(day).kind === "holiday" ? "休" : "班"), 11, _hoisted_5$i)) : createCommentVNode("", true)
+                }, toDisplayString(holidayOf(day).kind === "holiday" ? "休" : "班"), 11, _hoisted_5$j)) : createCommentVNode("", true)
               ]),
-              createBaseVNode("div", _hoisted_6$g, [
+              createBaseVNode("div", _hoisted_6$h, [
                 (openBlock(true), createElementBlock(Fragment$2, null, renderList(visibleTasks2(day), (task) => {
                   return openBlock(), createBlock(CalendarTaskChip, {
                     key: unref(calendarTaskRowKey)(task, __props.dateField ?? "dueAt"),
@@ -49848,10 +49851,10 @@ const _sfc_main$m = /* @__PURE__ */ defineComponent({
 const CalendarMonthView = /* @__PURE__ */ _export_sfc(_sfc_main$m, [["__scopeId", "data-v-6a032524"]]);
 const _hoisted_1$l = { class: "cal-week" };
 const _hoisted_2$j = { class: "cal-week__head" };
-const _hoisted_3$h = { class: "cal-week__weekday" };
-const _hoisted_4$h = { class: "cal-week__date-row" };
-const _hoisted_5$h = ["title"];
-const _hoisted_6$f = {
+const _hoisted_3$i = { class: "cal-week__weekday" };
+const _hoisted_4$i = { class: "cal-week__date-row" };
+const _hoisted_5$i = ["title"];
+const _hoisted_6$g = {
   class: "cal-week__body",
   ref: "bodyRef"
 };
@@ -49901,8 +49904,8 @@ const _sfc_main$l = /* @__PURE__ */ defineComponent({
               key: day.format("YYYY-MM-DD"),
               class: normalizeClass(["cal-week__head-cell", { "is-today": day.isSame(unref(today), "day") }])
             }, [
-              createBaseVNode("span", _hoisted_3$h, toDisplayString(unref(weekdayLabel)(day)), 1),
-              createBaseVNode("div", _hoisted_4$h, [
+              createBaseVNode("span", _hoisted_3$i, toDisplayString(unref(weekdayLabel)(day)), 1),
+              createBaseVNode("div", _hoisted_4$i, [
                 createBaseVNode("span", {
                   class: normalizeClass(["cal-week__date", { "is-today": day.isSame(unref(today), "day") }])
                 }, toDisplayString(day.date()), 3),
@@ -49910,12 +49913,12 @@ const _sfc_main$l = /* @__PURE__ */ defineComponent({
                   key: 0,
                   class: normalizeClass(["cal-week__mark", holidayOf(day).kind === "holiday" ? "is-off" : "is-work"]),
                   title: holidayOf(day).name
-                }, toDisplayString(holidayOf(day).kind === "holiday" ? "休" : "班"), 11, _hoisted_5$h)) : createCommentVNode("", true)
+                }, toDisplayString(holidayOf(day).kind === "holiday" ? "休" : "班"), 11, _hoisted_5$i)) : createCommentVNode("", true)
               ])
             ], 2);
           }), 128))
         ]),
-        createBaseVNode("div", _hoisted_6$f, [
+        createBaseVNode("div", _hoisted_6$g, [
           createBaseVNode("div", _hoisted_7$c, [
             (openBlock(true), createElementBlock(Fragment$2, null, renderList(unref(hours), (h2) => {
               return openBlock(), createElementBlock("div", {
@@ -49962,10 +49965,10 @@ const _sfc_main$l = /* @__PURE__ */ defineComponent({
 const CalendarWeekView = /* @__PURE__ */ _export_sfc(_sfc_main$l, [["__scopeId", "data-v-5721e0cb"]]);
 const _hoisted_1$k = { class: "cal-day" };
 const _hoisted_2$i = { class: "cal-day__head" };
-const _hoisted_3$g = { class: "cal-day__weekday" };
-const _hoisted_4$g = ["title"];
-const _hoisted_5$g = { class: "cal-day__mark-name" };
-const _hoisted_6$e = { class: "cal-day__body" };
+const _hoisted_3$h = { class: "cal-day__weekday" };
+const _hoisted_4$h = ["title"];
+const _hoisted_5$h = { class: "cal-day__mark-name" };
+const _hoisted_6$f = { class: "cal-day__body" };
 const _hoisted_7$b = { class: "cal-day__time-col" };
 const _hoisted_8$7 = { class: "cal-day__grid" };
 const SLOT_H = 56;
@@ -50000,7 +50003,7 @@ const _sfc_main$k = /* @__PURE__ */ defineComponent({
     return (_ctx, _cache) => {
       return openBlock(), createElementBlock("div", _hoisted_1$k, [
         createBaseVNode("header", _hoisted_2$i, [
-          createBaseVNode("span", _hoisted_3$g, toDisplayString(unref(weekdayLabel)(__props.anchor)), 1),
+          createBaseVNode("span", _hoisted_3$h, toDisplayString(unref(weekdayLabel)(__props.anchor)), 1),
           createBaseVNode("span", {
             class: normalizeClass(["cal-day__date", { "is-today": __props.anchor.isSame(unref(today), "day") }])
           }, toDisplayString(__props.anchor.date()), 3),
@@ -50010,10 +50013,10 @@ const _sfc_main$k = /* @__PURE__ */ defineComponent({
             title: dayHoliday.value.name
           }, [
             createTextVNode(toDisplayString(dayHoliday.value.kind === "holiday" ? "休" : "班") + " ", 1),
-            createBaseVNode("span", _hoisted_5$g, toDisplayString(dayHoliday.value.name), 1)
-          ], 10, _hoisted_4$g)) : createCommentVNode("", true)
+            createBaseVNode("span", _hoisted_5$h, toDisplayString(dayHoliday.value.name), 1)
+          ], 10, _hoisted_4$h)) : createCommentVNode("", true)
         ]),
-        createBaseVNode("div", _hoisted_6$e, [
+        createBaseVNode("div", _hoisted_6$f, [
           createBaseVNode("div", _hoisted_7$b, [
             (openBlock(true), createElementBlock(Fragment$2, null, renderList(unref(hours), (h2) => {
               return openBlock(), createElementBlock("div", {
@@ -50053,10 +50056,10 @@ const _sfc_main$k = /* @__PURE__ */ defineComponent({
 const CalendarDayView = /* @__PURE__ */ _export_sfc(_sfc_main$k, [["__scopeId", "data-v-d2fb3dd9"]]);
 const _hoisted_1$j = { class: "cal-year" };
 const _hoisted_2$h = ["onClick"];
-const _hoisted_3$f = { class: "cal-year__month-title" };
-const _hoisted_4$f = { class: "cal-year__weekdays" };
-const _hoisted_5$f = { class: "cal-year__days" };
-const _hoisted_6$d = ["title"];
+const _hoisted_3$g = { class: "cal-year__month-title" };
+const _hoisted_4$g = { class: "cal-year__weekdays" };
+const _hoisted_5$g = { class: "cal-year__days" };
+const _hoisted_6$e = ["title"];
 const _hoisted_7$a = {
   key: 0,
   class: "cal-year__count"
@@ -50134,8 +50137,8 @@ const _sfc_main$j = /* @__PURE__ */ defineComponent({
             class: normalizeClass(["cal-year__month", { "is-current": isCurrentMonth(monthIndex) }]),
             onClick: ($event) => emit("select-month", monthIndex)
           }, [
-            createBaseVNode("div", _hoisted_3$f, toDisplayString(monthIndex) + "月", 1),
-            createBaseVNode("div", _hoisted_4$f, [
+            createBaseVNode("div", _hoisted_3$g, toDisplayString(monthIndex) + "月", 1),
+            createBaseVNode("div", _hoisted_4$g, [
               (openBlock(), createElementBlock(Fragment$2, null, renderList(weekdayShort, (w) => {
                 return createBaseVNode("span", {
                   key: w,
@@ -50143,13 +50146,13 @@ const _sfc_main$j = /* @__PURE__ */ defineComponent({
                 }, toDisplayString(w), 1);
               }), 64))
             ]),
-            createBaseVNode("div", _hoisted_5$f, [
+            createBaseVNode("div", _hoisted_5$g, [
               (openBlock(true), createElementBlock(Fragment$2, null, renderList(daysOfMonth(monthIndex), (day) => {
                 return openBlock(), createElementBlock("span", {
                   key: day.format("YYYY-MM-DD"),
                   class: normalizeClass(["cal-year__day", dayClass(day, monthIndex)]),
                   title: dayTitle(day)
-                }, toDisplayString(day.date()), 11, _hoisted_6$d);
+                }, toDisplayString(day.date()), 11, _hoisted_6$e);
               }), 128))
             ]),
             monthTaskCount(monthIndex) > 0 ? (openBlock(), createElementBlock("div", _hoisted_7$a, toDisplayString(monthTaskCount(monthIndex)) + " 项 ", 1)) : createCommentVNode("", true)
@@ -50165,10 +50168,10 @@ const _hoisted_2$g = {
   key: 0,
   class: "cal-custom__empty"
 };
-const _hoisted_3$e = { class: "cal-custom__day-head" };
-const _hoisted_4$e = { class: "cal-custom__day-date" };
-const _hoisted_5$e = { class: "cal-custom__count" };
-const _hoisted_6$c = {
+const _hoisted_3$f = { class: "cal-custom__day-head" };
+const _hoisted_4$f = { class: "cal-custom__day-date" };
+const _hoisted_5$f = { class: "cal-custom__count" };
+const _hoisted_6$d = {
   key: 0,
   class: "cal-custom__tasks"
 };
@@ -50221,15 +50224,15 @@ const _sfc_main$i = /* @__PURE__ */ defineComponent({
             key: day.format("YYYY-MM-DD"),
             class: "cal-custom__day"
           }, [
-            createBaseVNode("header", _hoisted_3$e, [
-              createBaseVNode("span", _hoisted_4$e, toDisplayString(day.format("M月D日 dddd")), 1),
+            createBaseVNode("header", _hoisted_3$f, [
+              createBaseVNode("span", _hoisted_4$f, toDisplayString(day.format("M月D日 dddd")), 1),
               holidayOf(day) ? (openBlock(), createElementBlock("span", {
                 key: 0,
                 class: normalizeClass(["cal-custom__mark", holidayOf(day).kind === "holiday" ? "is-off" : "is-work"])
               }, toDisplayString(holidayOf(day).kind === "holiday" ? "休" : "班"), 3)) : createCommentVNode("", true),
-              createBaseVNode("span", _hoisted_5$e, toDisplayString(tasksOnDay(day).length) + " 项", 1)
+              createBaseVNode("span", _hoisted_5$f, toDisplayString(tasksOnDay(day).length) + " 项", 1)
             ]),
-            tasksOnDay(day).length ? (openBlock(), createElementBlock("ul", _hoisted_6$c, [
+            tasksOnDay(day).length ? (openBlock(), createElementBlock("ul", _hoisted_6$d, [
               (openBlock(true), createElementBlock(Fragment$2, null, renderList(tasksOnDay(day), (task) => {
                 return openBlock(), createElementBlock("li", {
                   key: unref(calendarTaskRowKey)(task, __props.dateField ?? "dueAt")
@@ -50253,10 +50256,10 @@ const _sfc_main$i = /* @__PURE__ */ defineComponent({
 const CalendarCustomRangeView = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["__scopeId", "data-v-98b20d91"]]);
 const _hoisted_1$h = { class: "calendar-page" };
 const _hoisted_2$f = { class: "calendar-page__header" };
-const _hoisted_3$d = { class: "calendar-page__head-left" };
-const _hoisted_4$d = { class: "calendar-page__title" };
-const _hoisted_5$d = { class: "calendar-page__head-actions" };
-const _hoisted_6$b = { class: "calendar-page__nav" };
+const _hoisted_3$e = { class: "calendar-page__head-left" };
+const _hoisted_4$e = { class: "calendar-page__title" };
+const _hoisted_5$e = { class: "calendar-page__head-actions" };
+const _hoisted_6$c = { class: "calendar-page__nav" };
 const _hoisted_7$8 = { class: "calendar-page__body" };
 const _sfc_main$h = /* @__PURE__ */ defineComponent({
   __name: "CalendarView",
@@ -50572,8 +50575,8 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
           class: normalizeClass(["calendar-page__main", { "is-detail-open": detailOpen.value }])
         }, [
           createBaseVNode("header", _hoisted_2$f, [
-            createBaseVNode("div", _hoisted_3$d, [
-              createBaseVNode("h1", _hoisted_4$d, toDisplayString(title.value), 1),
+            createBaseVNode("div", _hoisted_3$e, [
+              createBaseVNode("h1", _hoisted_4$e, toDisplayString(title.value), 1),
               createVNode(_component_el_select, {
                 modelValue: calendarDateField.value,
                 "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => calendarDateField.value = $event),
@@ -50669,7 +50672,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
                 _: 1
               }, 8, ["modelValue"])
             ]),
-            createBaseVNode("div", _hoisted_5$d, [
+            createBaseVNode("div", _hoisted_5$e, [
               createVNode(_component_el_button, {
                 text: "",
                 circle: "",
@@ -50686,7 +50689,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
                 ]),
                 _: 1
               }),
-              createBaseVNode("div", _hoisted_6$b, [
+              createBaseVNode("div", _hoisted_6$c, [
                 createVNode(_component_el_button, {
                   size: "small",
                   onClick: _cache[5] || (_cache[5] = ($event) => shift2(-1))
@@ -50785,12 +50788,12 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
 const CalendarView = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-331d30b7"]]);
 const _hoisted_1$g = { class: "settings-section" };
 const _hoisted_2$e = { class: "settings-section__path" };
-const _hoisted_3$c = { class: "settings-section__row" };
-const _hoisted_4$c = {
+const _hoisted_3$d = { class: "settings-section__row" };
+const _hoisted_4$d = {
   key: 0,
   class: "settings-section__hint"
 };
-const _hoisted_5$c = {
+const _hoisted_5$d = {
   key: 1,
   class: "settings-section__error"
 };
@@ -50846,7 +50849,7 @@ ${path}
           title: "安装到 Program Files 等目录可能无法写入；卸载可能删除安装目录下的数据，请及时备份。",
           class: "settings-section__alert"
         }),
-        createBaseVNode("div", _hoisted_3$c, [
+        createBaseVNode("div", _hoisted_3$d, [
           createVNode(_component_el_button, {
             type: "primary",
             loading: migrating.value,
@@ -50868,9 +50871,9 @@ ${path}
             _: 1
           }, 8, ["loading"])) : createCommentVNode("", true)
         ]),
-        info.value ? (openBlock(), createElementBlock("p", _hoisted_4$c, " 默认路径：" + toDisplayString(info.value.defaultDataPath), 1)) : createCommentVNode("", true),
+        info.value ? (openBlock(), createElementBlock("p", _hoisted_4$d, " 默认路径：" + toDisplayString(info.value.defaultDataPath), 1)) : createCommentVNode("", true),
         _cache[3] || (_cache[3] = createBaseVNode("p", { class: "settings-section__hint" }, " 更改时会先完整复制数据库与附件到新目录，成功后再删除原目录中的业务文件，然后自动重启。 ", -1)),
-        info.value && !info.value.writable ? (openBlock(), createElementBlock("p", _hoisted_5$c, "当前目录不可写，请尽快更改。")) : createCommentVNode("", true)
+        info.value && !info.value.writable ? (openBlock(), createElementBlock("p", _hoisted_5$d, "当前目录不可写，请尽快更改。")) : createCommentVNode("", true)
       ]);
     };
   }
@@ -50917,10 +50920,10 @@ function saveLastSyncUsername(username) {
 }
 const _hoisted_1$f = { class: "settings-section" };
 const _hoisted_2$d = { class: "settings-section__hint" };
-const _hoisted_3$b = { class: "settings-section__field settings-section__field--stack" };
-const _hoisted_4$b = { class: "settings-section__row" };
-const _hoisted_5$b = { class: "settings-section__field settings-section__field--stack" };
-const _hoisted_6$a = { class: "settings-section__toggles" };
+const _hoisted_3$c = { class: "settings-section__field settings-section__field--stack" };
+const _hoisted_4$c = { class: "settings-section__row" };
+const _hoisted_5$c = { class: "settings-section__field settings-section__field--stack" };
+const _hoisted_6$b = { class: "settings-section__toggles" };
 const _hoisted_7$7 = { class: "settings-section__field" };
 const _hoisted_8$6 = { class: "settings-section__auth-toggle" };
 const _hoisted_9$3 = { class: "settings-section__field settings-section__field--stack" };
@@ -51186,9 +51189,9 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
       return openBlock(), createElementBlock("section", _hoisted_1$f, [
         _cache[46] || (_cache[46] = createBaseVNode("h2", { class: "settings-section__title" }, "账号与同步", -1)),
         createBaseVNode("p", _hoisted_2$d, toDisplayString(status.value?.loggedIn ? "已登录时可在多台桌面客户端间按下方范围同步（需自建 Sync Server）。" : "未登录时数据仅存本机，行为与此前纯本地版本一致。"), 1),
-        createBaseVNode("div", _hoisted_3$b, [
+        createBaseVNode("div", _hoisted_3$c, [
           _cache[17] || (_cache[17] = createBaseVNode("span", { class: "settings-section__label" }, "服务器地址", -1)),
-          createBaseVNode("div", _hoisted_4$b, [
+          createBaseVNode("div", _hoisted_4$c, [
             createVNode(_component_el_input, {
               modelValue: serverUrl.value,
               "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => serverUrl.value = $event),
@@ -51216,9 +51219,9 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
             }, 8, ["disabled"])
           ])
         ]),
-        createBaseVNode("div", _hoisted_5$b, [
+        createBaseVNode("div", _hoisted_5$c, [
           _cache[22] || (_cache[22] = createBaseVNode("span", { class: "settings-section__label" }, "同步范围", -1)),
-          createBaseVNode("div", _hoisted_6$a, [
+          createBaseVNode("div", _hoisted_6$b, [
             createVNode(_component_el_checkbox, {
               modelValue: prefs.syncTasks,
               "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => prefs.syncTasks = $event),
@@ -51620,13 +51623,13 @@ const _hoisted_2$c = {
   key: 0,
   class: "settings-section__banner settings-section__banner--ok"
 };
-const _hoisted_3$a = {
+const _hoisted_3$b = {
   key: 1,
   class: "settings-section__banner"
 };
-const _hoisted_4$a = { class: "settings-section__field" };
-const _hoisted_5$a = { class: "settings-section__field settings-section__field--stack" };
-const _hoisted_6$9 = { class: "settings-section__checks" };
+const _hoisted_4$b = { class: "settings-section__field" };
+const _hoisted_5$b = { class: "settings-section__field settings-section__field--stack" };
+const _hoisted_6$a = { class: "settings-section__checks" };
 const _hoisted_7$6 = { class: "settings-section__actions" };
 const _hoisted_8$5 = { class: "settings-section__checks" };
 const _hoisted_9$2 = { class: "settings-section__actions" };
@@ -51756,8 +51759,8 @@ const _sfc_main$e = /* @__PURE__ */ defineComponent({
       return openBlock(), createElementBlock("section", _hoisted_1$e, [
         _cache[33] || (_cache[33] = createBaseVNode("h2", { class: "settings-section__title" }, "通知管理", -1)),
         _cache[34] || (_cache[34] = createBaseVNode("p", { class: "settings-section__hint" }, " 配置系统托盘与外部推送。外部渠道（IYUU / Webhook）互斥，仅生效一个；站内消息始终保留。 ", -1)),
-        loggedIn.value ? (openBlock(), createElementBlock("div", _hoisted_2$c, " 已登录：可按下方时机经服务器代发；关闭客户端且租约过期后，离线代发开启时到点外发。 ")) : (openBlock(), createElementBlock("div", _hoisted_3$a, " 未登录：外发仅本机直连生效渠道；关闭客户端后不会云端代发。 ")),
-        createBaseVNode("div", _hoisted_4$a, [
+        loggedIn.value ? (openBlock(), createElementBlock("div", _hoisted_2$c, " 已登录：可按下方时机经服务器代发；关闭客户端且租约过期后，离线代发开启时到点外发。 ")) : (openBlock(), createElementBlock("div", _hoisted_3$b, " 未登录：外发仅本机直连生效渠道；关闭客户端后不会云端代发。 ")),
+        createBaseVNode("div", _hoisted_4$b, [
           _cache[14] || (_cache[14] = createBaseVNode("div", null, [
             createBaseVNode("span", { class: "settings-section__label" }, "系统托盘通知"),
             createBaseVNode("p", { class: "settings-section__subhint" }, "到期提醒、定时汇总时弹出操作系统通知（不受免打扰影响）")
@@ -51769,7 +51772,7 @@ const _sfc_main$e = /* @__PURE__ */ defineComponent({
             onChange: saveConfig
           }, null, 8, ["modelValue", "disabled"])
         ]),
-        createBaseVNode("div", _hoisted_5$a, [
+        createBaseVNode("div", _hoisted_5$b, [
           _cache[23] || (_cache[23] = createBaseVNode("span", { class: "settings-section__label" }, "生效渠道", -1)),
           createVNode(_component_el_radio_group, {
             modelValue: config2.activeChannel,
@@ -51810,7 +51813,7 @@ const _sfc_main$e = /* @__PURE__ */ defineComponent({
               placeholder: "IYUU 令牌",
               disabled: loading.value || saving.value
             }, null, 8, ["modelValue", "disabled"]),
-            createBaseVNode("div", _hoisted_6$9, [
+            createBaseVNode("div", _hoisted_6$a, [
               createVNode(_component_el_checkbox, {
                 modelValue: iyuuReminder.value,
                 "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => iyuuReminder.value = $event),
@@ -52169,10 +52172,10 @@ const _sfc_main$d = /* @__PURE__ */ defineComponent({
 const ShortcutEditor = /* @__PURE__ */ _export_sfc(_sfc_main$d, [["__scopeId", "data-v-597be668"]]);
 const _hoisted_1$c = { class: "settings-section settings-section--wide" };
 const _hoisted_2$b = { class: "settings-section__conflict-list" };
-const _hoisted_3$9 = { class: "settings-section__kbd is-conflict" };
-const _hoisted_4$9 = { class: "settings-section__toolbar" };
-const _hoisted_5$9 = { class: "settings-section__group-title" };
-const _hoisted_6$8 = { class: "settings-section__key-cell" };
+const _hoisted_3$a = { class: "settings-section__kbd is-conflict" };
+const _hoisted_4$a = { class: "settings-section__toolbar" };
+const _hoisted_5$a = { class: "settings-section__group-title" };
+const _hoisted_6$9 = { class: "settings-section__key-cell" };
 const _hoisted_7$5 = {
   key: 0,
   class: "settings-section__conflict-tag"
@@ -52294,7 +52297,7 @@ const _sfc_main$c = /* @__PURE__ */ defineComponent({
                 return openBlock(), createElementBlock("li", {
                   key: item.accelerator
                 }, [
-                  createBaseVNode("kbd", _hoisted_3$9, toDisplayString(unref(formatAcceleratorForDisplay)(item.accelerator, unref(isMac))), 1),
+                  createBaseVNode("kbd", _hoisted_3$a, toDisplayString(unref(formatAcceleratorForDisplay)(item.accelerator, unref(isMac))), 1),
                   createTextVNode(" 被占用：" + toDisplayString(item.labels.join("、")), 1)
                 ]);
               }), 128))
@@ -52302,7 +52305,7 @@ const _sfc_main$c = /* @__PURE__ */ defineComponent({
           ]),
           _: 1
         })) : createCommentVNode("", true),
-        createBaseVNode("div", _hoisted_4$9, [
+        createBaseVNode("div", _hoisted_4$a, [
           createVNode(_component_el_button, {
             size: "small",
             onClick: runConflictCheck
@@ -52328,7 +52331,7 @@ const _sfc_main$c = /* @__PURE__ */ defineComponent({
             key: category,
             class: "settings-section__group"
           }, [
-            createBaseVNode("h3", _hoisted_5$9, toDisplayString(unref(SHORTCUT_CATEGORY_LABELS)[category]), 1),
+            createBaseVNode("h3", _hoisted_5$a, toDisplayString(unref(SHORTCUT_CATEGORY_LABELS)[category]), 1),
             createVNode(_component_el_table, {
               data: rowsFor(category),
               size: "small",
@@ -52358,7 +52361,7 @@ const _sfc_main$c = /* @__PURE__ */ defineComponent({
                   "min-width": "160"
                 }, {
                   default: withCtx(({ row }) => [
-                    createBaseVNode("div", _hoisted_6$8, [
+                    createBaseVNode("div", _hoisted_6$9, [
                       createBaseVNode("kbd", {
                         class: normalizeClass(["settings-section__kbd", { "is-empty": !row.bound, "is-conflict": row.hasConflict }])
                       }, toDisplayString(row.display), 3),
@@ -52668,10 +52671,10 @@ function createCustomPrompt(name, content) {
 }
 const _hoisted_1$a = { class: "settings-section" };
 const _hoisted_2$a = { class: "prompt-block prompt-block--builtin" };
-const _hoisted_3$8 = { class: "prompt-block__head" };
-const _hoisted_4$8 = { class: "prompt-block__title" };
-const _hoisted_5$8 = { class: "settings-section__actions" };
-const _hoisted_6$7 = { class: "prompt-block" };
+const _hoisted_3$9 = { class: "prompt-block__head" };
+const _hoisted_4$9 = { class: "prompt-block__title" };
+const _hoisted_5$9 = { class: "settings-section__actions" };
+const _hoisted_6$8 = { class: "prompt-block" };
 const _hoisted_7$4 = { class: "prompt-block__head" };
 const _hoisted_8$3 = {
   key: 0,
@@ -52816,8 +52819,8 @@ const _sfc_main$a = /* @__PURE__ */ defineComponent({
       return openBlock(), createElementBlock("section", _hoisted_1$a, [
         _cache[23] || (_cache[23] = createBaseVNode("h2", { class: "settings-section__title" }, "提示词管理", -1)),
         createBaseVNode("article", _hoisted_2$a, [
-          createBaseVNode("header", _hoisted_3$8, [
-            createBaseVNode("h3", _hoisted_4$8, toDisplayString(form.taskPromptName), 1),
+          createBaseVNode("header", _hoisted_3$9, [
+            createBaseVNode("h3", _hoisted_4$9, toDisplayString(form.taskPromptName), 1),
             createVNode(_component_el_tag, {
               size: "small",
               type: "info"
@@ -52903,7 +52906,7 @@ const _sfc_main$a = /* @__PURE__ */ defineComponent({
                 ]),
                 _: 1
               }),
-              createBaseVNode("div", _hoisted_5$8, [
+              createBaseVNode("div", _hoisted_5$9, [
                 createVNode(_component_el_button, { onClick: resetBuiltin }, {
                   default: withCtx(() => [..._cache[13] || (_cache[13] = [
                     createTextVNode("恢复内置默认", -1)
@@ -52925,7 +52928,7 @@ const _sfc_main$a = /* @__PURE__ */ defineComponent({
             _: 1
           })
         ]),
-        createBaseVNode("article", _hoisted_6$7, [
+        createBaseVNode("article", _hoisted_6$8, [
           createBaseVNode("header", _hoisted_7$4, [
             _cache[17] || (_cache[17] = createBaseVNode("h3", { class: "prompt-block__title" }, "自定义提示词", -1)),
             createVNode(_component_el_button, {
@@ -53134,16 +53137,16 @@ const DEFAULT_TASK_ACTIVITY_MAX_COUNT = 2e3;
 const DEFAULT_TASK_ACTIVITY_MAX_DAYS = 180;
 const _hoisted_1$8 = { class: "settings-section" };
 const _hoisted_2$8 = { class: "task-activity-settings__card" };
-const _hoisted_3$7 = {
+const _hoisted_3$8 = {
   key: 0,
   class: "task-activity-settings__field"
 };
-const _hoisted_4$7 = {
+const _hoisted_4$8 = {
   key: 1,
   class: "task-activity-settings__field"
 };
-const _hoisted_5$7 = { class: "task-activity-settings__actions" };
-const _hoisted_6$6 = { class: "task-activity-settings__card" };
+const _hoisted_5$8 = { class: "task-activity-settings__actions" };
+const _hoisted_6$7 = { class: "task-activity-settings__card" };
 const _hoisted_7$3 = { class: "settings-section__hint" };
 const _hoisted_8$2 = { class: "task-activity-settings__actions" };
 const _sfc_main$8 = /* @__PURE__ */ defineComponent({
@@ -53286,7 +53289,7 @@ const _sfc_main$8 = /* @__PURE__ */ defineComponent({
             ]),
             _: 1
           }, 8, ["modelValue"]),
-          mode.value === "max_count" ? (openBlock(), createElementBlock("div", _hoisted_3$7, [
+          mode.value === "max_count" ? (openBlock(), createElementBlock("div", _hoisted_3$8, [
             _cache[6] || (_cache[6] = createBaseVNode("span", null, "最多保留", -1)),
             createVNode(_component_el_input_number, {
               modelValue: maxCount.value,
@@ -53295,7 +53298,7 @@ const _sfc_main$8 = /* @__PURE__ */ defineComponent({
               max: 1e5
             }, null, 8, ["modelValue"]),
             _cache[7] || (_cache[7] = createBaseVNode("span", null, "条", -1))
-          ])) : mode.value === "max_days" ? (openBlock(), createElementBlock("div", _hoisted_4$7, [
+          ])) : mode.value === "max_days" ? (openBlock(), createElementBlock("div", _hoisted_4$8, [
             _cache[8] || (_cache[8] = createBaseVNode("span", null, "保留最近", -1)),
             createVNode(_component_el_input_number, {
               modelValue: maxDays.value,
@@ -53305,7 +53308,7 @@ const _sfc_main$8 = /* @__PURE__ */ defineComponent({
             }, null, 8, ["modelValue"]),
             _cache[9] || (_cache[9] = createBaseVNode("span", null, "天", -1))
           ])) : createCommentVNode("", true),
-          createBaseVNode("div", _hoisted_5$7, [
+          createBaseVNode("div", _hoisted_5$8, [
             createVNode(_component_el_button, {
               type: "primary",
               loading: saving.value,
@@ -53318,7 +53321,7 @@ const _sfc_main$8 = /* @__PURE__ */ defineComponent({
             }, 8, ["loading"])
           ])
         ]),
-        createBaseVNode("div", _hoisted_6$6, [
+        createBaseVNode("div", _hoisted_6$7, [
           _cache[15] || (_cache[15] = createBaseVNode("h3", { class: "task-activity-settings__subtitle" }, "清理与删除", -1)),
           createBaseVNode("p", _hoisted_7$3, " 当前共 " + toDisplayString(totalCount.value ?? "…") + " 条动态记录。 ", 1),
           createBaseVNode("div", _hoisted_8$2, [
@@ -53360,12 +53363,33 @@ const _sfc_main$8 = /* @__PURE__ */ defineComponent({
 const SettingsTaskActivitySection = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-767cacbf"]]);
 const _hoisted_1$7 = { class: "settings-section" };
 const _hoisted_2$7 = { class: "settings-section__field" };
+const _hoisted_3$7 = {
+  key: 0,
+  class: "settings-section__hint settings-section__hint--tight"
+};
+const _hoisted_4$7 = {
+  key: 1,
+  class: "settings-section__hint settings-section__hint--tight"
+};
+const _hoisted_5$7 = {
+  key: 2,
+  class: "settings-section__field settings-section__field--stack"
+};
+const _hoisted_6$6 = { class: "settings-section__field" };
 const _sfc_main$7 = /* @__PURE__ */ defineComponent({
   __name: "SettingsCloseBehaviorSection",
   setup(__props) {
     const behavior = ref("ask");
     const loading = ref(false);
     const saving = ref(false);
+    const launch = reactive({
+      enabled: false,
+      startupMode: "tray"
+    });
+    const packaged = ref(true);
+    const syncedHint = ref("");
+    const loadingLaunch = ref(false);
+    const savingLaunch = ref(false);
     async function loadBehavior() {
       loading.value = true;
       try {
@@ -53387,36 +53411,111 @@ const _sfc_main$7 = /* @__PURE__ */ defineComponent({
         saving.value = false;
       }
     }
-    onMounted(loadBehavior);
+    async function loadLaunch() {
+      loadingLaunch.value = true;
+      syncedHint.value = "";
+      try {
+        const data = unwrapIpc(await window.api.app.getLaunchAtLogin());
+        launch.enabled = data.enabled;
+        launch.startupMode = data.startupMode;
+        packaged.value = data.packaged;
+        if (data.syncedFromSystem) {
+          syncedHint.value = "已与系统设置同步";
+        }
+      } catch (err) {
+        ElMessage.error(err instanceof Error ? err.message : "读取开机自启失败");
+      } finally {
+        loadingLaunch.value = false;
+      }
+    }
+    async function saveLaunch() {
+      savingLaunch.value = true;
+      try {
+        const saved = unwrapIpc(
+          await window.api.app.setLaunchAtLogin({
+            enabled: launch.enabled,
+            startupMode: launch.startupMode
+          })
+        );
+        launch.enabled = saved.enabled;
+        launch.startupMode = saved.startupMode;
+        ElMessage.success("开机自启已保存");
+      } catch (err) {
+        ElMessage.error(err instanceof Error ? err.message : "保存开机自启失败");
+        await loadLaunch();
+      } finally {
+        savingLaunch.value = false;
+      }
+    }
+    onMounted(async () => {
+      await Promise.all([loadBehavior(), loadLaunch()]);
+    });
     return (_ctx, _cache) => {
+      const _component_el_switch = resolveComponent("el-switch");
       const _component_el_radio = resolveComponent("el-radio");
       const _component_el_radio_group = resolveComponent("el-radio-group");
       return openBlock(), createElementBlock("section", _hoisted_1$7, [
-        _cache[5] || (_cache[5] = createBaseVNode("h2", { class: "settings-section__title" }, "关闭行为", -1)),
-        _cache[6] || (_cache[6] = createBaseVNode("p", { class: "settings-section__hint" }, "设置点击主窗口关闭按钮时的默认处理方式。", -1)),
+        _cache[11] || (_cache[11] = createBaseVNode("h2", { class: "settings-section__title" }, "窗口与启动", -1)),
+        _cache[12] || (_cache[12] = createBaseVNode("p", { class: "settings-section__hint" }, "控制开机自启与关闭主窗口时的行为。", -1)),
         createBaseVNode("div", _hoisted_2$7, [
-          _cache[4] || (_cache[4] = createBaseVNode("span", { class: "settings-section__label" }, "关闭主窗口时", -1)),
+          _cache[3] || (_cache[3] = createBaseVNode("span", { class: "settings-section__label" }, "开机时自动启动", -1)),
+          createVNode(_component_el_switch, {
+            modelValue: launch.enabled,
+            "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => launch.enabled = $event),
+            disabled: loadingLaunch.value || savingLaunch.value,
+            onChange: saveLaunch
+          }, null, 8, ["modelValue", "disabled"])
+        ]),
+        !packaged.value ? (openBlock(), createElementBlock("p", _hoisted_3$7, " 当前为开发/未打包启动，系统自启可能无效，请用安装包验证。 ")) : createCommentVNode("", true),
+        syncedHint.value ? (openBlock(), createElementBlock("p", _hoisted_4$7, toDisplayString(syncedHint.value), 1)) : createCommentVNode("", true),
+        launch.enabled ? (openBlock(), createElementBlock("div", _hoisted_5$7, [
+          _cache[6] || (_cache[6] = createBaseVNode("span", { class: "settings-section__label" }, "启动后", -1)),
+          createVNode(_component_el_radio_group, {
+            modelValue: launch.startupMode,
+            "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => launch.startupMode = $event),
+            disabled: loadingLaunch.value || savingLaunch.value,
+            onChange: saveLaunch
+          }, {
+            default: withCtx(() => [
+              createVNode(_component_el_radio, { value: "tray" }, {
+                default: withCtx(() => [..._cache[4] || (_cache[4] = [
+                  createTextVNode("静默到托盘", -1)
+                ])]),
+                _: 1
+              }),
+              createVNode(_component_el_radio, { value: "window" }, {
+                default: withCtx(() => [..._cache[5] || (_cache[5] = [
+                  createTextVNode("打开主窗口", -1)
+                ])]),
+                _: 1
+              })
+            ]),
+            _: 1
+          }, 8, ["modelValue", "disabled"])
+        ])) : createCommentVNode("", true),
+        createBaseVNode("div", _hoisted_6$6, [
+          _cache[10] || (_cache[10] = createBaseVNode("span", { class: "settings-section__label" }, "关闭主窗口时", -1)),
           createVNode(_component_el_radio_group, {
             modelValue: behavior.value,
-            "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => behavior.value = $event),
+            "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => behavior.value = $event),
             disabled: loading.value || saving.value,
             onChange: saveBehavior
           }, {
             default: withCtx(() => [
               createVNode(_component_el_radio, { value: "ask" }, {
-                default: withCtx(() => [..._cache[1] || (_cache[1] = [
+                default: withCtx(() => [..._cache[7] || (_cache[7] = [
                   createTextVNode("每次询问", -1)
                 ])]),
                 _: 1
               }),
               createVNode(_component_el_radio, { value: "tray" }, {
-                default: withCtx(() => [..._cache[2] || (_cache[2] = [
+                default: withCtx(() => [..._cache[8] || (_cache[8] = [
                   createTextVNode("缩小到托盘", -1)
                 ])]),
                 _: 1
               }),
               createVNode(_component_el_radio, { value: "quit" }, {
-                default: withCtx(() => [..._cache[3] || (_cache[3] = [
+                default: withCtx(() => [..._cache[9] || (_cache[9] = [
                   createTextVNode("退出应用", -1)
                 ])]),
                 _: 1
@@ -53429,7 +53528,7 @@ const _sfc_main$7 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SettingsCloseBehaviorSection = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-565c524d"]]);
+const SettingsCloseBehaviorSection = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-f5a58abd"]]);
 const _hoisted_1$6 = { class: "holiday-month" };
 const _hoisted_2$6 = { class: "holiday-month__weekdays" };
 const _hoisted_3$6 = { class: "holiday-month__grid" };
@@ -54517,7 +54616,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       { id: "prompt", label: "提示词", icon: document_default },
       { id: "importExport", label: "导入导出", icon: folder_opened_default },
       { id: "taskActivity", label: "任务动态", icon: timer_default },
-      { id: "closeBehavior", label: "关闭行为", icon: switch_button_default },
+      { id: "closeBehavior", label: "窗口与启动", icon: switch_button_default },
       { id: "workday", label: "工作日", icon: calendar_default },
       { id: "theme", label: "风格切换", icon: brush_default },
       { id: "widget", label: "桌面挂件", icon: monitor_default },
@@ -54569,7 +54668,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SettingsView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-91e6617b"]]);
+const SettingsView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-149f220a"]]);
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [

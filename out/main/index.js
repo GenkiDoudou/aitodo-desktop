@@ -289,6 +289,26 @@ function mergeCloseBehavior(raw) {
   if (raw === "tray" || raw === "quit" || raw === "ask") return raw;
   return DEFAULT_CLOSE_BEHAVIOR;
 }
+const DEFAULT_LAUNCH_AT_LOGIN = {
+  startupMode: "tray"
+};
+function mergeLaunchAtLoginPrefs(raw) {
+  const enabled = raw?.enabled === true;
+  const startupMode = raw?.startupMode === "window" || raw?.startupMode === "tray" ? raw.startupMode : DEFAULT_LAUNCH_AT_LOGIN.startupMode;
+  return { enabled, startupMode };
+}
+function shouldStartHidden(argv, loginItem, prefs) {
+  if (!prefs.enabled || prefs.startupMode !== "tray") {
+    return false;
+  }
+  if (argv.includes("--hidden")) {
+    return true;
+  }
+  if (loginItem.wasOpenedAsHidden === true) {
+    return true;
+  }
+  return loginItem.wasOpenedAtLogin === true;
+}
 const DEFAULT_TASK_ACTIVITY_RETENTION = {
   mode: "forever"
 };
@@ -535,6 +555,28 @@ function saveCloseBehavior(behavior) {
     }
   }
   const next = { ...existing, closeBehavior: mergeCloseBehavior(behavior) };
+  fs.writeFileSync(configPath, JSON.stringify(next, null, 2), "utf-8");
+}
+function readLaunchAtLoginPrefs() {
+  const cfg = readActiveConfig();
+  return mergeLaunchAtLoginPrefs(cfg.launchAtLogin);
+}
+function saveLaunchAtLoginPrefs(prefs) {
+  const defaultDir = getDefaultDataDir();
+  fs.mkdirSync(defaultDir, { recursive: true });
+  const configPath = path.join(defaultDir, CONFIG_FILE$1);
+  let existing = {};
+  if (fs.existsSync(configPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    } catch {
+      existing = {};
+    }
+  }
+  const next = {
+    ...existing,
+    launchAtLogin: mergeLaunchAtLoginPrefs(prefs)
+  };
   fs.writeFileSync(configPath, JSON.stringify(next, null, 2), "utf-8");
 }
 function readTaskActivityRetention() {
@@ -1355,6 +1397,8 @@ const IPC = {
   APP_PARSE_TASK_INPUT: "app:parseTaskInput",
   APP_GET_CLOSE_BEHAVIOR: "app:getCloseBehavior",
   APP_SET_CLOSE_BEHAVIOR: "app:setCloseBehavior",
+  APP_GET_LAUNCH_AT_LOGIN: "app:getLaunchAtLogin",
+  APP_SET_LAUNCH_AT_LOGIN: "app:setLaunchAtLogin",
   APP_CLOSE_REQUEST: "app:closeRequest",
   APP_CONFIRM_CLOSE: "app:confirmClose",
   APP_SHOW_WINDOW: "app:showWindow",
@@ -5476,6 +5520,39 @@ class SyncApiClient {
     return envelope.data;
   }
 }
+function applyLaunchAtLoginToSystem(prefs, electronApp) {
+  const merged = mergeLaunchAtLoginPrefs(prefs);
+  if (!merged.enabled) {
+    electronApp.setLoginItemSettings({
+      openAtLogin: false,
+      openAsHidden: false,
+      args: []
+    });
+    return;
+  }
+  const hidden = merged.startupMode === "tray";
+  electronApp.setLoginItemSettings({
+    openAtLogin: true,
+    openAsHidden: hidden,
+    args: hidden ? ["--hidden"] : []
+  });
+}
+function reconcileLaunchAtLoginPrefs(local, electronApp) {
+  const merged = mergeLaunchAtLoginPrefs(local);
+  let systemOpen = false;
+  try {
+    systemOpen = Boolean(electronApp.getLoginItemSettings().openAtLogin);
+  } catch {
+    return { prefs: merged, syncedFromSystem: false };
+  }
+  if (systemOpen === merged.enabled) {
+    return { prefs: merged, syncedFromSystem: false };
+  }
+  return {
+    prefs: { ...merged, enabled: systemOpen },
+    syncedFromSystem: true
+  };
+}
 const APP_SETTINGS_ENTITY_ID = "default";
 function buildAppSettingsPayload(widgetNoteRepo, uiPreferences) {
   const settings = widgetNoteRepo.getSettings();
@@ -5486,6 +5563,7 @@ function buildAppSettingsPayload(widgetNoteRepo, uiPreferences) {
     llm: readLlmConfig(),
     aiPrompt: readAiPromptConfig(),
     closeBehavior: readCloseBehavior(),
+    launchAtLogin: readLaunchAtLoginPrefs(),
     taskActivityRetention: readTaskActivityRetention(),
     widget: { openOnStartup: settings.openOnStartup },
     ...uiPreferences ? { uiPreferences } : {}
@@ -5513,6 +5591,14 @@ function applyAppSettingsPayload(payload, widgetNoteRepo, dataDir) {
   }
   if (payload.closeBehavior && typeof payload.closeBehavior === "object") {
     saveCloseBehavior(mergeCloseBehavior(payload.closeBehavior));
+  }
+  if (payload.launchAtLogin && typeof payload.launchAtLogin === "object") {
+    const merged = mergeLaunchAtLoginPrefs(payload.launchAtLogin);
+    saveLaunchAtLoginPrefs(merged);
+    try {
+      applyLaunchAtLoginToSystem(merged, electron.app);
+    } catch {
+    }
   }
   if (payload.taskActivityRetention && typeof payload.taskActivityRetention === "object") {
     saveTaskActivityRetention(mergeTaskActivityRetention(payload.taskActivityRetention));
@@ -10673,6 +10759,26 @@ class NsisMacUpdater {
     electronUpdater.autoUpdater.quitAndInstall(false, true);
   }
 }
+function withNoAsar(fn) {
+  const proc = process;
+  const prev = proc.noAsar;
+  proc.noAsar = true;
+  try {
+    return fn();
+  } finally {
+    proc.noAsar = prev;
+  }
+}
+async function withNoAsarAsync(fn) {
+  const proc = process;
+  const prev = proc.noAsar;
+  proc.noAsar = true;
+  try {
+    return await fn();
+  } finally {
+    proc.noAsar = prev;
+  }
+}
 const PORTABLE_PRESERVE_NAMES = /* @__PURE__ */ new Set([
   PORTABLE_DATA_DIR_NAME,
   ".aitodo-update-pending.json",
@@ -10692,25 +10798,27 @@ function assertSha512Match(actual, expected) {
   }
 }
 function applyPortableStaging(appRoot, stagingDir) {
-  if (!fs.existsSync(stagingDir)) {
-    throw new Error(`staging 不存在: ${stagingDir}`);
-  }
-  const contentRoot = resolveZipContentRoot(stagingDir);
-  const names = fs.readdirSync(contentRoot);
-  for (const name of names) {
-    if (shouldPreservePortableEntry(name)) continue;
-    const from = path.join(contentRoot, name);
-    const to = path.join(appRoot, name);
-    const st = fs.statSync(from);
-    if (st.isDirectory()) {
-      if (fs.existsSync(to)) {
-        fs.rmSync(to, { recursive: true, force: true });
-      }
-      fs.cpSync(from, to, { recursive: true });
-    } else {
-      fs.copyFileSync(from, to);
+  withNoAsar(() => {
+    if (!fs.existsSync(stagingDir)) {
+      throw new Error(`staging 不存在: ${stagingDir}`);
     }
-  }
+    const contentRoot = resolveZipContentRoot(stagingDir);
+    const names = fs.readdirSync(contentRoot);
+    for (const name of names) {
+      if (shouldPreservePortableEntry(name)) continue;
+      const from = path.join(contentRoot, name);
+      const to = path.join(appRoot, name);
+      const st = fs.statSync(from);
+      if (st.isDirectory()) {
+        if (fs.existsSync(to)) {
+          fs.rmSync(to, { recursive: true, force: true });
+        }
+        fs.cpSync(from, to, { recursive: true });
+      } else {
+        fs.copyFileSync(from, to);
+      }
+    }
+  });
 }
 function resolveZipContentRoot(stagingDir) {
   const names = fs.readdirSync(stagingDir).filter((n) => n !== "__MACOSX");
@@ -10726,10 +10834,19 @@ function resolveZipContentRoot(stagingDir) {
   return stagingDir;
 }
 function ensureEmptyDir(dir) {
-  if (fs.existsSync(dir)) {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
-  fs.mkdirSync(dir, { recursive: true });
+  withNoAsar(() => {
+    if (fs.existsSync(dir)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(dir, { recursive: true });
+  });
+}
+function removeDirForce(dir) {
+  withNoAsar(() => {
+    if (fs.existsSync(dir)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 }
 function writePendingMarker(filePath, marker) {
   fs.writeFileSync(filePath, JSON.stringify(marker, null, 2), "utf8");
@@ -10767,7 +10884,7 @@ class PortableZipUpdater {
       assertSha512Match(actual, feed.manifest.sha512);
       const extractDir = path.join(stagingDir, "_extracted");
       ensureEmptyDir(extractDir);
-      await extractZip(zipPath, { dir: extractDir });
+      await withNoAsarAsync(() => extractZip(zipPath, { dir: extractDir }));
       fs.rmSync(zipPath, { force: true });
       for (const name of feed.manifest.parts) {
         fs.rmSync(path.join(stagingDir, name), { force: true });
@@ -10781,7 +10898,7 @@ class PortableZipUpdater {
       this.hooks.onReady?.(feed.manifest.version, feed.source);
     } catch (err) {
       try {
-        fs.rmSync(stagingDir, { recursive: true, force: true });
+        removeDirForce(stagingDir);
         fs.rmSync(portablePendingPath(appRoot), { force: true });
       } catch {
       }
@@ -10827,9 +10944,7 @@ class PortableZipUpdater {
     applyPortableStaging(appRoot, marker.stagingDir);
     fs.rmSync(pendingFile, { force: true });
     const stagingParent = portableStagingPath(appRoot);
-    if (fs.existsSync(stagingParent)) {
-      fs.rmSync(stagingParent, { recursive: true, force: true });
-    }
+    removeDirForce(stagingParent);
     return { applied: true, version: marker.version };
   }
 }
@@ -11376,6 +11491,35 @@ function registerIpcHandlers(getMainWindow) {
       saveCloseBehavior(behavior);
       notifyAppSettingsChanged();
       return readCloseBehavior();
+    })
+  );
+  electron.ipcMain.handle(
+    IPC.APP_GET_LAUNCH_AT_LOGIN,
+    () => wrapIpc(() => {
+      const local = readLaunchAtLoginPrefs();
+      const { prefs, syncedFromSystem } = reconcileLaunchAtLoginPrefs(local, electron.app);
+      if (syncedFromSystem) {
+        saveLaunchAtLoginPrefs(prefs);
+      }
+      return {
+        ...prefs,
+        packaged: electron.app.isPackaged,
+        syncedFromSystem
+      };
+    })
+  );
+  electron.ipcMain.handle(
+    IPC.APP_SET_LAUNCH_AT_LOGIN,
+    (_e, prefs) => wrapIpc(() => {
+      const merged = mergeLaunchAtLoginPrefs(prefs);
+      try {
+        applyLaunchAtLoginToSystem(merged, electron.app);
+      } catch (err) {
+        throw new Error(err instanceof Error ? err.message : "设置开机自启失败");
+      }
+      saveLaunchAtLoginPrefs(merged);
+      notifyAppSettingsChanged();
+      return merged;
     })
   );
   electron.ipcMain.handle(
@@ -12191,7 +12335,8 @@ let mainWindow = null;
 let reminderService = null;
 let summarySchedulerService = null;
 registerNotificationSupport();
-function createWindow() {
+function createWindow(options) {
+  const startHidden = Boolean(options?.startHidden);
   const win = new electron.BrowserWindow({
     width: 1100,
     height: 720,
@@ -12200,6 +12345,8 @@ function createWindow() {
     title: "小柒todo",
     /** 不显示系统菜单栏（File / Edit / View …） */
     autoHideMenuBar: true,
+    /** 登录项静默托盘启动时不闪主窗 */
+    show: !startHidden,
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -12267,7 +12414,13 @@ electron.app.whenReady().then(() => {
     new TaskActivityService(new TaskActivityRepository(db2)).purgeByCurrentPolicy();
   } catch {
   }
-  mainWindow = createWindow();
+  mainWindow = createWindow({
+    startHidden: shouldStartHidden(
+      process.argv,
+      electron.app.getLoginItemSettings(),
+      readLaunchAtLoginPrefs()
+    )
+  });
   registerGlobalShortcuts(mainWindow, createDefaultShortcutHandlers());
   const db = getDatabase();
   const taskRepo = new TaskRepository(db);

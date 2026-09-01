@@ -44,6 +44,8 @@ const IPC = {
   APP_PARSE_TASK_INPUT: "app:parseTaskInput",
   APP_GET_CLOSE_BEHAVIOR: "app:getCloseBehavior",
   APP_SET_CLOSE_BEHAVIOR: "app:setCloseBehavior",
+  APP_GET_LAUNCH_AT_LOGIN: "app:getLaunchAtLogin",
+  APP_SET_LAUNCH_AT_LOGIN: "app:setLaunchAtLogin",
   APP_CLOSE_REQUEST: "app:closeRequest",
   APP_CONFIRM_CLOSE: "app:confirmClose",
   APP_SHOW_WINDOW: "app:showWindow",

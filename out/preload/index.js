@@ -1,6 +1,6 @@
 "use strict";
 const electron = require("electron");
-const ipcChannels = require("./chunks/ipc-channels-DscW9b0H.js");
+const ipcChannels = require("./chunks/ipc-channels-X9F-XqCd.js");
 const api = {
   tasks: {
     list: (filter) => electron.ipcRenderer.invoke(ipcChannels.IPC.TASKS_LIST, filter),
@@ -113,6 +113,8 @@ const api = {
     parseTaskInput: (text, categories) => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_PARSE_TASK_INPUT, text, categories),
     getCloseBehavior: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_GET_CLOSE_BEHAVIOR),
     setCloseBehavior: (behavior) => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_SET_CLOSE_BEHAVIOR, behavior),
+    getLaunchAtLogin: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_GET_LAUNCH_AT_LOGIN),
+    setLaunchAtLogin: (prefs) => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_SET_LAUNCH_AT_LOGIN, prefs),
     confirmClose: (payload) => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_CONFIRM_CLOSE, payload),
     showWindow: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_SHOW_WINDOW),
     openMain: (route) => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_OPEN_MAIN, route),
