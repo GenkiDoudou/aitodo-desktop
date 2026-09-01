@@ -6,7 +6,8 @@ import { detectInstallShape, hasNsisUninstaller } from './install-shape-detector
 import {
   applyPortableStaging,
   shouldPreservePortableEntry,
-  resolveZipContentRoot
+  resolveZipContentRoot,
+  withNoAsar
 } from './portable-fs'
 import { compareSemver, parseUpdateYml } from './update-yml'
 import { FeedResolver } from './feed-resolver'
@@ -182,6 +183,16 @@ describe('portable-fs data preservation', () => {
   afterEach(() => {
     for (const d of dirs) rmSync(d, { recursive: true, force: true })
     dirs.length = 0
+  })
+
+  it('withNoAsar temporarily sets process.noAsar and restores previous value', () => {
+    const proc = process as NodeJS.Process & { noAsar?: boolean }
+    const before = proc.noAsar
+    proc.noAsar = false
+    const seen = withNoAsar(() => proc.noAsar)
+    expect(seen).toBe(true)
+    expect(proc.noAsar).toBe(false)
+    proc.noAsar = before
   })
 
   it('preserves data name in exclude list', () => {

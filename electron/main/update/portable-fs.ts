@@ -13,6 +13,37 @@ import {
 import { join } from 'path'
 import { PORTABLE_DATA_DIR_NAME } from './install-shape-detector'
 
+/** Electron 在 process 上扩展的 asar 开关（未打包 Node 环境无此字段） */
+type ProcessWithNoAsar = NodeJS.Process & { noAsar?: boolean }
+
+/**
+ * 临时关闭 Electron 对 `.asar` 的 fs 拦截。
+ * 免解压更新解压/复制 `app.asar` 时必须关闭，否则会报 Invalid package。
+ * 同步与异步均可用；finally 恢复原值，避免影响应用其它 asar 读取。
+ */
+export function withNoAsar<T>(fn: () => T): T {
+  const proc = process as ProcessWithNoAsar
+  const prev = proc.noAsar
+  proc.noAsar = true
+  try {
+    return fn()
+  } finally {
+    proc.noAsar = prev
+  }
+}
+
+/** 同 {@link withNoAsar}，供 extract-zip 等异步 IO 使用 */
+export async function withNoAsarAsync<T>(fn: () => Promise<T>): Promise<T> {
+  const proc = process as ProcessWithNoAsar
+  const prev = proc.noAsar
+  proc.noAsar = true
+  try {
+    return await fn()
+  } finally {
+    proc.noAsar = prev
+  }
+}
+
 /** 替换程序文件时必须跳过的目录/文件名 */
 export const PORTABLE_PRESERVE_NAMES = new Set([
   PORTABLE_DATA_DIR_NAME,
@@ -45,27 +76,30 @@ export interface PortablePendingMarker {
 /**
  * 将 staging 中的程序文件合并到 appRoot，跳过 data/ 等保留项。
  * staging 内若误含 data/，也会被跳过，不会覆盖用户数据。
+ * 复制/删除含 `app.asar` 的目录时必须 noAsar，否则 Electron 会拦截并报 Invalid package。
  */
 export function applyPortableStaging(appRoot: string, stagingDir: string): void {
-  if (!existsSync(stagingDir)) {
-    throw new Error(`staging 不存在: ${stagingDir}`)
-  }
-  const contentRoot = resolveZipContentRoot(stagingDir)
-  const names = readdirSync(contentRoot)
-  for (const name of names) {
-    if (shouldPreservePortableEntry(name)) continue
-    const from = join(contentRoot, name)
-    const to = join(appRoot, name)
-    const st = statSync(from)
-    if (st.isDirectory()) {
-      if (existsSync(to)) {
-        rmSync(to, { recursive: true, force: true })
-      }
-      cpSync(from, to, { recursive: true })
-    } else {
-      copyFileSync(from, to)
+  withNoAsar(() => {
+    if (!existsSync(stagingDir)) {
+      throw new Error(`staging 不存在: ${stagingDir}`)
     }
-  }
+    const contentRoot = resolveZipContentRoot(stagingDir)
+    const names = readdirSync(contentRoot)
+    for (const name of names) {
+      if (shouldPreservePortableEntry(name)) continue
+      const from = join(contentRoot, name)
+      const to = join(appRoot, name)
+      const st = statSync(from)
+      if (st.isDirectory()) {
+        if (existsSync(to)) {
+          rmSync(to, { recursive: true, force: true })
+        }
+        cpSync(from, to, { recursive: true })
+      } else {
+        copyFileSync(from, to)
+      }
+    }
+  })
 }
 
 /**
@@ -99,11 +133,25 @@ export function moveDataDirIfNeeded(fromAppRoot: string, toAppRoot: string): voi
   }
 }
 
+/**
+ * 清空并重建目录。可能含 `app.asar` 时须 noAsar，否则递归删除会失败。
+ */
 export function ensureEmptyDir(dir: string): void {
-  if (existsSync(dir)) {
-    rmSync(dir, { recursive: true, force: true })
-  }
-  mkdirSync(dir, { recursive: true })
+  withNoAsar(() => {
+    if (existsSync(dir)) {
+      rmSync(dir, { recursive: true, force: true })
+    }
+    mkdirSync(dir, { recursive: true })
+  })
+}
+
+/** 强制递归删除目录（含 asar 时安全） */
+export function removeDirForce(dir: string): void {
+  withNoAsar(() => {
+    if (existsSync(dir)) {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 }
 
 export function writePendingMarker(filePath: string, marker: PortablePendingMarker): void {

@@ -12,7 +12,9 @@ import {
   applyPortableStaging,
   assertSha512Match,
   ensureEmptyDir,
+  removeDirForce,
   sha512FileBase64,
+  withNoAsarAsync,
   writePendingMarker,
   type PortablePendingMarker
 } from './portable-fs'
@@ -79,7 +81,8 @@ export class PortableZipUpdater {
       assertSha512Match(actual, feed.manifest.sha512)
       const extractDir = join(stagingDir, '_extracted')
       ensureEmptyDir(extractDir)
-      await extractZip(zipPath, { dir: extractDir })
+      // Electron 会拦截对 .asar 的 fs 写入；解压免解压包内 app.asar 必须临时 noAsar
+      await withNoAsarAsync(() => extractZip(zipPath, { dir: extractDir }))
       rmSync(zipPath, { force: true })
       // 清理分卷临时文件
       for (const name of feed.manifest.parts) {
@@ -94,7 +97,7 @@ export class PortableZipUpdater {
       this.hooks.onReady?.(feed.manifest.version, feed.source)
     } catch (err) {
       try {
-        rmSync(stagingDir, { recursive: true, force: true })
+        removeDirForce(stagingDir)
         rmSync(portablePendingPath(appRoot), { force: true })
       } catch {
         /* ignore cleanup */
@@ -143,9 +146,7 @@ export class PortableZipUpdater {
     applyPortableStaging(appRoot, marker.stagingDir)
     rmSync(pendingFile, { force: true })
     const stagingParent = portableStagingPath(appRoot)
-    if (existsSync(stagingParent)) {
-      rmSync(stagingParent, { recursive: true, force: true })
-    }
+    removeDirForce(stagingParent)
     return { applied: true, version: marker.version }
   }
 }
