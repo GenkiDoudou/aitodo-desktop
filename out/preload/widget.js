@@ -1,6 +1,6 @@
 "use strict";
 const electron = require("electron");
-const ipcChannels = require("./chunks/ipc-channels-X9F-XqCd.js");
+const ipcChannels = require("./chunks/ipc-channels-CP9YXcGk.js");
 const widgetApi = {
   widget: {
     getInstance: (id) => electron.ipcRenderer.invoke(ipcChannels.IPC.WIDGET_INSTANCES_GET, id),

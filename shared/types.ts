@@ -251,12 +251,16 @@ export interface UpdateCategoryDto {
 export type SmartList = 'all' | 'today' | 'week' | 'last7days' | 'done' | 'trash'
 
 export type { TaskDateField, DoneTimeRange, CalendarRangePreset } from './date-filter'
+export type { HideDoneScope } from './hide-done-scope'
 
 export interface TaskListFilter {
   smartList?: SmartList
   categoryId?: string | null
   status?: TaskStatus
+  /** @deprecated 请使用 hideDoneScope；保留以兼容旧 IPC/存储 */
   hideDone?: boolean
+  /** 隐藏已完成范围：off / all / today / week / month */
+  hideDoneScope?: import('./hide-done-scope').HideDoneScope
   parentId?: string | null
   search?: string
   /** 今天/本周/最近7天：按哪列时间筛选，默认 dueAt */

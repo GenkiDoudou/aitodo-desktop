@@ -130,7 +130,7 @@
             />
             <TaskListViewMenu
               v-else-if="showListViewSettingsMenu"
-              v-model:hide-done="listHideDone"
+              v-model:hide-done-scope="listHideDoneScope"
               v-model:detail-style="taskDetailStyle"
               v-model:meta-visibility="taskListMetaVisibility"
               v-model:group-by="taskGroupBy"
@@ -244,7 +244,7 @@
           :tasks="kanbanDisplayTasks"
           :loading="taskStore.loading"
           :selected-id="activeTaskId"
-          :hide-done="taskStore.filter.hideDone"
+          :hide-done-scope="resolveHideDoneScope(taskStore.filter)"
           :meta-visibility="taskListMetaVisibility"
           :default-category-id="kanbanDefaultCategoryId"
           :parse-categories="parseCategoriesForMatch"
@@ -350,7 +350,7 @@
         :initial-quadrant-options="viewEditorQuadrantOptions"
         :initial-rule="viewEditorRule"
         :initial-scope-key="viewEditorScopeKey"
-        :initial-hide-done="viewEditorHideDone"
+        :initial-hide-done-scope="viewEditorHideDoneScope"
         :initial-detail-style="viewEditorDetailStyle"
         :initial-meta-visibility="viewEditorMetaVisibility"
         :categories="categoryStore.categories"
@@ -401,6 +401,7 @@ import TaskDetailPanel from '@/components/TaskDetailPanel.vue'
 import type { TaskSavePayload } from '@/components/TaskDetailPanel.vue'
 
 import { useTaskStore } from '@/stores/task-store'
+import { resolveHideDoneScope, type HideDoneScope } from '@shared/hide-done-scope'
 
 import { useCategoryStore } from '@/stores/category-store'
 import { useViewStore } from '@/stores/view-store'
@@ -571,10 +572,10 @@ const showListViewSettingsMenu = computed(
     !navViewId.value
 )
 
-const listHideDone = computed({
-  get: () => taskStore.filter.hideDone,
-  set: (value: boolean) => {
-    void taskStore.setHideDone(value).then(() => saveCurrentNavListPrefs())
+const listHideDoneScope = computed({
+  get: () => resolveHideDoneScope(taskStore.filter),
+  set: (value: HideDoneScope) => {
+    void taskStore.setHideDoneScope(value).then(() => saveCurrentNavListPrefs())
   }
 })
 
@@ -1061,7 +1062,7 @@ async function refreshHeaderTaskCounts() {
   }
   const seq = ++headerCountSeq
   try {
-    const filter = { ...taskStore.filter, hideDone: false }
+    const filter = { ...taskStore.filter, hideDone: false, hideDoneScope: 'off' as const }
     const res = await window.api.tasks.list(filter)
     if (!res.ok || seq !== headerCountSeq) return
     let tasks = res.data
@@ -1200,7 +1201,7 @@ function applyNavListPrefs() {
   if (prefs.viewMode === 'kanban') {
     kanbanBoardMode.value = groupByToKanbanBoardMode(prefs.groupBy)
   }
-  void taskStore.setHideDone(prefs.hideDone)
+  void taskStore.setHideDoneScope(prefs.hideDoneScope)
   applyingNavListPrefs = false
 }
 
@@ -1212,7 +1213,7 @@ function saveCurrentNavListPrefs() {
     viewMode: listViewMode.value === 'kanban' ? 'kanban' : 'list',
     groupBy: taskGroupBy.value,
     sortBy: taskSortBy.value,
-    hideDone: taskStore.filter.hideDone,
+    hideDoneScope: resolveHideDoneScope(taskStore.filter),
     detailStyle: taskDetailStyle.value,
     metaVisibility: { ...taskListMetaVisibility.value }
   }
@@ -1252,7 +1253,7 @@ function applySelectedViewToUi() {
   const display = readViewDisplayPreferences(view.id, kanbanMode)
   taskDetailStyle.value = display.detailStyle
   taskListMetaVisibility.value = { ...display.metaVisibility }
-  void taskStore.setHideDone(display.hideDone)
+  void taskStore.setHideDoneScope(display.hideDoneScope)
 }
 
 async function onView(id: string) {
@@ -1267,11 +1268,15 @@ async function onView(id: string) {
   navCategoryId.value = undefined
   navSmart.value = 'all'
   detailOpen.value = false
-  await taskStore.load({ smartList: 'all', hideDone: taskStore.filter.hideDone })
+  await taskStore.load({
+    smartList: 'all',
+    hideDoneScope: resolveHideDoneScope(taskStore.filter),
+    hideDone: resolveHideDoneScope(taskStore.filter) !== 'off'
+  })
   void router.replace({ path: '/', query: { viewId: id } })
 }
 
-const viewEditorHideDone = ref(true)
+const viewEditorHideDoneScope = ref<HideDoneScope>('all')
 const viewEditorDetailStyle = ref<TaskDetailStyle>('sidebar')
 const viewEditorMetaVisibility = ref<TaskListMetaVisibility>({
   ...DEFAULT_TASK_LIST_META_VISIBILITY
@@ -1290,7 +1295,7 @@ function seedViewEditorFrom(view = viewStore.selectedView) {
   const display = view?.id
     ? readViewDisplayPreferences(view.id, mode)
     : defaultViewDisplayPreferences(mode)
-  viewEditorHideDone.value = display.hideDone
+  viewEditorHideDoneScope.value = display.hideDoneScope
   viewEditorDetailStyle.value = display.detailStyle
   viewEditorMetaVisibility.value = { ...display.metaVisibility }
 }
@@ -1307,7 +1312,7 @@ function openCreateView() {
   viewEditorRule.value = null
   viewEditorScopeKey.value = null
   const display = defaultViewDisplayPreferences(null)
-  viewEditorHideDone.value = display.hideDone
+  viewEditorHideDoneScope.value = display.hideDoneScope
   viewEditorDetailStyle.value = taskDetailStyle.value
   viewEditorMetaVisibility.value = { ...taskListMetaVisibility.value }
   viewEditorVisible.value = true
@@ -1349,7 +1354,11 @@ async function onViewEditorSaved(savedId?: string) {
     navViewId.value = savedId
     viewStore.selectView(savedId)
     applySelectedViewToUi()
-    await taskStore.load({ smartList: 'all', hideDone: taskStore.filter.hideDone })
+    await taskStore.load({
+    smartList: 'all',
+    hideDoneScope: resolveHideDoneScope(taskStore.filter),
+    hideDone: resolveHideDoneScope(taskStore.filter) !== 'off'
+  })
   }
 }
 
@@ -1380,7 +1389,7 @@ async function onInbox() {
   detailOpen.value = false
   closeNoteDetail()
   await loadWidgetNotes()
-  await taskStore.load({ smartList: 'all', hideDone: false })
+  await taskStore.load({ smartList: 'all', hideDone: false, hideDoneScope: 'off' })
   void router.replace({ path: '/', query: { view: 'inbox' } })
 }
 
@@ -1958,7 +1967,11 @@ onMounted(async () => {
   } else {
     navViewId.value = null
     applyNavListPrefs()
-    await taskStore.load({ smartList: 'all', hideDone: taskStore.filter.hideDone })
+    await taskStore.load({
+    smartList: 'all',
+    hideDoneScope: resolveHideDoneScope(taskStore.filter),
+    hideDone: resolveHideDoneScope(taskStore.filter) !== 'off'
+  })
     syncNavFromFilter()
   }
   await taskStore.refreshSidebarCounts()

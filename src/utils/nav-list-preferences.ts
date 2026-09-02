@@ -6,6 +6,11 @@ import type {
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 import type { TaskGroupBy, TaskSortBy } from '@shared/task-list-layout'
 import { kanbanScopeKey } from '@shared/kanban-scope'
+import {
+  coerceHideDoneScope,
+  hideDoneScopeFromLegacy,
+  type HideDoneScope
+} from '@shared/hide-done-scope'
 import { readTaskGroupBy, readTaskSortBy } from './filter-preferences'
 import {
   readTaskDetailStyle,
@@ -19,20 +24,26 @@ export interface NavListPrefs {
   viewMode: 'list' | 'kanban'
   groupBy: TaskGroupBy
   sortBy: TaskSortBy
-  hideDone: boolean
+  /** @deprecated 请使用 hideDoneScope */
+  hideDone?: boolean
+  hideDoneScope: HideDoneScope
   detailStyle: TaskDetailStyle
   metaVisibility: TaskListMetaVisibility
 }
 
-function readHideDoneFallback(): boolean {
+function readHideDoneScopeFallback(): HideDoneScope {
   try {
+    const scopeRaw = localStorage.getItem('aitodo_hide_done_scope')
+    if (scopeRaw) {
+      return coerceHideDoneScope(scopeRaw, 'all')
+    }
     const raw = localStorage.getItem('aitodo_hide_done')
-    if (raw === 'true') return true
-    if (raw === 'false') return false
+    if (raw === 'true') return 'all'
+    if (raw === 'false') return 'off'
   } catch {
     /* ignore */
   }
-  return true
+  return 'all'
 }
 
 /** 全局键作默认（迁移） */
@@ -42,7 +53,7 @@ export function defaultNavListPrefs(): NavListPrefs {
     viewMode: mode === 'kanban' ? 'kanban' : 'list',
     groupBy: readTaskGroupBy(),
     sortBy: readTaskSortBy(),
-    hideDone: readHideDoneFallback(),
+    hideDoneScope: readHideDoneScopeFallback(),
     detailStyle: readTaskDetailStyle(),
     metaVisibility: readTaskListMetaVisibility()
   }
@@ -80,11 +91,17 @@ function normalizePrefs(partial?: Partial<NavListPrefs> | null): NavListPrefs {
   const viewMode = partial.viewMode === 'kanban' ? 'kanban' : partial.viewMode === 'list' ? 'list' : base.viewMode
   const groupBy = partial.groupBy ?? base.groupBy
   const sortBy = partial.sortBy ?? base.sortBy
+  const hideDoneScope =
+    partial.hideDoneScope !== undefined
+      ? coerceHideDoneScope(partial.hideDoneScope, base.hideDoneScope)
+      : typeof partial.hideDone === 'boolean'
+        ? hideDoneScopeFromLegacy(partial.hideDone)
+        : base.hideDoneScope
   return {
     viewMode,
     groupBy,
     sortBy,
-    hideDone: partial.hideDone ?? base.hideDone,
+    hideDoneScope,
     detailStyle: partial.detailStyle === 'dialog' ? 'dialog' : partial.detailStyle === 'sidebar' ? 'sidebar' : base.detailStyle,
     metaVisibility: {
       ...DEFAULT_TASK_LIST_META_VISIBILITY,

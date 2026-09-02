@@ -15,36 +15,55 @@ import type { TaskPriority } from '@shared/task-priority'
 import type { AiParseCategoryRef } from '@shared/ai-task-parser'
 import { buildQuickCreateTaskDtoFromDraft, toParseCategories } from '@shared/quick-create-task'
 import { cloneTaskListFilter, isMatrixListFilter } from '@shared/task-list-filter'
+import {
+  coerceHideDoneScope,
+  hideDoneScopeFromLegacy,
+  resolveHideDoneScope,
+  taskMatchesHideDoneScope,
+  type HideDoneScope
+} from '@shared/hide-done-scope'
 import { unwrapIpc } from '@/ipc/client'
 
-/** 与《待办需求》一致：true 表示隐藏已完成（开关默认关 = 隐藏） */
+/** 与《待办需求》一致：默认隐藏全部已完成 */
 export const HIDE_DONE_STORAGE_KEY = 'aitodo_hide_done'
+export const HIDE_DONE_SCOPE_STORAGE_KEY = 'aitodo_hide_done_scope'
+
+function readHideDoneScopePreference(): HideDoneScope {
+  try {
+    const scopeRaw = localStorage.getItem(HIDE_DONE_SCOPE_STORAGE_KEY)
+    if (scopeRaw) {
+      return coerceHideDoneScope(scopeRaw, 'all')
+    }
+    const legacy = localStorage.getItem(HIDE_DONE_STORAGE_KEY)
+    if (legacy === 'false') return 'off'
+    if (legacy === 'true') return 'all'
+  } catch {
+    /* 极端环境无 localStorage 时仅内存生效 */
+  }
+  return 'all'
+}
+
+function persistHideDoneScope(scope: HideDoneScope): void {
+  try {
+    localStorage.setItem(HIDE_DONE_SCOPE_STORAGE_KEY, scope)
+    localStorage.setItem(HIDE_DONE_STORAGE_KEY, String(scope !== 'off'))
+  } catch {
+    /* ignore */
+  }
+}
+
+function filterWithHideDoneScope(scope: HideDoneScope): Pick<TaskListFilter, 'hideDoneScope' | 'hideDone'> {
+  return {
+    hideDoneScope: scope,
+    hideDone: scope !== 'off'
+  }
+}
 
 /** load 时显式清除的筛选项（undefined 无法覆盖旧值，需单独标记） */
 export interface TaskListLoadOptions {
   clearSmartList?: boolean
   clearCategoryId?: boolean
   clearSearch?: boolean
-}
-
-function readHideDonePreference(): boolean {
-  try {
-    const raw = localStorage.getItem(HIDE_DONE_STORAGE_KEY)
-    if (raw === null) {
-      return true
-    }
-    return raw === 'true'
-  } catch {
-    return true
-  }
-}
-
-function persistHideDone(hideDone: boolean): void {
-  try {
-    localStorage.setItem(HIDE_DONE_STORAGE_KEY, String(hideDone))
-  } catch {
-    /* 极端环境无 localStorage 时仅内存生效 */
-  }
 }
 
 function mergeFilter(
@@ -70,7 +89,7 @@ export function taskMatchesFilter(task: Task, filter: TaskListFilter): boolean {
   if (task.deletedAt) {
     return false
   }
-  if (filter.hideDone && task.status === 'DONE') {
+  if (!taskMatchesHideDoneScope(task, resolveHideDoneScope(filter))) {
     return false
   }
   if (filter.categoryId !== undefined && task.categoryId !== filter.categoryId) {
@@ -119,7 +138,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const doneCount = ref(0)
   const filter = ref<TaskListFilter>({
     smartList: 'all',
-    hideDone: readHideDonePreference()
+    ...filterWithHideDoneScope(readHideDoneScopePreference())
   })
 
   let loadSeq = 0
@@ -153,9 +172,9 @@ export const useTaskStore = defineStore('tasks', () => {
 
   /** 侧栏切换：用全新 filter 拉列表，确保分类/全部/今天互斥 */
   async function navigate(view: TaskNavView) {
-    const hideDone = filter.value.hideDone
+    const hidePatch = filterWithHideDoneScope(resolveHideDoneScope(filter.value))
     if (view.kind === 'smart') {
-      const next: TaskListFilter = { hideDone, smartList: view.smart }
+      const next: TaskListFilter = { ...hidePatch, smartList: view.smart }
       if (view.dateField && isDueSmartList(view.smart)) {
         next.dateField = view.dateField
       } else if (isDueSmartList(view.smart)) {
@@ -166,6 +185,7 @@ export const useTaskStore = defineStore('tasks', () => {
       /** 已完成：仅 DONE，按 completed_at 倒序（见 task-repository） */
       filter.value = {
         hideDone: false,
+        hideDoneScope: 'off',
         smartList: 'done',
         doneTimeRange: view.doneTimeRange ?? filter.value.doneTimeRange ?? 'all',
         dateFrom: view.dateFrom ?? filter.value.dateFrom,
@@ -174,12 +194,12 @@ export const useTaskStore = defineStore('tasks', () => {
     } else if (view.kind === 'trash') {
       filter.value = { smartList: 'trash' }
     } else if (view.kind === 'category') {
-      filter.value = { hideDone, categoryId: view.categoryId }
+      filter.value = { ...hidePatch, categoryId: view.categoryId }
     } else if (view.kind === 'uncategorized') {
-      filter.value = { hideDone, categoryId: null }
+      filter.value = { ...hidePatch, categoryId: null }
     } else {
       /** 四象限：拉取含已完成任务，展示由象限选项控制 */
-      filter.value = { hideDone: false }
+      filter.value = { hideDone: false, hideDoneScope: 'off' }
     }
     await fetchWithCurrentFilter()
   }
@@ -239,34 +259,41 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   async function reloadAfterSave(created: Task) {
-    const hideDone = created.status === 'DONE' ? false : filter.value.hideDone
+    const scope =
+      created.status === 'DONE' ? 'off' : resolveHideDoneScope(filter.value)
     if (created.status === 'DONE') {
-      persistHideDone(false)
+      persistHideDoneScope('off')
     }
 
+    const hidePatch = filterWithHideDoneScope(scope)
     const wasMatrix = isMatrixListFilter(filter.value)
 
     if (wasMatrix) {
       /** 四象限内新建/保存：保持 matrix 筛选，避免跳回「全部」列表 */
-      filter.value = { hideDone }
+      filter.value = { ...hidePatch }
     } else if (created.categoryId) {
-      filter.value = { hideDone, categoryId: created.categoryId }
+      filter.value = { ...hidePatch, categoryId: created.categoryId }
     } else {
-      filter.value = { hideDone, smartList: 'all' }
+      filter.value = { ...hidePatch, smartList: 'all' }
     }
     await fetchWithCurrentFilter()
 
     if (!tasks.value.some((t) => t.id === created.id) && !wasMatrix) {
-      filter.value = { hideDone: false, smartList: 'all' }
+      filter.value = { hideDone: false, hideDoneScope: 'off', smartList: 'all' }
       await fetchWithCurrentFilter()
     }
     syncTaskInList(created)
   }
 
-  async function setHideDone(hideDone: boolean) {
-    persistHideDone(hideDone)
-    filter.value = { ...filter.value, hideDone }
+  async function setHideDoneScope(scope: HideDoneScope) {
+    persistHideDoneScope(scope)
+    filter.value = { ...filter.value, ...filterWithHideDoneScope(scope) }
     await fetchWithCurrentFilter()
+  }
+
+  /** @deprecated 请使用 setHideDoneScope */
+  async function setHideDone(hideDone: boolean) {
+    await setHideDoneScope(hideDoneScopeFromLegacy(hideDone))
   }
 
   async function create(
@@ -472,6 +499,7 @@ export const useTaskStore = defineStore('tasks', () => {
     syncTaskInList,
     reloadAfterSave,
     setHideDone,
+    setHideDoneScope,
     create,
     quickCreate,
     cycleStatus,

@@ -178,6 +178,9 @@ export interface DesktopApi {
     pickDataDir(): Promise<IpcResult<string | null>>
     exportUserConfig(uiPreferences?: Record<string, string>): Promise<IpcResult<string | null>>
     importUserConfig(): Promise<IpcResult<UserConfigImportResult | null>>
+    exportTasksJson(): Promise<IpcResult<string | null>>
+    exportTasksMarkdown(): Promise<IpcResult<string | null>>
+    importTasksJson(): Promise<IpcResult<import('@shared/task-data-export').TaskDataImportResult | null>>
     getVersion(): Promise<IpcResult<string>>
     getInfo(): Promise<IpcResult<AppInfo>>
     getShortcuts(): Promise<IpcResult<ShortcutBindings>>

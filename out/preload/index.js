@@ -1,6 +1,6 @@
 "use strict";
 const electron = require("electron");
-const ipcChannels = require("./chunks/ipc-channels-X9F-XqCd.js");
+const ipcChannels = require("./chunks/ipc-channels-CP9YXcGk.js");
 const api = {
   tasks: {
     list: (filter) => electron.ipcRenderer.invoke(ipcChannels.IPC.TASKS_LIST, filter),
@@ -102,6 +102,9 @@ const api = {
     pickDataDir: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_PICK_DATA_DIR),
     exportUserConfig: (uiPreferences) => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_EXPORT_USER_CONFIG, uiPreferences),
     importUserConfig: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_IMPORT_USER_CONFIG),
+    exportTasksJson: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_EXPORT_TASKS_JSON),
+    exportTasksMarkdown: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_EXPORT_TASKS_MARKDOWN),
+    importTasksJson: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_IMPORT_TASKS_JSON),
     getVersion: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_GET_VERSION),
     getInfo: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_GET_INFO),
     getShortcuts: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_GET_SHORTCUTS),

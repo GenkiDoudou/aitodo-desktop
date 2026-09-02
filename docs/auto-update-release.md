@@ -30,7 +30,22 @@
 同一 git tag / 版本号，将资产上传到 Gitee + GitHub Releases，**文件名必须一致**。
 
 - **GitHub**：完整 zip + yml / Setup + 下载脚本
-- **Gitee**：单附件 **&lt;100MB**；大 zip 切分卷
+- **Gitee**：单附件 **&lt;100MB**；大 zip 切分卷；**全仓库附件总量约 1GB**，超出后新附件一律 HTTP 400（`文件大小已超出仓库附件配额：1 GB`）
+
+### Gitee 1GB 配额满了怎么办
+
+1. **GitHub Actions**：仓库 → Actions → **Cleanup Gitee Attachments** → Run workflow（先 dry-run 看清单，再 `dry_run=false` 实删）
+2. **本地**（需 `GITEE_TOKEN`）：
+   ```powershell
+   cd desktop
+   $env:GITEE_TOKEN = "你的令牌"
+   $env:KEEP = "6"          # 只保留最新 6 个版本附件
+   $env:DRY_RUN = "true"    # 先预演
+   node scripts/prune-gitee-attachments.cjs
+   $env:DRY_RUN = "false"   # 确认后实删
+   node scripts/prune-gitee-attachments.cjs
+   ```
+3. 发版脚本 `publish-gitee-release.cjs` 会在上传前**自动修剪**（默认保留最新 8 个 semver 版本）；修剪后若分卷仍失败，GitHub Release 仍有完整 zip，CI 不会因分卷失败而整体失败。
 
 需在 GitHub 仓库配置 `GITEE_TOKEN`。
 

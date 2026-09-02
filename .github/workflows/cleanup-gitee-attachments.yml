@@ -1,0 +1,40 @@
+# 手动清理 Gitee Release 旧版附件，腾出 1GB 仓库附件配额。
+# 默认 dry-run；确认清单后将 dry_run 设为 false 再运行。
+
+name: Cleanup Gitee Attachments
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: 保留最新多少个版本的附件
+        required: false
+        default: '8'
+      dry_run:
+        description: 仅打印将删除的内容而不实际删除
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitee-attachments
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prune old Gitee release attachments
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_OWNER: GenkiDoudou
+          GITEE_REPO: aitodo-desktop
+          KEEP: ${{ inputs.keep }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/prune-gitee-attachments.cjs

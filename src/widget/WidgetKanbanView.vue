@@ -60,12 +60,18 @@ import { TASK_PRIORITIES, isValidTaskPriority } from '@shared/task-priority'
 import type { Category, KanbanGroup, Task } from '@shared/types'
 import { categoryLogoInitial } from '@shared/widget-notes'
 import { readKanbanConfig } from '@/utils/kanban-preferences'
+import {
+  resolveHideDoneScope,
+  shouldShowKanbanDoneColumn,
+  type HideDoneScope
+} from '@shared/hide-done-scope'
 
 const props = defineProps<{
   tasks: Task[]
   boardMode: KanbanBoardMode
   sortBy?: TaskSortBy
   hideDone?: boolean
+  hideDoneScope?: HideDoneScope
   updatingIds?: Set<string>
   categories?: Category[]
 }>()
@@ -81,7 +87,9 @@ const customGroups = ref<KanbanGroup[]>([])
 const ungroupedName = ref('未分组')
 
 const sortBy = computed(() => props.sortBy ?? 'custom')
-const hideDone = computed(() => props.hideDone ?? true)
+const effectiveHideDoneScope = computed(() =>
+  props.hideDoneScope ?? resolveHideDoneScope({ hideDone: props.hideDone })
+)
 const updatingIds = computed(() => props.updatingIds ?? new Set<string>())
 const categoryMap = computed(() => new Map((props.categories ?? []).map((c) => [c.id, c])))
 
@@ -117,7 +125,7 @@ const displayColumns = computed(() => {
   for (const group of customGroups.value) {
     cols.push({ id: group.id, name: group.name })
   }
-  if (!hideDone.value) {
+  if (shouldShowKanbanDoneColumn(effectiveHideDoneScope.value)) {
     cols.push({ id: DONE_COLUMN_ID, name: '已完成' })
   }
   return cols

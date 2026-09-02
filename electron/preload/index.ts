@@ -145,6 +145,9 @@ const api: DesktopApi = {
     exportUserConfig: (uiPreferences?: Record<string, string>) =>
       ipcRenderer.invoke(IPC.APP_EXPORT_USER_CONFIG, uiPreferences),
     importUserConfig: () => ipcRenderer.invoke(IPC.APP_IMPORT_USER_CONFIG),
+    exportTasksJson: () => ipcRenderer.invoke(IPC.APP_EXPORT_TASKS_JSON),
+    exportTasksMarkdown: () => ipcRenderer.invoke(IPC.APP_EXPORT_TASKS_MARKDOWN),
+    importTasksJson: () => ipcRenderer.invoke(IPC.APP_IMPORT_TASKS_JSON),
     getVersion: () => ipcRenderer.invoke(IPC.APP_GET_VERSION),
     getInfo: () => ipcRenderer.invoke(IPC.APP_GET_INFO),
     getShortcuts: () => ipcRenderer.invoke(IPC.APP_GET_SHORTCUTS),

@@ -22,11 +22,19 @@
         </el-radio-group>
       </div>
 
-      <button type="button" class="task-view-menu__row task-view-menu__row--static">
-        <el-icon class="task-view-menu__row-icon"><CircleCheck /></el-icon>
-        <span class="task-view-menu__row-label">隐藏已完成</span>
-        <el-switch v-model="hideDone" size="small" @click.stop />
-      </button>
+      <div class="task-view-menu__sub task-view-menu__sub--compact">
+        <div class="task-view-menu__sub-title">隐藏已完成</div>
+        <el-radio-group
+          v-model="hideDoneScope"
+          class="task-view-menu__radio-group task-view-menu__radio-group--hide-done"
+          size="small"
+          @click.stop
+        >
+          <el-radio v-for="opt in hideDoneOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </el-radio>
+        </el-radio-group>
+      </div>
 
       <button
         v-if="viewMode === 'list'"
@@ -120,7 +128,9 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ArrowRight, CircleCheck, Setting, View } from '@element-plus/icons-vue'
+import { ArrowRight, Setting, View } from '@element-plus/icons-vue'
+import type { HideDoneScope } from '@shared/hide-done-scope'
+import { HIDE_DONE_SCOPE_LABELS, HIDE_DONE_SCOPE_OPTIONS } from '@shared/hide-done-scope'
 import type { TaskDetailStyle, TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { TASK_GROUP_BY_LABELS, TASK_SORT_BY_LABELS, type TaskGroupBy, type TaskSortBy } from '@shared/task-list-layout'
 import type { Category } from '@shared/types'
@@ -128,7 +138,12 @@ import { UNCATEGORIZED_LIST_KEY } from '@shared/visible-lists'
 
 export type GearViewMode = 'list' | 'kanban'
 
-const hideDone = defineModel<boolean>('hideDone', { required: true })
+const hideDoneScope = defineModel<HideDoneScope>('hideDoneScope', { required: true })
+
+const hideDoneOptions = HIDE_DONE_SCOPE_OPTIONS.map((value) => ({
+  value,
+  label: HIDE_DONE_SCOPE_LABELS[value]
+}))
 const detailStyle = defineModel<TaskDetailStyle>('detailStyle', { required: true })
 const metaVisibility = defineModel<TaskListMetaVisibility>('metaVisibility', { required: true })
 const groupBy = defineModel<TaskGroupBy>('groupBy', { required: true })
@@ -319,6 +334,16 @@ function updateMeta(key: keyof TaskListMetaVisibility, value: boolean) {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+}
+
+.task-view-menu__radio-group--hide-done {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
+}
+
+.task-view-menu__sub--compact {
+  margin-top: 4px;
 }
 </style>
 

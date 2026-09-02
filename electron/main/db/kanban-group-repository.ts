@@ -25,6 +25,14 @@ function mapRow(row: KanbanGroupRow): KanbanGroup {
 export class KanbanGroupRepository {
   constructor(private readonly db: Database.Database) {}
 
+  /** 全部看板自定义分组（任务导出用） */
+  listAll(): KanbanGroup[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM kanban_groups ORDER BY scope_key ASC, sort_order ASC`)
+      .all() as KanbanGroupRow[]
+    return rows.map(mapRow)
+  }
+
   listByScope(scopeKey: string): KanbanGroup[] {
     const rows = this.db
       .prepare(

@@ -10,6 +10,9 @@ export function cloneTaskListFilter(filter: TaskListFilter): TaskListFilter {
   if (typeof filter.hideDone === 'boolean') {
     out.hideDone = filter.hideDone
   }
+  if (filter.hideDoneScope) {
+    out.hideDoneScope = filter.hideDoneScope
+  }
   if (filter.smartList) {
     out.smartList = filter.smartList
   }

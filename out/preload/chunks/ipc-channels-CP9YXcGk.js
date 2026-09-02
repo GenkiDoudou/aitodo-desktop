@@ -28,6 +28,9 @@ const IPC = {
   APP_PICK_DATA_DIR: "app:pickDataDir",
   APP_EXPORT_USER_CONFIG: "app:exportUserConfig",
   APP_IMPORT_USER_CONFIG: "app:importUserConfig",
+  APP_EXPORT_TASKS_JSON: "app:exportTasksJson",
+  APP_EXPORT_TASKS_MARKDOWN: "app:exportTasksMarkdown",
+  APP_IMPORT_TASKS_JSON: "app:importTasksJson",
   APP_GET_VERSION: "app:getVersion",
   APP_GET_INFO: "app:getInfo",
   /** Main → Renderer：托盘/菜单触发新建任务（兼容旧版） */

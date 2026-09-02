@@ -1381,6 +1381,9 @@ const IPC = {
   APP_PICK_DATA_DIR: "app:pickDataDir",
   APP_EXPORT_USER_CONFIG: "app:exportUserConfig",
   APP_IMPORT_USER_CONFIG: "app:importUserConfig",
+  APP_EXPORT_TASKS_JSON: "app:exportTasksJson",
+  APP_EXPORT_TASKS_MARKDOWN: "app:exportTasksMarkdown",
+  APP_IMPORT_TASKS_JSON: "app:importTasksJson",
   APP_GET_VERSION: "app:getVersion",
   APP_GET_INFO: "app:getInfo",
   /** Main → Renderer：托盘/菜单触发新建任务（兼容旧版） */
@@ -1785,6 +1788,11 @@ function mapRow$7(row) {
 class KanbanGroupRepository {
   constructor(db) {
     this.db = db;
+  }
+  /** 全部看板自定义分组（任务导出用） */
+  listAll() {
+    const rows = this.db.prepare(`SELECT * FROM kanban_groups ORDER BY scope_key ASC, sort_order ASC`).all();
+    return rows.map(mapRow$7);
   }
   listByScope(scopeKey) {
     const rows = this.db.prepare(
@@ -2200,6 +2208,33 @@ function doneTimeRangeBounds(range, base = dayjs(), custom) {
   }
   return null;
 }
+const HIDE_DONE_SCOPE_OPTIONS = ["off", "all", "today", "week", "month"];
+const VALID_SCOPES = new Set(HIDE_DONE_SCOPE_OPTIONS);
+function hideDoneScopeFromLegacy(hideDone) {
+  if (hideDone === false) return "off";
+  return "all";
+}
+function resolveHideDoneScope(filter) {
+  if (filter.hideDoneScope && VALID_SCOPES.has(filter.hideDoneScope)) {
+    return filter.hideDoneScope;
+  }
+  return hideDoneScopeFromLegacy(filter.hideDone);
+}
+function hideDoneScopeSqlClause(scope, base = dayjs()) {
+  if (scope === "off") return null;
+  if (scope === "all") {
+    return { sql: `status != 'DONE'`, params: {} };
+  }
+  const bounds = doneTimeRangeBounds(scope, base);
+  if (!bounds) return null;
+  return {
+    sql: `(status != 'DONE' OR COALESCE(completed_at, updated_at) < @hideDoneFrom OR COALESCE(completed_at, updated_at) > @hideDoneTo)`,
+    params: {
+      hideDoneFrom: bounds.from,
+      hideDoneTo: bounds.to
+    }
+  };
+}
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 function normalizeCompletedOccurrenceDates(dates) {
   if (!dates?.length) return [];
@@ -2349,8 +2384,15 @@ class TaskRepository {
       const rows2 = this.db.prepare(sql2).all(sqlBind(params));
       return rows2.map(mapRow$4);
     }
-    if (filter.hideDone) {
-      clauses.push(`status != 'DONE'`);
+    if (filter.smartList !== "done") {
+      const hideClause = hideDoneScopeSqlClause(
+        resolveHideDoneScope(filter),
+        dayjs()
+      );
+      if (hideClause) {
+        clauses.push(hideClause.sql);
+        Object.assign(params, hideClause.params);
+      }
     }
     if (filter.status) {
       clauses.push("status = @status");
@@ -9496,6 +9538,9 @@ function cloneTaskListFilter(filter) {
   if (typeof filter.hideDone === "boolean") {
     out.hideDone = filter.hideDone;
   }
+  if (filter.hideDoneScope) {
+    out.hideDoneScope = filter.hideDoneScope;
+  }
   if (filter.smartList) {
     out.smartList = filter.smartList;
   }
@@ -9712,6 +9757,351 @@ function applyUserConfigImport(data) {
   if (data.aiPrompt) {
     saveAiPromptConfig(mergeAiPromptConfig(data.aiPrompt));
   }
+}
+const TASK_DATA_EXPORT_VERSION = 1;
+const TASK_DATA_EXPORT_KIND = "aitodo-tasks";
+function categoryNameById(categories, id) {
+  if (!id) return null;
+  return categories.find((c) => c.id === id)?.name ?? null;
+}
+function buildTaskDataExport(payload) {
+  const categories = payload.categories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    color: c.color,
+    sortOrder: c.sortOrder,
+    keywords: c.keywords ?? []
+  }));
+  const kanbanGroups = (payload.kanbanGroups ?? []).map((g) => ({
+    id: g.id,
+    scopeKey: g.scopeKey,
+    name: g.name,
+    sortOrder: g.sortOrder
+  }));
+  const tasks = payload.tasks.filter((t) => !t.deletedAt).map((t) => taskToExportItem(t, payload.categories));
+  return {
+    kind: TASK_DATA_EXPORT_KIND,
+    version: TASK_DATA_EXPORT_VERSION,
+    exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    categories,
+    kanbanGroups,
+    tasks
+  };
+}
+function taskToExportItem(task, categories) {
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    priority: task.priority,
+    categoryId: task.categoryId,
+    categoryName: categoryNameById(categories, task.categoryId),
+    parentId: task.parentId,
+    startAt: task.startAt,
+    dueAt: task.dueAt,
+    remindAt: task.remindAt,
+    completedAt: task.completedAt,
+    sortOrder: task.sortOrder,
+    kanbanGroupId: task.kanbanGroupId,
+    tags: task.tags ?? [],
+    reminders: task.reminders?.map((r) => ({
+      remindAt: r.remindAt,
+      offsetMinutes: r.offsetMinutes ?? null
+    })),
+    recurrence: task.recurrence ?? null,
+    completedOccurrenceDates: task.completedOccurrenceDates ?? [],
+    remindContinuous: task.remindContinuous ?? false,
+    triagedAt: task.triagedAt,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt
+  };
+}
+const STATUS_LABEL = {
+  TODO: "待办",
+  IN_PROGRESS: "进行中",
+  DONE: "已完成"
+};
+function formatLine(text) {
+  return text?.trim() ? text.trim() : "";
+}
+function tasksToMarkdown(tasks, categories) {
+  const catMap = new Map(categories.map((c) => [c.id, c.name]));
+  const byCategory = /* @__PURE__ */ new Map();
+  for (const task of tasks) {
+    const key = task.categoryId ?? "__none__";
+    if (!byCategory.has(key)) byCategory.set(key, []);
+    byCategory.get(key).push(task);
+  }
+  const lines = ["# 小柒 Todo 任务导出", ""];
+  lines.push(`> 导出时间：${(/* @__PURE__ */ new Date()).toLocaleString("zh-CN")}`);
+  lines.push(`> 任务数：${tasks.length}`);
+  lines.push("");
+  const keys = [...byCategory.keys()].sort((a, b) => {
+    const na = a === "__none__" ? "zzz" : catMap.get(a) ?? a;
+    const nb = b === "__none__" ? "zzz" : catMap.get(b) ?? b;
+    return na.localeCompare(nb, "zh-CN");
+  });
+  for (const key of keys) {
+    const heading = key === "__none__" ? "未分类" : catMap.get(key) ?? key;
+    lines.push(`## ${heading}`, "");
+    for (const task of byCategory.get(key) ?? []) {
+      const checked = task.status === "DONE" ? "x" : " ";
+      lines.push(`- [${checked}] **${task.title}**（${STATUS_LABEL[task.status]}）`);
+      if (task.dueAt) lines.push(`  - 截止：${task.dueAt}`);
+      if (task.completedAt) lines.push(`  - 完成：${task.completedAt}`);
+      if (task.tags?.length) lines.push(`  - 标签：${task.tags.join("、")}`);
+      const desc = formatLine(task.description);
+      if (desc) {
+        lines.push("  - 描述：");
+        for (const row of desc.split("\n")) {
+          lines.push(`    ${row}`);
+        }
+      }
+    }
+    lines.push("");
+  }
+  return lines.join("\n").trimEnd() + "\n";
+}
+function parseTaskDataExport(raw) {
+  const parsed = JSON.parse(raw);
+  if (parsed.kind !== TASK_DATA_EXPORT_KIND) {
+    throw new Error("不是有效的任务导出文件");
+  }
+  if (parsed.version !== TASK_DATA_EXPORT_VERSION) {
+    throw new Error("不支持的任务导出版本");
+  }
+  if (!Array.isArray(parsed.tasks)) {
+    throw new Error("任务导出格式无效");
+  }
+  return parsed;
+}
+class TaskDataService {
+  constructor(taskRepo, categoryRepo, kanbanRepo, tagRepo, reminderRepo, outbox) {
+    this.taskRepo = taskRepo;
+    this.categoryRepo = categoryRepo;
+    this.kanbanRepo = kanbanRepo;
+    this.tagRepo = tagRepo;
+    this.reminderRepo = reminderRepo;
+    this.outbox = outbox;
+  }
+  withTx(fn) {
+    return this.outbox ? this.outbox.runInTransaction(fn) : fn();
+  }
+  /** 拉取未删除任务并附带标签、提醒 */
+  listExportableTasks() {
+    const tasks = this.taskRepo.list({ hideDoneScope: "off", smartList: "all" });
+    if (!tasks.length) return tasks;
+    const tagMap = this.tagRepo.getTagsByTaskIds(tasks.map((t) => t.id));
+    return tasks.map((task) => ({
+      ...task,
+      tags: tagMap.get(task.id) ?? [],
+      reminders: this.reminderRepo.listByTaskId(task.id)
+    }));
+  }
+  listAllKanbanGroups() {
+    return this.kanbanRepo.listAll();
+  }
+  buildExportPayload() {
+    const categories = this.categoryRepo.list();
+    const tasks = this.listExportableTasks();
+    const kanbanGroups = this.listAllKanbanGroups();
+    return buildTaskDataExport({ tasks, categories, kanbanGroups });
+  }
+  async exportJsonToFile(parent) {
+    if (parent && !parent.isDestroyed()) parent.focus();
+    const result = await electron.dialog.showSaveDialog(parent ?? void 0, {
+      title: "导出任务 JSON",
+      defaultPath: `小柒todo-tasks-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`,
+      filters: [{ name: "JSON", extensions: ["json"] }]
+    });
+    if (result.canceled || !result.filePath) return null;
+    const payload = this.buildExportPayload();
+    fs.writeFileSync(result.filePath, JSON.stringify(payload, null, 2), "utf-8");
+    return result.filePath;
+  }
+  async exportMarkdownToFile(parent) {
+    if (parent && !parent.isDestroyed()) parent.focus();
+    const result = await electron.dialog.showSaveDialog(parent ?? void 0, {
+      title: "导出任务 Markdown",
+      defaultPath: `小柒todo-tasks-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.md`,
+      filters: [{ name: "Markdown", extensions: ["md", "markdown"] }]
+    });
+    if (result.canceled || !result.filePath) return null;
+    const payload = this.buildExportPayload();
+    fs.writeFileSync(result.filePath, tasksToMarkdown(payload.tasks, payload.categories), "utf-8");
+    return result.filePath;
+  }
+  async importJsonFromFile(parent) {
+    if (parent && !parent.isDestroyed()) parent.focus();
+    const result = await electron.dialog.showOpenDialog(parent ?? void 0, {
+      title: "导入任务 JSON",
+      properties: ["openFile"],
+      filters: [{ name: "JSON", extensions: ["json"] }]
+    });
+    if (result.canceled || !result.filePaths[0]) return null;
+    const raw = fs.readFileSync(result.filePaths[0], "utf-8");
+    const parsed = parseTaskDataExport(raw);
+    return this.applyImport(parsed);
+  }
+  /** 合并导入：按 id upsert 任务与清单，保留导出文件中的时间戳 */
+  applyImport(data) {
+    let importedTasks = 0;
+    let updatedTasks = 0;
+    let importedCategories = 0;
+    const skippedTrash = 0;
+    return this.withTx(() => {
+      const categoryIdByName = /* @__PURE__ */ new Map();
+      for (const cat of this.categoryRepo.list()) {
+        categoryIdByName.set(cat.name, cat.id);
+      }
+      for (const item of data.categories ?? []) {
+        const existing = this.categoryRepo.findById(item.id);
+        const ts = nowIso();
+        if (existing) {
+          this.categoryRepo.update(item.id, {
+            name: item.name,
+            color: item.color,
+            sortOrder: item.sortOrder,
+            keywords: item.keywords ?? [],
+            updatedAt: ts
+          });
+          categoryIdByName.set(item.name, item.id);
+        } else {
+          const existingNameId = categoryIdByName.get(item.name);
+          if (existingNameId) {
+            categoryIdByName.set(item.name, existingNameId);
+          } else {
+            this.categoryRepo.insert({
+              id: item.id,
+              name: item.name,
+              color: item.color,
+              sortOrder: item.sortOrder,
+              keywords: item.keywords ?? [],
+              createdAt: ts,
+              updatedAt: ts,
+              deletedAt: null
+            });
+            categoryIdByName.set(item.name, item.id);
+            importedCategories += 1;
+          }
+        }
+      }
+      for (const g of data.kanbanGroups ?? []) {
+        if (this.kanbanRepo.findById(g.id)) {
+          this.kanbanRepo.update({
+            id: g.id,
+            scopeKey: g.scopeKey,
+            name: g.name,
+            sortOrder: g.sortOrder,
+            createdAt: nowIso(),
+            updatedAt: nowIso()
+          });
+        } else {
+          this.kanbanRepo.insert({
+            id: g.id,
+            scopeKey: g.scopeKey,
+            name: g.name,
+            sortOrder: g.sortOrder,
+            createdAt: nowIso(),
+            updatedAt: nowIso()
+          });
+        }
+      }
+      const sorted = sortTasksForImport(data.tasks);
+      for (const item of sorted) {
+        const categoryId = resolveCategoryId(item, categoryIdByName);
+        const existing = this.taskRepo.findById(item.id);
+        const task = buildTaskFromExportItem(item, categoryId);
+        if (existing) {
+          this.taskRepo.update({
+            ...task,
+            remindFiredAt: existing.remindFiredAt,
+            syncVersion: existing.syncVersion + 1,
+            deletedAt: null
+          });
+          updatedTasks += 1;
+        } else {
+          this.taskRepo.insert({ ...task, remindFiredAt: null, syncVersion: 1, deletedAt: null });
+          importedTasks += 1;
+        }
+        const tags = normalizeTagNames(item.tags ?? []);
+        this.tagRepo.setTaskTags(item.id, tags, nowIso());
+        const reminders = normalizeReminders(item);
+        this.reminderRepo.replaceForTask(item.id, reminders, nowIso());
+      }
+      return { importedTasks, updatedTasks, importedCategories, skippedTrash };
+    });
+  }
+}
+function sortTasksForImport(tasks) {
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const depthCache = /* @__PURE__ */ new Map();
+  function depth(id, stack = /* @__PURE__ */ new Set()) {
+    if (depthCache.has(id)) return depthCache.get(id);
+    if (stack.has(id)) return 0;
+    stack.add(id);
+    const task = byId.get(id);
+    if (!task?.parentId || !byId.has(task.parentId)) {
+      depthCache.set(id, 0);
+      return 0;
+    }
+    const d = depth(task.parentId, stack) + 1;
+    depthCache.set(id, d);
+    return d;
+  }
+  return [...tasks].sort((a, b) => depth(a.id) - depth(b.id));
+}
+function resolveCategoryId(item, categoryIdByName) {
+  if (item.categoryName && categoryIdByName.has(item.categoryName)) {
+    return categoryIdByName.get(item.categoryName);
+  }
+  if (item.categoryId) {
+    return item.categoryId;
+  }
+  return null;
+}
+function normalizeReminders(item) {
+  if (item.reminders?.length) return item.reminders;
+  if (item.remindAt) return [{ remindAt: item.remindAt, offsetMinutes: null }];
+  return [];
+}
+function buildTaskFromExportItem(item, categoryId) {
+  const reminders = normalizeReminders(item);
+  return {
+    id: item.id,
+    title: item.title.trim(),
+    description: item.description,
+    status: item.status,
+    priority: coerceTaskPriority(item.priority, DEFAULT_TASK_PRIORITY),
+    categoryId,
+    parentId: item.parentId,
+    startAt: item.startAt,
+    dueAt: item.dueAt,
+    remindAt: primaryRemindAt(reminders) ?? item.remindAt,
+    remindFiredAt: null,
+    completedAt: item.completedAt,
+    sortOrder: item.sortOrder,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    deletedAt: null,
+    syncVersion: 1,
+    kanbanGroupId: item.kanbanGroupId,
+    recurrence: item.recurrence ?? null,
+    completedOccurrenceDates: normalizeCompletedOccurrenceDates(item.completedOccurrenceDates ?? []),
+    remindContinuous: item.remindContinuous ?? false,
+    tags: normalizeTagNames(item.tags ?? []),
+    triagedAt: item.triagedAt
+  };
+}
+async function exportTasksJsonToFile(service, parent) {
+  return service.exportJsonToFile(parent);
+}
+async function exportTasksMarkdownToFile(service, parent) {
+  return service.exportMarkdownToFile(parent);
+}
+async function importTasksJsonFromFile(service, parent) {
+  return service.importJsonFromFile(parent);
 }
 const WEEKDAY_MAP = {
   一: 1,
@@ -11198,6 +11588,14 @@ function services() {
     tags: tagRepo,
     categories: new CategoryService(categoryRepo, syncOutbox),
     kanbanGroups: new KanbanGroupService(kanbanRepo),
+    taskData: new TaskDataService(
+      taskRepo,
+      categoryRepo,
+      kanbanRepo,
+      tagRepo,
+      reminderRepo,
+      syncOutbox
+    ),
     messages: new AppMessageService(
       messageRepo,
       syncOutbox,
@@ -11439,6 +11837,18 @@ function registerIpcHandlers(getMainWindow) {
       }
       return result;
     })
+  );
+  electron.ipcMain.handle(
+    IPC.APP_EXPORT_TASKS_JSON,
+    async () => wrapIpcAsync(() => exportTasksJsonToFile(services().taskData, getMainWindow() ?? void 0))
+  );
+  electron.ipcMain.handle(
+    IPC.APP_EXPORT_TASKS_MARKDOWN,
+    async () => wrapIpcAsync(() => exportTasksMarkdownToFile(services().taskData, getMainWindow() ?? void 0))
+  );
+  electron.ipcMain.handle(
+    IPC.APP_IMPORT_TASKS_JSON,
+    async () => wrapIpcAsync(() => importTasksJsonFromFile(services().taskData, getMainWindow() ?? void 0))
   );
   electron.ipcMain.handle(IPC.APP_GET_SHORTCUTS, () => wrapIpc(() => readShortcutBindings()));
   electron.ipcMain.handle(

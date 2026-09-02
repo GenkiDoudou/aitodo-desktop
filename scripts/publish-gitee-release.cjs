@@ -41,6 +41,17 @@ const ASSET_PATTERNS = [
 /** Gitee 附件硬限制 100MB，低于此值才上传 */
 const GITEE_MAX_UPLOAD_BYTES = 95 * 1024 * 1024
 
+/** 发布前保留的最新 semver 版本数（更早版本的附件会被修剪） */
+const DEFAULT_KEEP_RELEASES = Number.parseInt(process.env.GITEE_KEEP_RELEASES || '8', 10) || 8
+
+function isQuotaError(message) {
+  return /附件配额|1\s*GB|quota|超出仓库/i.test(message)
+}
+
+function isOversizeError(message) {
+  return /100\s*MB|超出限制|file size/i.test(message)
+}
+
 function listAssets() {
   if (!fs.existsSync(distDir)) {
     throw new Error(`dist 不存在: ${distDir}`)
@@ -50,6 +61,32 @@ function listAssets() {
     .filter((name) => ASSET_PATTERNS.some((re) => re.test(name)))
     .map((name) => path.join(distDir, name))
     .filter((p) => fs.statSync(p).isFile())
+}
+
+async function pruneOldAttachmentsBestEffort() {
+  try {
+    const { spawnSync } = require('child_process')
+    const script = path.join(__dirname, 'prune-gitee-attachments.cjs')
+    console.log(
+      `[publish-gitee-release] 发布前修剪旧版附件（保留最新 ${DEFAULT_KEEP_RELEASES} 个版本）…`
+    )
+    const result = spawnSync(process.execPath, [script], {
+      env: {
+        ...process.env,
+        GITEE_OWNER: owner,
+        GITEE_REPO: repo,
+        GITEE_TOKEN: token,
+        KEEP: String(DEFAULT_KEEP_RELEASES),
+        DRY_RUN: 'false'
+      },
+      stdio: 'inherit'
+    })
+    if (result.status !== 0) {
+      console.warn('[publish-gitee-release] 修剪旧附件失败（继续尝试上传）')
+    }
+  } catch (err) {
+    console.warn('[publish-gitee-release] 修剪旧附件异常（继续尝试上传）:', err)
+  }
 }
 
 function shouldUpload(filePath) {
@@ -203,6 +240,8 @@ function uploadFile(releaseId, filePath) {
 }
 
 async function main() {
+  await pruneOldAttachmentsBestEffort()
+
   const assets = listAssets()
   if (!assets.length) {
     throw new Error('dist 下没有可上传的 exe/zip/yml/blockmap/part')
@@ -224,8 +263,13 @@ async function main() {
     } catch (err) {
       failed += 1
       const msg = err instanceof Error ? err.message : String(err)
-      if (/100 MB|超出限制|file size/i.test(msg)) {
-        console.warn(`[publish-gitee-release] skip oversized ${path.basename(file)}: ${msg}`)
+      const base = path.basename(file)
+      if (isOversizeError(msg)) {
+        console.warn(`[publish-gitee-release] skip oversized ${base}: ${msg}`)
+        continue
+      }
+      if (isQuotaError(msg)) {
+        console.warn(`[publish-gitee-release] skip quota ${base}: ${msg}`)
         continue
       }
       throw err
@@ -234,7 +278,21 @@ async function main() {
   if (ok === 0) {
     throw new Error('Gitee 没有成功上传任何附件')
   }
-  console.log(`[publish-gitee-release] done ok=${ok} skippedOrFailedSize=${failed}`)
+  const partFailed = uploadList.some(
+    (p) => /\.part\d+$/i.test(p) && failed > 0
+  )
+  if (failed > 0) {
+    console.warn(
+      `[publish-gitee-release] 有 ${failed} 个附件未上传（多为配额或单文件 100MB 限制）。` +
+        ' 可在本地运行 node scripts/prune-gitee-attachments.cjs 后重试，或到 Gitee Release 手动清理旧版附件。'
+    )
+  }
+  console.log(`[publish-gitee-release] done ok=${ok} failed=${failed}`)
+  if (partFailed && ok > 0) {
+    console.warn(
+      '[publish-gitee-release] 分卷未全部上传：Gitee 免解压包可能不可用，GitHub Release 仍有完整 zip。'
+    )
+  }
 }
 
 main().catch((err) => {

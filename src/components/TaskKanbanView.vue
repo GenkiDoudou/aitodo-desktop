@@ -230,6 +230,11 @@ import {
 } from '@shared/kanban-group-columns'
 import { TASK_PRIORITIES, DEFAULT_TASK_PRIORITY, isValidTaskPriority, type TaskPriority } from '@shared/task-priority'
 import { KANBAN_DONE_COLUMN_ID, KANBAN_UNGROUPED_ID } from '@shared/kanban-scope'
+import {
+  resolveHideDoneScope,
+  shouldShowKanbanDoneColumn,
+  type HideDoneScope
+} from '@shared/hide-done-scope'
 import { readKanbanConfig } from '@/utils/kanban-preferences'
 import { taskDescriptionPreview } from '@shared/task-description'
 import { buildQuickCreateTaskDtoFromDraft, toParseCategories } from '@shared/quick-create-task'
@@ -260,7 +265,9 @@ const props = defineProps<{
   tasks: Task[]
   loading: boolean
   selectedId?: string | null
+  /** @deprecated 请使用 hideDoneScope */
   hideDone?: boolean
+  hideDoneScope?: HideDoneScope
   metaVisibility?: TaskListMetaVisibility
   sortBy?: TaskSortBy
   /** 看板列分组方式（由视图配置决定，不在看板内切换） */
@@ -272,6 +279,10 @@ const props = defineProps<{
 }>()
 
 const parseCategories = computed(() => props.parseCategories ?? [])
+
+const effectiveHideDoneScope = computed(() =>
+  props.hideDoneScope ?? resolveHideDoneScope({ hideDone: props.hideDone })
+)
 
 const emit = defineEmits<{
   select: [string]
@@ -342,7 +353,7 @@ const displayColumns = computed<DisplayColumn[]>(() => {
   for (const g of customGroups.value) {
     cols.push({ id: g.id, name: g.name })
   }
-  if (!props.hideDone) {
+  if (shouldShowKanbanDoneColumn(effectiveHideDoneScope.value)) {
     cols.push({ id: DONE_COLUMN_ID, name: '已完成' })
   }
   return cols

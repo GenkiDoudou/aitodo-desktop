@@ -4,6 +4,11 @@ import type { TaskGroupBy, TaskSortBy } from '@shared/task-list-layout'
 import type { TaskListViewMode } from '@shared/list-view-preferences'
 import type { FilterNode } from '@shared/task-filter-ast'
 import { matchTask } from '@shared/task-filter-ast'
+import {
+  resolveHideDoneScope,
+  taskMatchesHideDoneScope,
+  type HideDoneScope
+} from '@shared/hide-done-scope'
 import type { TaskViewLayout, Task } from '@shared/types'
 import type { QuadrantLayoutOptions } from '@shared/quadrant-layout'
 import type { Dayjs } from 'dayjs'
@@ -76,7 +81,9 @@ function buildHasSubtasksMap(tasks: readonly Task[]): Map<string, boolean> {
 }
 
 export interface FilterTasksForViewOptions {
+  /** @deprecated 请使用 hideDoneScope */
   hideDone?: boolean
+  hideDoneScope?: HideDoneScope
   now?: Dayjs
 }
 
@@ -93,9 +100,9 @@ export function filterTasksForViewWidget(
   view: Pick<TaskView, 'filterRule' | 'layout' | 'kanbanBoardMode' | 'quadrantOptions'>,
   options: FilterTasksForViewOptions = {}
 ): Task[] {
-  const hideDone = options.hideDone ?? true
+  const scope = options.hideDoneScope ?? resolveHideDoneScope({ hideDone: options.hideDone })
   const alive = allTasks.filter((task) => !task.deletedAt)
-  const pool = hideDone ? alive.filter((task) => task.status !== 'DONE') : alive
+  const pool = alive.filter((task) => taskMatchesHideDoneScope(task, scope, options.now))
   const rule = view.filterRule
   const hasSubtasksById = buildHasSubtasksMap(alive)
   const ctx = { hasSubtasksById, now: options.now }

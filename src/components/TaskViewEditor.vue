@@ -141,12 +141,19 @@
         </div>
 
         <div class="task-view-editor__display-block">
-          <div class="task-view-editor__switch-row">
-            <span class="task-view-editor__field-label">隐藏已完成</span>
-            <el-switch v-model="hideDone" />
+          <div class="task-view-editor__field">
+            <label class="task-view-editor__field-label">隐藏已完成</label>
+            <el-select v-model="hideDoneScope" class="task-view-editor__select">
+              <el-option
+                v-for="opt in hideDoneOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
+            </el-select>
           </div>
           <p class="task-view-editor__hint">
-            状态看板建议关闭，以便显示「已完成」列
+            状态看板建议选「不隐藏」，以便显示「已完成」列
           </p>
 
           <div class="task-view-editor__field" style="margin-top: 14px">
@@ -215,6 +222,12 @@ import { VIEW_EDITOR_KANBAN_GROUP_OPTIONS } from '@shared/view-editor-config'
 import type { TaskDetailStyle, TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 import {
+  HIDE_DONE_SCOPE_LABELS,
+  HIDE_DONE_SCOPE_OPTIONS,
+  hideDoneScopeFromLegacy,
+  type HideDoneScope
+} from '@shared/hide-done-scope'
+import {
   createEmptyAndGroup,
   filterNodeForEditor,
   filterNodeToPersist,
@@ -271,6 +284,7 @@ const props = withDefaults(
     initialRule?: FilterNode | null
     initialScopeKey?: string | null
     initialHideDone?: boolean
+    initialHideDoneScope?: HideDoneScope
     initialDetailStyle?: TaskDetailStyle
     initialMetaVisibility?: TaskListMetaVisibility
     categories: Category[]
@@ -308,7 +322,11 @@ const kanbanBoardMode = ref<KanbanBoardMode>('group')
 const scopeKeyMode = ref<string>('follow')
 const quadrantOptions = ref<QuadrantLayoutOptions>(readQuadrantViewPreferences())
 const quadrantGroupByLabels = QUADRANT_GROUP_BY_LABELS
-const hideDone = ref(true)
+const hideDoneScope = ref<HideDoneScope>('all')
+const hideDoneOptions = HIDE_DONE_SCOPE_OPTIONS.map((value) => ({
+  value,
+  label: HIDE_DONE_SCOPE_LABELS[value]
+}))
 const detailStyle = ref<TaskDetailStyle>('sidebar')
 const metaVisibility = ref<TaskListMetaVisibility>({ ...DEFAULT_TASK_LIST_META_VISIBILITY })
 const root = ref<FilterNode>(createEmptyAndGroup())
@@ -353,8 +371,11 @@ watch(
       props.mode === 'edit' && props.viewId
         ? readViewDisplayPreferences(props.viewId, mode)
         : defaultViewDisplayPreferences(mode)
-    hideDone.value =
-      typeof props.initialHideDone === 'boolean' ? props.initialHideDone : stored.hideDone
+    hideDoneScope.value =
+      props.initialHideDoneScope ??
+      (typeof props.initialHideDone === 'boolean'
+        ? hideDoneScopeFromLegacy(props.initialHideDone)
+        : stored.hideDoneScope)
     detailStyle.value = props.initialDetailStyle ?? stored.detailStyle
     metaVisibility.value = {
       ...stored.metaVisibility,
@@ -375,7 +396,7 @@ watch([layout, kanbanBoardMode], ([nextLayout, nextMode]) => {
     quadrantOptions.value = readQuadrantViewPreferences()
   }
   if (nextLayout === 'kanban' && nextMode === 'status') {
-    hideDone.value = false
+    hideDoneScope.value = 'off'
   }
 })
 
@@ -437,7 +458,7 @@ async function onSave() {
         : null
   }
   const displayPrefs = {
-    hideDone: hideDone.value,
+    hideDoneScope: hideDoneScope.value,
     detailStyle: detailStyle.value,
     metaVisibility: { ...metaVisibility.value }
   }

@@ -47,7 +47,7 @@
         :tasks="filteredTasks"
         :board-mode="selectedView.kanbanBoardMode ?? 'group'"
         :sort-by="selectedView.sortBy"
-        :hide-done="viewHideDone"
+        :hide-done-scope="viewHideDoneScope"
         :updating-ids="updatingIds"
         :categories="categories"
         @toggle-done="toggleDone"
@@ -127,17 +127,17 @@ const selectedView = computed(() => {
 const hasActiveRule = computed(() => isFilterRuleActive(selectedView.value?.filterRule))
 const isKanbanView = computed(() => selectedView.value?.layout === 'kanban')
 
-const viewHideDone = computed(() => {
+const viewHideDoneScope = computed(() => {
   const view = selectedView.value
-  if (!view) return true
+  if (!view) return 'all' as const
   const kanbanMode = view.layout === 'kanban' ? view.kanbanBoardMode ?? 'group' : null
-  return readViewDisplayPreferences(view.id, kanbanMode).hideDone
+  return readViewDisplayPreferences(view.id, kanbanMode).hideDoneScope
 })
 
 const filteredTasks = computed(() => {
   const view = selectedView.value
   if (!view) return []
-  return filterTasksForViewWidget(tasks.value, view, { hideDone: viewHideDone.value })
+  return filterTasksForViewWidget(tasks.value, view, { hideDoneScope: viewHideDoneScope.value })
 })
 
 const listRows = computed(() => flattenTasksForViewWidget(filteredTasks.value))

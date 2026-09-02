@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3'
 import type { SummaryTaskFilter } from '@shared/summary-report-config'
 import dayjs from 'dayjs'
 import { doneTimeRangeBounds, smartListDateBounds } from '@shared/date-filter'
+import { hideDoneScopeSqlClause, resolveHideDoneScope } from '@shared/hide-done-scope'
 import { dueCutoffIsoForSmartList, isDueSmartList, type DueSmartList } from '@shared/smart-list'
 import type { Task, TaskListFilter, TaskStatus } from '@shared/types'
 import { parseRecurrenceRule, primaryRemindAt, serializeRecurrenceRule, type TaskReminderItem } from '@shared/task-reminder'
@@ -108,8 +109,15 @@ export class TaskRepository {
       return rows.map(mapRow)
     }
 
-    if (filter.hideDone) {
-      clauses.push(`status != 'DONE'`)
+    if (filter.smartList !== 'done') {
+      const hideClause = hideDoneScopeSqlClause(
+        resolveHideDoneScope(filter),
+        dayjs()
+      )
+      if (hideClause) {
+        clauses.push(hideClause.sql)
+        Object.assign(params, hideClause.params)
+      }
     }
     if (filter.status) {
       clauses.push('status = @status')

@@ -82,6 +82,12 @@ import {
   exportUserConfigToFile,
   importUserConfigFromFile
 } from '../services/user-config-service'
+import {
+  TaskDataService,
+  exportTasksJsonToFile,
+  exportTasksMarkdownToFile,
+  importTasksJsonFromFile
+} from '../services/task-data-service'
 import type { HolidayService } from '../services/holiday-service'
 import type { UpdateWidgetSettingsDto } from '@shared/widget-notes'
 import { WidgetNoteRepository } from '../db/widget-note-repository'
@@ -124,6 +130,14 @@ function services() {
     tags: tagRepo,
     categories: new CategoryService(categoryRepo, syncOutbox),
     kanbanGroups: new KanbanGroupService(kanbanRepo),
+    taskData: new TaskDataService(
+      taskRepo,
+      categoryRepo,
+      kanbanRepo,
+      tagRepo,
+      reminderRepo,
+      syncOutbox
+    ),
     messages: new AppMessageService(messageRepo, syncOutbox, () =>
       readSyncPreferences(getActiveDataDir())
     ),
@@ -384,6 +398,18 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       }
       return result
     })
+  )
+
+  ipcMain.handle(IPC.APP_EXPORT_TASKS_JSON, async () =>
+    wrapIpcAsync(() => exportTasksJsonToFile(services().taskData, getMainWindow() ?? undefined))
+  )
+
+  ipcMain.handle(IPC.APP_EXPORT_TASKS_MARKDOWN, async () =>
+    wrapIpcAsync(() => exportTasksMarkdownToFile(services().taskData, getMainWindow() ?? undefined))
+  )
+
+  ipcMain.handle(IPC.APP_IMPORT_TASKS_JSON, async () =>
+    wrapIpcAsync(() => importTasksJsonFromFile(services().taskData, getMainWindow() ?? undefined))
   )
 
   ipcMain.handle(IPC.APP_GET_SHORTCUTS, () => wrapIpc(() => readShortcutBindings()))

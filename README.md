@@ -58,7 +58,9 @@ npm run build:win    # Windows：NSIS + zip，并生成 latest-portable.yml
 npm run build:mac    # macOS：dmg + zip（需在 macOS 上执行）
 ```
 
-产物输出在 `desktop/dist/`。自动更新相关资产与双仓上传步骤见 [`docs/auto-update-release.md`](docs/auto-update-release.md)。
+产物输出在 `desktop/dist/`。
+
+**文档**：[`docs/pages-overview.md`](docs/pages-overview.md)（页面与视图结构）、[`docs/auto-update-release.md`](docs/auto-update-release.md)（自动更新发布）。
 
 ### 推送到公开仓并发版（自更新）
 

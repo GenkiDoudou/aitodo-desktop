@@ -1,9 +1,16 @@
 import type { TaskDetailStyle, TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 import type { KanbanBoardMode } from '@shared/kanban-config'
+import {
+  coerceHideDoneScope,
+  hideDoneScopeFromLegacy,
+  type HideDoneScope
+} from '@shared/hide-done-scope'
 
 export interface ViewDisplayPreferences {
-  hideDone: boolean
+  /** @deprecated 请使用 hideDoneScope */
+  hideDone?: boolean
+  hideDoneScope: HideDoneScope
   detailStyle: TaskDetailStyle
   metaVisibility: TaskListMetaVisibility
 }
@@ -19,7 +26,7 @@ export function defaultViewDisplayPreferences(
 ): ViewDisplayPreferences {
   return {
     // 状态看板默认展示已完成列
-    hideDone: kanbanBoardMode === 'status' ? false : true,
+    hideDoneScope: kanbanBoardMode === 'status' ? 'off' : 'all',
     detailStyle: 'sidebar',
     metaVisibility: { ...DEFAULT_TASK_LIST_META_VISIBILITY }
   }
@@ -34,9 +41,14 @@ export function readViewDisplayPreferences(
     const raw = localStorage.getItem(storageKey(viewId))
     if (!raw) return fallback
     const parsed = JSON.parse(raw) as Partial<ViewDisplayPreferences>
+    const hideDoneScope =
+      parsed.hideDoneScope !== undefined
+        ? coerceHideDoneScope(parsed.hideDoneScope, fallback.hideDoneScope)
+        : typeof parsed.hideDone === 'boolean'
+          ? hideDoneScopeFromLegacy(parsed.hideDone)
+          : fallback.hideDoneScope
     return {
-      hideDone:
-        typeof parsed.hideDone === 'boolean' ? parsed.hideDone : fallback.hideDone,
+      hideDoneScope,
       detailStyle:
         parsed.detailStyle === 'dialog' || parsed.detailStyle === 'sidebar'
           ? parsed.detailStyle
