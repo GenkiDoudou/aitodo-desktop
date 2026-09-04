@@ -1,7 +1,7 @@
 {
   "name": "ai-todo-desktop",
   "productName": "小柒todo",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "小柒todo 纯本地桌面客户端（Electron + Vue3 + SQLite）",
   "main": "./out/main/index.js",
   "author": "小柒todo",
