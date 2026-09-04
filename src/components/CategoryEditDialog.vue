@@ -11,6 +11,20 @@
       <el-form-item label="清单名称" required>
         <el-input v-model="name" maxlength="64" show-word-limit placeholder="例如：工作" />
       </el-form-item>
+      <el-form-item label="颜色">
+        <div class="category-edit__colors" role="listbox" aria-label="清单颜色">
+          <button
+            v-for="c in colorPresets"
+            :key="c"
+            type="button"
+            class="category-edit__swatch"
+            :class="{ 'is-active': color === c }"
+            :style="{ background: c }"
+            :title="c"
+            @click="color = c"
+          />
+        </div>
+      </el-form-item>
       <el-form-item>
         <template #label>
           <span>关键词</span>
@@ -64,7 +78,22 @@ const emit = defineEmits<{
 const categoryStore = useCategoryStore()
 const name = ref('')
 const keywords = ref<string[]>([])
+const color = ref('#409eff')
 const saving = ref(false)
+
+/** 清单色板：与侧栏色点、Todo Pro 语义色对齐 */
+const colorPresets = [
+  '#409eff',
+  '#67c23a',
+  '#e6a23c',
+  '#f56c6c',
+  '#909399',
+  '#13c2c2',
+  '#9254de',
+  '#eb2f96',
+  '#2f54eb',
+  '#fa8c16'
+]
 
 watch(
   () => [props.modelValue, props.category] as const,
@@ -72,6 +101,7 @@ watch(
     if (!open) return
     name.value = category?.name ?? ''
     keywords.value = [...(category?.keywords ?? [])]
+    color.value = category?.color || '#409eff'
   },
   { immediate: true }
 )
@@ -115,10 +145,11 @@ async function submit() {
     if (props.category) {
       await categoryStore.update(props.category.id, {
         name: trimmedName,
-        keywords: normalized
+        keywords: normalized,
+        color: color.value
       })
     } else {
-      await categoryStore.create(trimmedName, { keywords: normalized })
+      await categoryStore.create(trimmedName, { keywords: normalized, color: color.value })
     }
     emit('update:modelValue', false)
     emit('saved')
@@ -141,5 +172,25 @@ async function submit() {
 
 .category-edit__keywords {
   width: 100%;
+}
+
+.category-edit__colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.category-edit__swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+
+  &.is-active {
+    border-color: #303133;
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.35);
+  }
 }
 </style>

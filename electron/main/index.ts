@@ -46,6 +46,9 @@ let summarySchedulerService: SummarySchedulerService | null = null
 
 registerNotificationSupport()
 
+/** 任务管理器 / 系统对话框中的应用名与窗口标题一致（打包 exe 仍由 electron-builder productName 决定） */
+app.setName('小柒todo')
+
 function createWindow(options?: { startHidden?: boolean }): BrowserWindow {
   const startHidden = Boolean(options?.startHidden)
   const win = new BrowserWindow({

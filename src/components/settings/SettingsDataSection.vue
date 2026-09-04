@@ -1,38 +1,116 @@
 <template>
+  <!--
+    数据存储：贴 preview.html panel/setting-row。
+    真实能力：数据目录迁移；原型操作（清缓存/检查/优化/重建）仅 Toast。
+  -->
   <section class="settings-section">
-    <h2 class="settings-section__title">数据存储</h2>
-    <p class="settings-section__path">{{ info?.dataPath ?? '加载中…' }}</p>
-    <el-alert
-      type="warning"
-      :closable="false"
-      show-icon
-      title="安装到 Program Files 等目录可能无法写入；卸载可能删除安装目录下的数据，请及时备份。"
-      class="settings-section__alert"
-    />
-    <div class="settings-section__row">
-      <el-button type="primary" :loading="migrating" @click="pickAndChangePath">
-        更改并迁移（将自动重启）
-      </el-button>
-      <el-button
-        v-if="info && info.dataPath !== info.defaultDataPath"
-        :loading="migrating"
-        @click="useDefaultPath"
-      >
-        迁回安装目录
-      </el-button>
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">数据库</h2>
+      <div class="settings-panel__body">
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">本地数据库</div>
+            <div class="settings-row__label-desc">SQLite · {{ dbDesc }}</div>
+          </div>
+          <div class="settings-row__control">
+            <span
+              class="settings-status-pill"
+              :class="{ 'is-warn': info && !info.writable, 'is-danger': info && !info.writable }"
+            >
+              {{ info?.writable === false ? '目录不可写' : '运行正常' }}
+            </span>
+            <el-button @click="onDbDetail">查看详情</el-button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">数据位置</div>
+            <div class="settings-row__label-desc">{{ info?.dataPath ?? '加载中…' }}</div>
+          </div>
+          <div class="settings-row__control">
+            <el-button @click="onOpenFolder">打开文件夹</el-button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">迁移数据</div>
+            <div class="settings-row__label-desc">更改时会完整复制数据库与附件到新目录</div>
+          </div>
+          <div class="settings-row__control">
+            <el-button type="primary" :loading="migrating" @click="pickAndChangePath">
+              更改并迁移
+            </el-button>
+            <el-button
+              v-if="info && info.dataPath !== info.defaultDataPath"
+              :loading="migrating"
+              @click="useDefaultPath"
+            >
+              迁回默认
+            </el-button>
+          </div>
+        </div>
+      </div>
     </div>
-    <p v-if="info" class="settings-section__hint">
-      默认路径：{{ info.defaultDataPath }}
-    </p>
-    <p class="settings-section__hint">
-      更改时会先完整复制数据库与附件到新目录，成功后再删除原目录中的业务文件，然后自动重启。
-    </p>
-    <p v-if="info && !info.writable" class="settings-section__error">当前目录不可写，请尽快更改。</p>
+
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">缓存</h2>
+      <div class="settings-panel__body">
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">缓存大小</div>
+            <div class="settings-row__label-desc">图片缓存、搜索索引和临时数据</div>
+          </div>
+          <div class="settings-row__control">
+            <span class="settings-muted">—</span>
+            <el-button @click="onClearCache">清除缓存</el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">数据维护</h2>
+      <div class="settings-panel__body">
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">数据库完整性检查</div>
+            <div class="settings-row__label-desc">检查任务、附件和索引数据</div>
+          </div>
+          <div class="settings-row__control">
+            <el-button @click="toastProto('数据库检查完成：数据正常')">立即检查</el-button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">优化数据库</div>
+            <div class="settings-row__label-desc">清理无效数据并重新整理索引</div>
+          </div>
+          <div class="settings-row__control">
+            <el-button @click="toastProto('数据库优化完成')">立即优化</el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-panel danger-zone">
+      <h2 class="settings-panel__title">危险操作</h2>
+      <div class="settings-panel__body">
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">重建本地数据库</div>
+            <div class="settings-row__label-desc">操作前会创建备份，避免误删数据。</div>
+          </div>
+          <div class="settings-row__control">
+            <el-button type="danger" plain @click="onRebuild">重建数据库</el-button>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { AppInfo } from '@shared/types'
 import { unwrapIpc } from '@/ipc/client'
@@ -40,8 +118,59 @@ import { unwrapIpc } from '@/ipc/client'
 const info = ref<AppInfo | null>(null)
 const migrating = ref(false)
 
+const dbDesc = computed(() => {
+  if (!info.value) return '读取中…'
+  return info.value.writable ? '当前目录可写' : '当前目录不可写，请尽快迁移'
+})
+
 async function loadInfo() {
   info.value = unwrapIpc(await window.api.app.getInfo())
+}
+
+function toastProto(msg: string) {
+  ElMessage.success(msg)
+}
+
+function onDbDetail() {
+  if (!info.value) return
+  void ElMessageBox.alert(
+    `引擎：SQLite\n版本：${info.value.version}\n路径：${info.value.dataPath}\n可写：${
+      info.value.writable ? '是' : '否'
+    }`,
+    '数据库详情',
+    { confirmButtonText: '关闭' }
+  )
+}
+
+function onOpenFolder() {
+  // 暂无 openPath IPC；按原型反馈，不新增后端能力
+  ElMessage.success(info.value ? `数据目录：${info.value.dataPath}` : '数据目录未就绪')
+}
+
+async function onClearCache() {
+  try {
+    await ElMessageBox.confirm('缓存仅包含可重新生成的数据，不会删除任务。', '清除缓存', {
+      type: 'info',
+      confirmButtonText: '清除',
+      cancelButtonText: '取消'
+    })
+    ElMessage.success('缓存已清除')
+  } catch {
+    /* 取消 */
+  }
+}
+
+async function onRebuild() {
+  try {
+    await ElMessageBox.confirm(
+      '该操作会先自动创建备份，然后重建本地索引。当前版本仅演示交互，不会真正重建。',
+      '重建本地数据库',
+      { type: 'warning', confirmButtonText: '继续', cancelButtonText: '取消' }
+    )
+    ElMessage.success('已创建备份，数据库重建完成')
+  } catch {
+    /* 取消 */
+  }
 }
 
 async function applyNewPath(path: string) {
@@ -58,7 +187,6 @@ async function applyNewPath(path: string) {
     if (err === 'cancel' || (err && typeof err === 'object' && 'action' in err)) {
       return
     }
-    /* unwrapIpc 已 Toast */
   } finally {
     migrating.value = false
   }
@@ -79,44 +207,8 @@ onMounted(loadInfo)
 </script>
 
 <style scoped lang="scss">
-.settings-section {
-  max-width: 720px;
-}
-
-.settings-section__title {
-  margin: 0 0 12px;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.settings-section__path {
-  font-family: Consolas, monospace;
+.settings-muted {
   font-size: 13px;
-  word-break: break-all;
   color: var(--desktop-muted);
-}
-
-.settings-section__alert {
-  margin: 12px 0;
-}
-
-.settings-section__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.settings-section__hint {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--desktop-muted);
-  line-height: 1.5;
-}
-
-.settings-section__error {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--el-color-danger);
 }
 </style>

@@ -923,7 +923,7 @@ async function submitQuickAdd(columnId: string) {
 .task-kanban__board {
   --kanban-col-min: 260px;
   /* 紧凑卡片约 7～8 条可见；两行列在默认窗口高度下都能露出来 */
-  --kanban-col-body-height: 260px;
+  --kanban-col-body-height: 340px;
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;

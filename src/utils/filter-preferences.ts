@@ -100,7 +100,7 @@ export function persistDoneTimeRange(range: DoneTimeRange): void {
 }
 
 export function readCalendarDateField(): TaskDateField {
-  return readEnum(CALENDAR_DATE_FIELD_KEY, ['dueAt', 'createdAt', 'completedAt'] as const, 'dueAt')
+  return readEnum(CALENDAR_DATE_FIELD_KEY, ['dueAt', 'createdAt', 'completedAt'] as const, 'createdAt')
 }
 
 export function persistCalendarDateField(field: TaskDateField): void {

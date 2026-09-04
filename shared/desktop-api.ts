@@ -58,7 +58,7 @@ import type {
   NotifyDeliveryRecord,
   PendingNotifyItem
 } from './notification-config'
-import type { AppUpdateStatus } from './app-update'
+import type { AppUpdateStatus, AppReleaseChangelogResult } from './app-update'
 
 /**
  * Preload 暴露给渲染进程的 API 形状。
@@ -250,6 +250,7 @@ export interface DesktopApi {
     getStatus(): Promise<IpcResult<AppUpdateStatus>>
     check(): Promise<IpcResult<AppUpdateStatus>>
     quitAndInstall(): Promise<IpcResult<void>>
+    listChangelog(): Promise<IpcResult<AppReleaseChangelogResult>>
     onStatus(callback: (status: AppUpdateStatus) => void): () => void
   }
 }

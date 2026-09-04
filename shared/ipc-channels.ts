@@ -150,6 +150,8 @@ export const IPC = {
   APP_UPDATE_GET_STATUS: 'appUpdate:getStatus',
   APP_UPDATE_CHECK: 'appUpdate:check',
   APP_UPDATE_QUIT_AND_INSTALL: 'appUpdate:quitAndInstall',
+  /** 关于页：拉取公开仓 Release 更新日志 */
+  APP_UPDATE_LIST_CHANGELOG: 'appUpdate:listChangelog',
   /** Main → Renderer：更新状态推送 */
   APP_UPDATE_STATUS: 'appUpdate:status'
 } as const

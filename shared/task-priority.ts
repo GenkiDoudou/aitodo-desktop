@@ -60,8 +60,8 @@ export const TASK_PRIORITIES: TaskPriorityMeta[] = [
     label: '不重要不紧急',
     flagLabel: 'P3',
     quadrantTitle: '不重要不紧急',
-    color: '#67c23a',
-    flagColor: '#c0c4cc',
+    color: '#909399',
+    flagColor: '#909399',
     flagOutline: true,
     roman: 'Ⅳ'
   }

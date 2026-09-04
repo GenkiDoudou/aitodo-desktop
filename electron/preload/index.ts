@@ -249,6 +249,7 @@ const api: DesktopApi = {
     getStatus: () => ipcRenderer.invoke(IPC.APP_UPDATE_GET_STATUS),
     check: () => ipcRenderer.invoke(IPC.APP_UPDATE_CHECK),
     quitAndInstall: () => ipcRenderer.invoke(IPC.APP_UPDATE_QUIT_AND_INSTALL),
+    listChangelog: () => ipcRenderer.invoke(IPC.APP_UPDATE_LIST_CHANGELOG),
     onStatus: (callback) => {
       const listener = (
         _event: Electron.IpcRendererEvent,

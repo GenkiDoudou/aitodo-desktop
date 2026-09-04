@@ -41,3 +41,17 @@ export function createIdleUpdateStatus(
     message: null
   }
 }
+
+/** 关于页「更新日志」单条（来自公开仓 Release Body） */
+export interface AppReleaseChangelogItem {
+  tag: string
+  title: string
+  body: string
+  publishedAt: string | null
+  htmlUrl: string | null
+}
+
+export interface AppReleaseChangelogResult {
+  source: UpdateFeedSource
+  items: AppReleaseChangelogItem[]
+}

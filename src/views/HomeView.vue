@@ -1,61 +1,76 @@
 <template>
 
-  <div class="home">
+  <AppShell>
 
-    <AppSidebar
+    <template #sidebar>
 
-      :active-smart="sidebarActiveSmart"
+      <AppSidebar
 
-      :active-category="navCategoryId"
-      :active-view-id="navViewId"
+        :active-workbench="sidebarActiveWorkbench"
 
-      :task-counts="taskCounts"
-      :category-counts="sidebarListCounts.byId"
-      :uncategorized-count="sidebarListCounts.uncategorized"
-      :trash-count="taskStore.trashCount"
-      :done-count="taskStore.doneCount"
-      :summary-active="isSummaryView"
-      :active-summary-section="navSummarySection"
-      @select-smart="onSmart"
-      @select-inbox="onInbox"
-      @select-matrix="onMatrix"
-      @select-summary="onSummary"
-      @select-done="onDone"
-      @select-trash="onTrash"
-      @select-calendar="onCalendar"
-      @select-tasks="onSelectTasks"
-      @select-category="onCategory"
-      @select-view="onView"
-      @create-view="openCreateView"
-      @create-view-from-template="onCreateViewFromTemplate"
-      @edit-view="openEditView"
-      @save-as-view="openSaveAsView"
-      @open-settings="router.push('/settings')"
-      @open-task="openTask"
+        :active-view="sidebarActiveView"
 
-    />
+        :active-category="navCategoryId"
+
+        :summary-active="isSummaryView"
+
+        :task-counts="taskCounts"
+
+        :category-counts="sidebarListCounts.byId"
+
+        :uncategorized-count="sidebarListCounts.uncategorized"
+
+        :done-count="taskStore.doneCount"
+
+        @select-smart="onSmart"
+
+        @select-inbox="onInbox"
+
+        @select-done="onDone"
+
+        @select-kanban="onSelectKanban"
+
+        @select-calendar="onCalendar"
+
+        @select-matrix="onMatrix"
+
+        @select-summary="onSummary"
+
+        @select-category="onCategory"
+
+        @select-tasks="onSelectTasks"
+
+      />
+
+    </template>
 
 
+
+    <template #topbar>
+
+      <AppTopBar :title="viewTitle" @focus-search="onFocusToolbarSearch" />
+
+    </template>
+
+
+
+    <div class="home">
 
     <div class="home__workspace">
 
       <section
         class="home__list-pane"
-        :class="{
-          'is-detail-open':
-            (detailOpen && taskDetailStyle === 'sidebar') || noteDetailOpen,
-          'is-detail-expanded': detailPanelExpanded && taskDetailStyle === 'sidebar'
-        }"
+        :class="{ 'is-note-detail-open': noteDetailOpen }"
       >
 
-        <header class="home__list-header">
+        <header v-if="!isSummaryView" class="home__list-header">
 
           <div class="home__list-head-left">
 
             <h1 class="home__view-title">{{ viewTitle }}</h1>
 
             <span v-if="!isSpecialListView" class="home__view-count">
-              ({{ headerTaskCounts.incomplete }}/{{ headerTaskCounts.total }})
+              {{ headerTaskCounts.total }} 个任务
             </span>
 
             <el-select
@@ -119,37 +134,48 @@
 
           </div>
 
-          <div class="home__list-actions">
-            <QuadrantMatrixMenu
-              v-if="isMatrixView || isQuadrantViewLayout"
-              v-model:meta-visibility="taskListMetaVisibility"
-              v-model:visible-list-ids="visibleListsMatrix"
-              :show-list-filter="isMatrixView"
-              :categories="categoryStore.categories"
-              @change="onQuadrantPrefsChange"
-            />
-            <TaskListViewMenu
-              v-else-if="showListViewSettingsMenu"
-              v-model:hide-done-scope="listHideDoneScope"
-              v-model:detail-style="taskDetailStyle"
-              v-model:meta-visibility="taskListMetaVisibility"
-              v-model:group-by="taskGroupBy"
-              v-model:sort-by="taskSortBy"
-              v-model:view-mode="gearViewMode"
-              v-model:visible-list-ids="visibleListsAll"
-              :show-list-filter="isAllTasksView"
-              :categories="categoryStore.categories"
-            />
-            <el-button
-              v-if="isTrashView"
-              text
-              class="home__empty-trash"
-              title="清空垃圾桶"
-              @click="onEmptyTrash"
-            >
-              <el-icon><Delete /></el-icon>
-            </el-button>
-          </div>
+          <TaskListToolbar
+            ref="listToolbarRef"
+            v-model:search-query="listSearchQuery"
+            v-model:view-mode="gearViewMode"
+            v-model:group-by="taskGroupBy"
+            v-model:sort-by="taskSortBy"
+            :show-view-seg="showToolbarViewSeg"
+            :show-sort-group="false"
+            @new-task="openEditorModal"
+          >
+            <template #extra>
+              <QuadrantMatrixMenu
+                v-if="isMatrixView || isQuadrantViewLayout"
+                v-model:meta-visibility="taskListMetaVisibility"
+                v-model:visible-list-ids="visibleListsMatrix"
+                :show-list-filter="isMatrixView"
+                :categories="categoryStore.categories"
+                @change="onQuadrantPrefsChange"
+              />
+              <TaskListViewMenu
+                v-else-if="showListViewSettingsMenu"
+                v-model:hide-done-scope="listHideDoneScope"
+                v-model:detail-style="taskDetailStyle"
+                v-model:meta-visibility="taskListMetaVisibility"
+                v-model:group-by="taskGroupBy"
+                v-model:sort-by="taskSortBy"
+                v-model:view-mode="gearViewMode"
+                v-model:visible-list-ids="visibleListsAll"
+                :show-list-filter="isAllTasksView"
+                :categories="categoryStore.categories"
+              />
+              <el-button
+                v-if="isTrashView"
+                text
+                class="home__empty-trash"
+                title="清空垃圾桶"
+                @click="onEmptyTrash"
+              >
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </template>
+          </TaskListToolbar>
 
         </header>
 
@@ -229,11 +255,9 @@
           @change-priority="onChangePriority"
         />
 
-        <div v-else-if="isSummaryConfigView" class="home__summary-pane">
-          <SettingsSummarySection embedded />
+        <div v-else-if="isSummaryView" class="home__summary-pane">
+          <SummaryWorkbench />
         </div>
-
-        <SummaryResultsView v-else-if="isSummaryResultsView" />
 
         <TaskKanbanView
           v-else-if="listViewMode === 'kanban'"
@@ -273,7 +297,7 @@
           :loading="taskStore.loading"
           :selected-id="activeTaskId"
           :meta-visibility="taskListMetaVisibility"
-          :show-category="showTaskListCategory"
+          :show-category="true"
           :categories="parseCategoriesForMatch"
           @select="openTask"
           @toggle-status="onToggleStatus"
@@ -283,12 +307,6 @@
       </section>
 
 
-
-      <div
-        v-if="(detailOpen && taskDetailStyle === 'sidebar') || noteDetailOpen"
-        class="home__detail-scrim"
-        @click="onDetailScrimClick"
-      />
 
       <InboxNotePanel
         v-if="isInboxView"
@@ -301,42 +319,21 @@
         @delete="onInboxDeleteNote"
       />
 
-      <TaskDetailPanel
-        v-if="taskDetailStyle === 'sidebar'"
-        class="home__detail"
-        :visible="detailOpen"
-        variant="sidebar"
+      <TaskDetailDrawer
+        :visible="detailOpen && Boolean(activeTaskId)"
         :task-id="activeTaskId"
-        :default-category-id="defaultCategoryForCreate"
-        :default-priority="defaultPriorityForCreate"
-        :emphasize-category="isMatrixView"
         @close="closeDetail"
-        @saved="onTaskSaved"
-        @panel-expanded-change="detailPanelExpanded = $event"
+        @edit="onEditFromDrawer"
       />
 
-      <el-dialog
-        v-else
-        :model-value="detailOpen"
-        class="home__detail-dialog"
-        width="640px"
-        top="6vh"
-        destroy-on-close
-        :show-close="false"
-        append-to-body
-        @update:model-value="onDetailDialogVisible"
-      >
-        <TaskDetailPanel
-          :visible="detailOpen"
-          variant="dialog"
-          :task-id="activeTaskId"
-          :default-category-id="defaultCategoryForCreate"
-          :default-priority="defaultPriorityForCreate"
-          :emphasize-category="isMatrixView || isQuadrantViewLayout"
-          @close="closeDetail"
-          @saved="onTaskSaved"
-        />
-      </el-dialog>
+      <TaskEditorModal
+        v-model="editorOpen"
+        :task-id="editorTaskId"
+        :default-category-id="defaultCategoryForCreate"
+        :default-priority="defaultPriorityForCreate"
+        :emphasize-category="isMatrixView || isQuadrantViewLayout"
+        @saved="onTaskSaved"
+      />
 
       <TaskViewEditor
         v-model:visible="viewEditorVisible"
@@ -359,7 +356,9 @@
 
     </div>
 
-  </div>
+    </div>
+
+  </AppShell>
 
 </template>
 
@@ -375,7 +374,12 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { ElMessage, ElMessageBox } from 'element-plus'
 
+import AppShell from '@/components/AppShell.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import AppTopBar from '@/components/AppTopBar.vue'
+import TaskListToolbar from '@/components/TaskListToolbar.vue'
+import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
+import TaskEditorModal from '@/components/TaskEditorModal.vue'
 import TaskViewEditor from '@/components/TaskViewEditor.vue'
 
 import TaskList from '@/components/TaskList.vue'
@@ -393,14 +397,12 @@ import InboxNotePanel from '@/components/InboxNotePanel.vue'
 import QuadrantMatrixView from '@/components/QuadrantMatrixView.vue'
 import QuadrantMatrixMenu from '@/components/QuadrantMatrixMenu.vue'
 import TaskListViewMenu from '@/components/TaskListViewMenu.vue'
-import SummaryResultsView from '@/components/SummaryResultsView.vue'
-import SettingsSummarySection from '@/components/settings/SettingsSummarySection.vue'
-
-import TaskDetailPanel from '@/components/TaskDetailPanel.vue'
+import SummaryWorkbench from '@/components/SummaryWorkbench.vue'
 
 import type { TaskSavePayload } from '@/components/TaskDetailPanel.vue'
 
 import { useTaskStore } from '@/stores/task-store'
+import { resolveRootTaskId } from '@/utils/resolve-root-task-id'
 import { resolveHideDoneScope, type HideDoneScope } from '@shared/hide-done-scope'
 
 import { useCategoryStore } from '@/stores/category-store'
@@ -498,13 +500,16 @@ const quickAddPriority = ref<TaskPriority>(DEFAULT_TASK_PRIORITY)
 const pendingTimelineDateKey = ref<string | null>(null)
 
 const quickAddInputRef = ref<InstanceType<typeof QuickAddInput>>()
+const listToolbarRef = ref<InstanceType<typeof TaskListToolbar>>()
+
+const listSearchQuery = ref('')
 
 const detailOpen = ref(false)
+const editorOpen = ref(false)
+const editorTaskId = ref<string | null>(null)
 const noteDetailOpen = ref(false)
 const activeNoteId = ref<string | null>(null)
 const activeTaskId = ref<string | null>(null)
-
-const detailPanelExpanded = ref(false)
 
 const defaultPriorityForCreate = ref<TaskPriority>(DEFAULT_TASK_PRIORITY)
 
@@ -514,7 +519,7 @@ const navCategoryId = ref<string | null | undefined>(undefined)
 /** 视图导航：选中则与 smart/清单互斥 */
 const navViewId = ref<string | null>(null)
 
-const navSmart = ref<'inbox' | 'all' | 'last7days' | 'matrix' | 'done' | 'trash'>('all')
+const navSmart = ref<'inbox' | 'all' | 'today' | 'tomorrow' | 'last7days' | 'matrix' | 'done' | 'trash'>('all')
 const navSummaryActive = ref(false)
 const widgetNotes = ref<WidgetNote[]>([])
 type SummarySection = 'config' | 'results'
@@ -549,7 +554,9 @@ const showSmartDateFieldFilter = computed(
   () =>
     !navViewId.value &&
     navCategoryId.value === undefined &&
-    navSmart.value === 'last7days'
+    (navSmart.value === 'last7days' ||
+      navSmart.value === 'today' ||
+      navSmart.value === 'tomorrow')
 )
 
 /** 全部 / 视图 / 智能列表等跨清单场景显示清单名；进入具体清单时不显示 */
@@ -571,6 +578,19 @@ const showListViewSettingsMenu = computed(
     !isQuadrantViewLayout.value &&
     !navViewId.value
 )
+
+/** 工具栏列表|看板切换：常规列表场景显示 */
+const showToolbarViewSeg = computed(
+  () =>
+    !isSpecialListView.value &&
+    !isMatrixView.value &&
+    !isInboxView.value &&
+    !isQuadrantViewLayout.value &&
+    !navViewId.value
+)
+
+/** 工具栏排序/分组：与视图切换同范围 */
+const showToolbarSortGroup = computed(() => showToolbarViewSeg.value)
 
 const listHideDoneScope = computed({
   get: () => resolveHideDoneScope(taskStore.filter),
@@ -626,9 +646,9 @@ watch(taskSortBy, (v) => {
 watch(visibleListsAll, (ids) => persistVisibleListIds('all', ids), { deep: true })
 watch(visibleListsMatrix, (ids) => persistVisibleListIds('matrix', ids), { deep: true })
 
-/** 应用分组/排序后的列表行（含分组标题） */
+/** 应用分组/排序后的列表行（含分组标题）；标题搜索在客户端过滤 */
 const taskListLayout = computed(() =>
-  buildTaskListLayout(listDisplayTasks.value, taskGroupBy.value, taskSortBy.value)
+  buildTaskListLayout(filteredListDisplayTasks.value, taskGroupBy.value, taskSortBy.value)
 )
 
 /** 看板自定义分组作用域：命名视图可固定 scopeKey，否则随侧栏导航 */
@@ -738,10 +758,32 @@ async function onKanbanChanged() {
 
 
 
-const sidebarActiveSmart = computed<'inbox' | 'all' | 'last7days' | 'matrix' | 'done' | 'trash' | null>(() => {
-  if (isSummaryView.value) return null
-  if (navViewId.value) return null
-  return navCategoryId.value !== undefined ? null : navSmart.value
+/** Todo Pro 侧栏：工作台选中态（全部 / 收集箱 / 已完成） */
+const sidebarActiveWorkbench = computed(() => {
+  if (navSummaryActive.value || navViewId.value) return null
+  if (navCategoryId.value !== undefined) return null
+  if (navSmart.value === 'inbox') return 'inbox'
+  if (navSmart.value === 'done') return 'done'
+  if (navSmart.value === 'matrix' || navSmart.value === 'trash') return null
+  if (listViewMode.value === 'kanban') return null
+  if (
+    navSmart.value === 'all' ||
+    navSmart.value === 'today' ||
+    navSmart.value === 'tomorrow' ||
+    navSmart.value === 'last7days'
+  ) {
+    return 'all'
+  }
+  return null
+})
+
+/** Todo Pro 侧栏：视图选中态（看板 / 四象限） */
+const sidebarActiveView = computed(() => {
+  if (navSummaryActive.value || navViewId.value) return null
+  if (navCategoryId.value !== undefined) return null
+  if (listViewMode.value === 'kanban' && !isSpecialListView.value) return 'kanban'
+  if (navSmart.value === 'matrix') return 'matrix'
+  return null
 })
 
 const isSummaryView = computed(() => navSummaryActive.value)
@@ -836,8 +878,7 @@ const parseCategoriesForMatch = computed(() => toParseCategories(categoryStore.c
 
 
 const viewTitle = computed(() => {
-  if (isSummaryConfigView.value) return '定时汇总配置'
-  if (isSummaryResultsView.value) return '汇总结果'
+  if (isSummaryView.value) return '定时汇总'
 
   if (navViewId.value) {
     return viewStore.items.find((v) => v.id === navViewId.value)?.name ?? '视图'
@@ -845,7 +886,7 @@ const viewTitle = computed(() => {
 
   if (navCategoryId.value === undefined) {
 
-    if (navSmart.value === 'inbox') return '收件箱'
+    if (navSmart.value === 'inbox') return '收集箱'
 
     if (navSmart.value === 'matrix') return '四象限'
 
@@ -854,8 +895,10 @@ const viewTitle = computed(() => {
     if (navSmart.value === 'trash') return '垃圾桶'
 
     if (navSmart.value === 'last7days') return '最近7天'
+    if (navSmart.value === 'today') return '今天'
+    if (navSmart.value === 'tomorrow') return '明天'
 
-    return '全部'
+    return '全部任务'
 
   }
 
@@ -874,7 +917,8 @@ const viewTitle = computed(() => {
 
 
 const quickAddPlaceholder = computed(
-  () => `输入任务，可含「明天下午3点」「每天」「30分钟后」等，回车添加至「${viewTitle.value}」`
+  () =>
+    '快速添加任务，支持自然语言，例如：周五 18:00 完成周报 #工作 P1'
 )
 
 
@@ -885,16 +929,28 @@ const taskCounts = computed(() => {
   const last7days = roots.filter((t) =>
     taskMatchesSmartListDate(t, 'last7days', listDateField.value)
   ).length
+  const today = roots.filter((t) =>
+    taskMatchesSmartListDate(t, 'today', listDateField.value)
+  ).length
+  const tomorrowRule: FilterNode = {
+    type: 'cond',
+    field: 'dueAt',
+    op: 'rel',
+    value: 'tomorrow'
+  }
+  const tomorrow = roots.filter((t) => matchTask(t, tomorrowRule)).length
   return {
     all: roots.length,
     last7days,
+    today,
+    tomorrow,
     inbox: inboxBadgeCount(widgetNotes.value, taskStore.tasks)
   }
 })
 
 const inboxTasks = computed(() => taskStore.tasks.filter(isUntriagedInboxTask))
 
-/** 侧栏清单计数（基于当前列表数据，与智能列表计数同源） */
+/** 侧栏清单计数（路由/视图编辑器仍可能引用） */
 const sidebarListCounts = computed(() => {
   const roots = taskStore.tasks.filter((t) => !t.parentId && !t.deletedAt)
   const byId: Record<string, number> = {}
@@ -918,7 +974,7 @@ function buildHasSubtasksMap(tasks: Task[]): Map<string, boolean> {
   return map
 }
 
-/** 在当前任务集上套用当前导航视图的 filterRule；「全部」再套清单多选 */
+/** 在当前任务集上套用当前导航视图的 filterRule；「全部」再套清单多选；「明天」为客户端相对日过滤 */
 const listDisplayTasks = computed(() => {
   const all = taskStore.tasks
   let result = all
@@ -929,6 +985,15 @@ const listDisplayTasks = computed(() => {
       result = all.filter((t) => matchTask(t, rule!, { hasSubtasksById }))
     }
   }
+  if (navSmart.value === 'tomorrow' && !navViewId.value && navCategoryId.value === undefined) {
+    const tomorrowRule: FilterNode = {
+      type: 'cond',
+      field: 'dueAt',
+      op: 'rel',
+      value: 'tomorrow'
+    }
+    result = result.filter((t) => matchTask(t, tomorrowRule))
+  }
   if (isAllTasksView.value) {
     result = filterTasksBySelectedLists(
       result,
@@ -937,6 +1002,13 @@ const listDisplayTasks = computed(() => {
     )
   }
   return result
+})
+
+/** 标题关键词过滤后的列表任务集 */
+const filteredListDisplayTasks = computed(() => {
+  const q = listSearchQuery.value.trim().toLowerCase()
+  if (!q) return listDisplayTasks.value
+  return listDisplayTasks.value.filter((t) => t.title.toLowerCase().includes(q))
 })
 
 /** 看板：在筛选结果上补齐已展示根任务的子任务 */
@@ -1165,9 +1237,8 @@ function syncNavFromFilter() {
 
 
 
-function smartListToNav(smart?: SmartList): 'all' | 'today' | 'week' | 'last7days' {
+function smartListToNav(smart?: SmartList): 'all' | 'today' | 'last7days' {
   if (smart === 'today') return 'today'
-  if (smart === 'week') return 'week'
   if (smart === 'last7days') return 'last7days'
   return 'all'
 }
@@ -1182,8 +1253,12 @@ function currentNavListPrefsKey(): string | null {
   if (navCategoryId.value !== undefined) {
     return navListPrefsScopeKey({ categoryId: navCategoryId.value })
   }
-  if (navSmart.value === 'all' || navSmart.value === 'last7days') {
-    return navListPrefsScopeKey({ smart: navSmart.value })
+  if (
+    navSmart.value === 'all' ||
+    navSmart.value === 'last7days' ||
+    navSmart.value === 'today'
+  ) {
+    return navListPrefsScopeKey({ smart: navSmart.value === 'today' ? 'all' : navSmart.value })
   }
   return null
 }
@@ -1362,16 +1437,33 @@ async function onViewEditorSaved(savedId?: string) {
   }
 }
 
-async function onSmart(smart: 'all' | 'last7days') {
+async function onSelectKanban() {
+  navSummaryActive.value = false
+  navViewId.value = null
+  navSmart.value = 'all'
+  navCategoryId.value = undefined
+  listViewMode.value = 'kanban'
+  detailOpen.value = false
+  await taskStore.load({
+    smartList: 'all',
+    hideDoneScope: resolveHideDoneScope(taskStore.filter),
+    hideDone: resolveHideDoneScope(taskStore.filter) !== 'off'
+  })
+  void router.replace({ path: '/', query: { listView: 'kanban' } })
+}
+
+async function onSmart(smart: 'all' | 'today' | 'tomorrow' | 'last7days') {
   navSummaryActive.value = false
   navViewId.value = null
   navSmart.value = smart
   navCategoryId.value = undefined
   applyNavListPrefs()
+  // tomorrow 无服务端 smartList：先拉全部未完成，再由 listDisplayTasks 客户端过滤
+  const storeSmart = smart === 'tomorrow' ? 'all' : smart
   await taskStore.navigate({
     kind: 'smart',
-    smart,
-    dateField: isDueSmartList(smart) ? listDateField.value : undefined
+    smart: storeSmart,
+    dateField: isDueSmartList(storeSmart) ? listDateField.value : undefined
   })
   void router.replace({
     path: '/',
@@ -1642,8 +1734,25 @@ async function onEmptyTrash() {
 async function onCategory(id: string | null) {
   navSummaryActive.value = false
   navViewId.value = null
+  /** 离开智能列表，避免与清单筛选状态混淆 */
+  navSmart.value = 'all'
   navCategoryId.value = id
-  applyNavListPrefs()
+
+  /** 先套 UI 偏好（视图模式等），hideDone 放到 navigate 之后，避免与分类筛选竞态 */
+  const prefsKey = currentNavListPrefsKey()
+  const prefs = prefsKey ? readNavListPrefs(prefsKey) : null
+  if (prefs) {
+    applyingNavListPrefs = true
+    listViewMode.value = prefs.viewMode
+    taskGroupBy.value = prefs.groupBy
+    taskSortBy.value = prefs.sortBy
+    taskDetailStyle.value = prefs.detailStyle
+    taskListMetaVisibility.value = { ...prefs.metaVisibility }
+    if (prefs.viewMode === 'kanban') {
+      kanbanBoardMode.value = groupByToKanbanBoardMode(prefs.groupBy)
+    }
+    applyingNavListPrefs = false
+  }
 
   if (id === null) {
     await taskStore.navigate({ kind: 'uncategorized' })
@@ -1651,6 +1760,10 @@ async function onCategory(id: string | null) {
   } else {
     await taskStore.navigate({ kind: 'category', categoryId: id })
     void router.replace({ path: '/', query: { category: id } })
+  }
+
+  if (prefs) {
+    await taskStore.setHideDoneScope(prefs.hideDoneScope)
   }
 }
 
@@ -1773,7 +1886,7 @@ async function onTaskSaved({ task, mode }: TaskSavePayload) {
 
     detailOpen.value = false
 
-    detailPanelExpanded.value = false
+    editorOpen.value = false
 
     ElMessage.success('任务已删除')
 
@@ -1791,7 +1904,7 @@ async function onTaskSaved({ task, mode }: TaskSavePayload) {
 
   detailOpen.value = false
 
-  detailPanelExpanded.value = false
+  editorOpen.value = false
 
   ElMessage.success(mode === 'create' ? '任务已创建' : '任务已保存')
 
@@ -1799,13 +1912,22 @@ async function onTaskSaved({ task, mode }: TaskSavePayload) {
 
 
 
-function openNewTask() {
+function openEditorModal() {
+  editorTaskId.value = null
+  detailOpen.value = false
+  editorOpen.value = true
+}
 
+function onEditFromDrawer() {
+  editorTaskId.value = activeTaskId.value
+  detailOpen.value = false
+  editorOpen.value = true
+}
+
+function openNewTask() {
   defaultPriorityForCreate.value = DEFAULT_TASK_PRIORITY
   quickAddPriority.value = DEFAULT_TASK_PRIORITY
-
-  void nextTick(() => quickAddInputRef.value?.focus())
-
+  openEditorModal()
 }
 
 
@@ -1848,8 +1970,12 @@ async function onQuadrantQuickCreate(priority: TaskPriority) {
 
 function openTask(id: string) {
   closeNoteDetail()
-  activeTaskId.value = id
-  detailOpen.value = true
+  /** 子任务与父任务共用同一详情：打开根父任务编辑 Modal */
+  const rootId = resolveRootTaskId(id, taskStore.tasks)
+  activeTaskId.value = rootId
+  editorTaskId.value = rootId
+  detailOpen.value = false
+  editorOpen.value = true
 }
 
 function closeDetail() {
@@ -1873,20 +1999,23 @@ function closeNoteDetail() {
   activeNoteId.value = null
 }
 
-function onDetailScrimClick() {
-  if (noteDetailOpen.value) {
-    closeNoteDetail()
-    return
-  }
-  closeDetail()
-}
-
 async function onInboxNoteChanged() {
   await loadWidgetNotes()
 }
 
-function onDetailDialogVisible(visible: boolean) {
-  if (!visible) closeDetail()
+function onFocusToolbarSearch() {
+  listToolbarRef.value?.focusSearch()
+}
+
+function onFocusQuickAdd() {
+  listToolbarRef.value?.focusSearch()
+}
+
+function onGlobalKeydown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    onFocusToolbarSearch()
+  }
 }
 
 
@@ -1921,14 +2050,6 @@ async function onChangePriority(taskId: string, priority: TaskPriority) {
     /* store 内 unwrapIpc 已 Toast */
 
   }
-
-}
-
-
-
-function onFocusQuickAdd() {
-
-  quickAddInputRef.value?.focus()
 
 }
 
@@ -1979,6 +2100,7 @@ onMounted(async () => {
   void refreshHeaderTaskCounts()
   window.addEventListener('desktop:new-task', openNewTask)
   window.addEventListener('desktop:focus-search', onFocusQuickAdd)
+  window.addEventListener('keydown', onGlobalKeydown)
 })
 
 watch(
@@ -2067,15 +2189,15 @@ async function syncHomeFromRoute() {
     }
     return
   }
-  if (smart === 'today' || smart === 'week') {
-    await onSmart('all')
-    void router.replace({ path: '/', query: {} })
-    return
-  }
-  if (smart === 'last7days' || smart === 'all') {
+  if (smart === 'today' || smart === 'tomorrow' || smart === 'last7days' || smart === 'all') {
     if (navSmart.value !== smart || navSummaryActive.value || navCategoryId.value !== undefined) {
       await onSmart(smart)
     }
+    return
+  }
+  if (smart === 'week') {
+    await onSmart('all')
+    void router.replace({ path: '/', query: {} })
     return
   }
   if (typeof category === 'string') {
@@ -2124,6 +2246,8 @@ onUnmounted(() => {
 
   window.removeEventListener('desktop:focus-search', onFocusQuickAdd)
 
+  window.removeEventListener('keydown', onGlobalKeydown)
+
 })
 
 </script>
@@ -2136,9 +2260,11 @@ onUnmounted(() => {
 
   display: flex;
 
-  height: 100vh;
+  flex: 1;
 
-  background: var(--desktop-bg);
+  min-height: 0;
+
+  overflow: hidden;
 
 }
 
@@ -2174,28 +2300,15 @@ onUnmounted(() => {
 
   min-height: 0;
 
-  overflow: hidden;
+  overflow: auto;
 
-  background: var(--desktop-panel);
+  background: #fff;
 
-  transition: padding-right 0.2s ease;
+}
 
-
-
-  &.is-detail-open {
-
-    padding-right: min(400px, 92vw);
-
-  }
-
-
-
-  &.is-detail-open.is-detail-expanded {
-
-    padding-right: min(720px, 62vw);
-
-  }
-
+.home__list-pane :deep(.task-list) {
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 
@@ -2206,17 +2319,7 @@ onUnmounted(() => {
   overflow-y: auto;
 }
 
-/* 点击列表区域关闭详情；详情面板 z-index 更高且 @click.stop */
-.home__detail-scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 15;
-  background: transparent;
-}
-
-
-
-/* 详情面板浮于列表之上，避免挤压任务列表与标题 */
+/* 收集箱笔记详情仍浮于列表右侧 */
 .home__detail {
 
   position: absolute;
@@ -2233,31 +2336,24 @@ onUnmounted(() => {
 
 }
 
-
-
-.home__detail-dialog {
-  :deep(.el-dialog__header) {
-    display: none;
-  }
-
-  :deep(.el-dialog__body) {
-    padding: 0;
-  }
-}
-
 .home__list-header {
 
   display: flex;
 
-  align-items: flex-end;
+  align-items: center;
 
   justify-content: space-between;
 
-  gap: 16px;
+  gap: 8px;
 
-  padding: 20px 20px 12px;
+  /* 对齐 preview (1).html .content / .toolbar */
+  padding: 20px 24px 0;
 
-  border-bottom: 1px solid var(--desktop-border);
+  border-bottom: none;
+
+  flex-wrap: wrap;
+
+  margin-bottom: 16px;
 
 }
 
@@ -2285,9 +2381,9 @@ onUnmounted(() => {
 
   margin: 0;
 
-  font-size: 22px;
+  font-size: 20px;
 
-  font-weight: 700;
+  font-weight: 650;
 
   color: var(--desktop-text);
 
@@ -2305,7 +2401,7 @@ onUnmounted(() => {
 
 .home__view-count {
 
-  font-size: 13px;
+  font-size: 12px;
 
   color: var(--desktop-muted);
 
@@ -2336,20 +2432,6 @@ onUnmounted(() => {
   &:hover {
     color: var(--el-color-danger);
   }
-}
-
-
-
-.home__list-actions {
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 10px;
-
-  flex-shrink: 0;
-
 }
 
 
@@ -2408,35 +2490,39 @@ onUnmounted(() => {
 
 
 
+.home__list-pane > .task-list,
+.home__list-pane > .home__quick-add {
+  margin-left: 24px;
+  margin-right: 24px;
+}
+
 .home__quick-add {
 
   display: flex;
 
-  align-items: flex-start;
+  align-items: center;
 
   gap: 8px;
 
-  margin: 12px 16px;
+  margin: 0 24px 18px;
 
-  padding: 8px 14px;
+  padding: 0 11px;
 
-  min-height: 40px;
+  height: 40px;
 
-  border-radius: 20px;
+  border-radius: 4px;
 
-  background: var(--desktop-bg);
+  background: #fff;
 
-  border: 1px solid transparent;
+  border: 1px solid var(--desktop-border);
 
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s;
 
 
 
   &:focus-within {
 
-    border-color: var(--el-color-primary-light-5);
-
-    box-shadow: 0 0 0 2px var(--desktop-active);
+    border-color: var(--desktop-primary, #409eff);
 
   }
 
@@ -2446,19 +2532,18 @@ onUnmounted(() => {
 
 .home__quick-add-icon {
 
-  color: var(--desktop-muted);
+  color: var(--desktop-primary, #409eff);
 
-  font-size: 16px;
+  font-size: 18px;
+
+  font-weight: 700;
 
   flex-shrink: 0;
-
-  margin-top: 3px;
 
 }
 
 .home__quick-add-priority {
-  flex-shrink: 0;
-  align-self: center;
+  display: none;
 }
 </style>
 

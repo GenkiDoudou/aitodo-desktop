@@ -1,6 +1,6 @@
 "use strict";
 const electron = require("electron");
-const ipcChannels = require("./chunks/ipc-channels-CP9YXcGk.js");
+const ipcChannels = require("./chunks/ipc-channels-GOp2-xn5.js");
 const api = {
   tasks: {
     list: (filter) => electron.ipcRenderer.invoke(ipcChannels.IPC.TASKS_LIST, filter),
@@ -196,6 +196,7 @@ const api = {
     getStatus: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_UPDATE_GET_STATUS),
     check: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_UPDATE_CHECK),
     quitAndInstall: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_UPDATE_QUIT_AND_INSTALL),
+    listChangelog: () => electron.ipcRenderer.invoke(ipcChannels.IPC.APP_UPDATE_LIST_CHANGELOG),
     onStatus: (callback) => {
       const listener = (_event, status) => {
         callback(status);

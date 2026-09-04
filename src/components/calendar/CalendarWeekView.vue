@@ -1,65 +1,51 @@
 <template>
   <div class="cal-week">
     <div class="cal-week__head">
-      <div class="cal-week__time-gutter" />
-      <div
+      <button
         v-for="day in weekDays"
         :key="day.format('YYYY-MM-DD')"
+        type="button"
         class="cal-week__head-cell"
-        :class="{ 'is-today': day.isSame(today, 'day') }"
+        :class="{
+          'is-today': day.isSame(today, 'day'),
+          'is-selected': day.format('YYYY-MM-DD') === selectedDate,
+          'is-weekend': day.day() === 0 || day.day() === 6,
+          'is-holiday': holidayOf(day)?.kind === 'holiday',
+          'is-makeup': holidayOf(day)?.kind === 'workday'
+        }"
+        @click="emit('select-day', day.format('YYYY-MM-DD'))"
       >
         <span class="cal-week__weekday">{{ weekdayLabel(day) }}</span>
-        <div class="cal-week__date-row">
-          <span class="cal-week__date" :class="{ 'is-today': day.isSame(today, 'day') }">
-            {{ day.date() }}
-          </span>
-          <span
-            v-if="holidayOf(day)"
-            class="cal-week__mark"
-            :class="holidayOf(day)!.kind === 'holiday' ? 'is-off' : 'is-work'"
-            :title="holidayOf(day)!.name"
-          >
-            {{ holidayOf(day)!.kind === 'holiday' ? '休' : '班' }}
-          </span>
-        </div>
-      </div>
-    </div>
-    <div class="cal-week__body" ref="bodyRef">
-      <div class="cal-week__time-col">
-        <div v-for="h in hours" :key="h" class="cal-week__hour-label">{{ h }}:00</div>
-      </div>
-      <div class="cal-week__grid">
-        <div v-for="day in weekDays" :key="day.format('YYYY-MM-DD')" class="cal-week__day-col">
-          <div v-for="h in hours" :key="h" class="cal-week__slot" />
-          <div
-            v-for="task in tasksOnDay(day)"
-            :key="calendarTaskRowKey(task, dateField ?? 'dueAt')"
-            class="cal-week__event"
-            :style="eventStyle(task)"
-          >
-            <CalendarTaskChip
-              :task="task"
-              :category-color="colorOf(task)"
-              :show-time="true"
-              @select="emit('select', $event)"
-              @toggle-status="emit('toggle-status', $event)"
-            />
-          </div>
-        </div>
-      </div>
+        <span class="cal-week__date" :class="{ 'is-today': day.isSame(today, 'day') }">
+          {{ day.date() }}
+        </span>
+        <span
+          v-if="holidayOf(day)"
+          class="cal-week__holiday-name"
+          :class="holidayOf(day)!.kind === 'holiday' ? 'is-off' : 'is-work'"
+          :title="holidayOf(day)!.name"
+        >
+          {{ holidayOf(day)!.name }}
+        </span>
+        <span v-else-if="day.day() === 0 || day.day() === 6" class="cal-week__hint is-rest">周末</span>
+        <span v-else class="cal-week__hint">工作日</span>
+        <span v-if="taskCount(day) > 0" class="cal-week__badge">{{ taskCount(day) }}</span>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+/**
+ * 周视图：仅日期头 + 节假日名；任务列表由日历页下方统一展示。
+ */
 import { computed } from 'vue'
 import dayjs from 'dayjs'
 import type { Task } from '@shared/types'
 import type { TaskDateField } from '@shared/date-filter'
 import type { HolidayCalendarDay } from '@shared/timor-holiday'
-import { calendarTaskRowKey, groupTasksByDateField, taskMinutesOnField, weekdayLabel } from '@shared/calendar-tasks'
+import { groupTasksByDateField, weekdayLabel } from '@shared/calendar-tasks'
 import { startOfWeekMonday } from '@shared/smart-list'
-import CalendarTaskChip from '@/components/calendar/CalendarTaskChip.vue'
 
 const props = defineProps<{
   anchor: dayjs.Dayjs
@@ -67,156 +53,131 @@ const props = defineProps<{
   categoryColorMap: Map<string, string>
   dateField?: TaskDateField
   holidayMarks?: Record<string, HolidayCalendarDay>
+  selectedDate?: string
 }>()
 
 const emit = defineEmits<{
-  select: [string]
-  'toggle-status': [Task]
+  'select-day': [string]
 }>()
 
 const today = dayjs()
-const hours = Array.from({ length: 24 }, (_, i) => i)
-const SLOT_H = 48
 
 const weekDays = computed(() => {
   const start = startOfWeekMonday(props.anchor)
   return Array.from({ length: 7 }, (_, i) => start.add(i, 'day'))
 })
 
-const byDate = computed(() => groupTasksByDateField(props.tasks, props.dateField ?? 'dueAt'))
+const byDate = computed(() => groupTasksByDateField(props.tasks, props.dateField ?? 'createdAt'))
 
-function tasksOnDay(day: dayjs.Dayjs) {
-  return byDate.value.get(day.format('YYYY-MM-DD')) ?? []
-}
-
-function colorOf(task: Task) {
-  if (!task.categoryId) return null
-  return props.categoryColorMap.get(task.categoryId) ?? null
+function taskCount(day: dayjs.Dayjs) {
+  return (byDate.value.get(day.format('YYYY-MM-DD')) ?? []).length
 }
 
 function holidayOf(day: dayjs.Dayjs) {
   return props.holidayMarks?.[day.format('YYYY-MM-DD')]
 }
-
-function eventStyle(task: Task) {
-  const top = (taskMinutesOnField(task, props.dateField ?? 'dueAt') / 60) * SLOT_H
-  return { top: `${top}px`, minHeight: `${SLOT_H - 4}px` }
-}
 </script>
 
 <style scoped lang="scss">
 .cal-week {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 0 12px 12px;
+  flex-shrink: 0;
+  padding: 0 12px 8px;
 }
 
 .cal-week__head {
   display: grid;
-  grid-template-columns: 52px repeat(7, 1fr);
-  border-bottom: 1px solid var(--desktop-border);
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
 }
 
 .cal-week__head-cell {
-  padding: 8px 4px;
-  text-align: center;
-  border-left: 1px solid var(--desktop-border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 88px;
+  padding: 10px;
+  border: 1px solid var(--desktop-border);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
 
-  &.is-today .cal-week__date.is-today {
-    background: var(--el-color-primary);
-    color: #fff;
-    border-radius: 50%;
+  &:hover {
+    border-color: rgba(64, 158, 255, 0.35);
+  }
+
+  &.is-selected {
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 1px var(--el-color-primary);
+  }
+
+  &.is-holiday {
+    background: rgba(245, 108, 108, 0.06);
+  }
+
+  &.is-makeup {
+    background: rgba(64, 158, 255, 0.05);
+  }
+
+  &.is-weekend:not(.is-holiday):not(.is-makeup) {
+    background: #fafbfc;
   }
 }
 
 .cal-week__weekday {
-  display: block;
   font-size: 12px;
   color: var(--desktop-muted);
 }
 
-.cal-week__date-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin-top: 4px;
-  min-height: 26px;
-}
-
 .cal-week__date {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--desktop-text);
+
+  &.is-today {
+    color: var(--el-color-primary);
+  }
 }
 
-.cal-week__mark {
+.cal-week__holiday-name {
   font-size: 11px;
   font-weight: 600;
-  line-height: 1;
-  padding: 2px 4px;
-  border-radius: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   &.is-off {
     color: #c45656;
-    background: rgba(196, 86, 86, 0.12);
   }
 
   &.is-work {
     color: #2f6fed;
-    background: rgba(47, 111, 237, 0.12);
   }
 }
 
-.cal-week__body {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 52px 1fr;
-  overflow: auto;
-}
-
-.cal-week__time-col {
-  border-right: 1px solid var(--desktop-border);
-}
-
-.cal-week__hour-label {
-  height: 48px;
+.cal-week__hint {
   font-size: 11px;
-  color: var(--desktop-muted);
-  text-align: right;
-  padding-right: 6px;
-  box-sizing: border-box;
+  color: #c0c4cc;
+
+  &.is-rest {
+    color: #d3a4a4;
+  }
 }
 
-.cal-week__grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  position: relative;
-}
-
-.cal-week__day-col {
-  position: relative;
-  border-left: 1px solid var(--desktop-border);
-  min-height: calc(48px * 24);
-}
-
-.cal-week__slot {
-  height: 48px;
-  border-bottom: 1px solid var(--desktop-border);
-  box-sizing: border-box;
-}
-
-.cal-week__event {
-  position: absolute;
-  left: 2px;
-  right: 2px;
-  z-index: 1;
+.cal-week__badge {
+  margin-top: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #409eff;
+  background: rgba(64, 158, 255, 0.14);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

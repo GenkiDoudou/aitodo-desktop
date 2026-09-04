@@ -1,171 +1,263 @@
 <template>
+  <!--
+    账号与同步：贴 preview.html 账号 / 同步 / 同步内容三栏 panel。
+    保留真实登录、偏好与同步 IPC。
+  -->
   <section class="settings-section">
-    <h2 class="settings-section__title">账号与同步</h2>
-    <p class="settings-section__hint">
-      {{
-        status?.loggedIn
-          ? '已登录时可在多台桌面客户端间按下方范围同步（需自建 Sync Server）。'
-          : '未登录时数据仅存本机，行为与此前纯本地版本一致。'
-      }}
-    </p>
-
-    <div class="settings-section__field settings-section__field--stack">
-      <span class="settings-section__label">服务器地址</span>
-      <div class="settings-section__row">
-        <el-input
-          v-model="serverUrl"
-          placeholder="https://aitodo.126w.com"
-          :disabled="loading || saving || status?.loggedIn"
-        />
-        <el-button :loading="testing" :disabled="loading || saving" @click="testServer">
-          测试连接
-        </el-button>
-        <el-button :disabled="loading || saving || status?.loggedIn" @click="saveServerUrl">
-          保存
-        </el-button>
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">账号</h2>
+      <div class="settings-panel__body">
+        <template v-if="status?.loggedIn">
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">{{ status.username }}</div>
+              <div class="settings-row__label-desc">设备 ID：{{ status.deviceId }}</div>
+            </div>
+            <div class="settings-row__control">
+              <el-button @click="onAccountManage">账号管理</el-button>
+              <el-button :disabled="loading || saving" @click="logout">退出登录</el-button>
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">服务器地址</div>
+              <div class="settings-row__label-desc">自建 Sync Server，未登录时数据仅存本机</div>
+            </div>
+            <div class="settings-row__control settings-row__control--grow">
+              <el-input
+                v-model="serverUrl"
+                placeholder="https://aitodo.126w.com"
+                :disabled="loading || saving"
+                style="width: 260px"
+              />
+              <el-button :loading="testing" :disabled="loading || saving" @click="testServer">
+                测试
+              </el-button>
+              <el-button :disabled="loading || saving" @click="saveServerUrl">保存</el-button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">{{ authMode === 'login' ? '登录' : '注册' }}</div>
+              <div class="settings-row__label-desc">登录后可在多设备间同步任务与设置</div>
+            </div>
+            <div class="settings-row__control">
+              <el-radio-group v-model="authMode" :disabled="loading || saving" size="small">
+                <el-radio-button value="login">登录</el-radio-button>
+                <el-radio-button value="register">注册</el-radio-button>
+              </el-radio-group>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">用户名</div>
+            </div>
+            <div class="settings-row__control">
+              <el-input
+                v-model="username"
+                :disabled="loading || saving"
+                autocomplete="username"
+                style="width: 220px"
+              />
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">密码</div>
+            </div>
+            <div class="settings-row__control">
+              <el-input
+                v-model="password"
+                type="password"
+                show-password
+                :disabled="loading || saving"
+                style="width: 220px"
+                :autocomplete="authMode === 'register' ? 'new-password' : 'current-password'"
+              />
+            </div>
+          </div>
+          <template v-if="authMode === 'register'">
+            <div class="settings-row">
+              <div class="settings-row__label">
+                <div class="settings-row__label-title">邮箱</div>
+              </div>
+              <div class="settings-row__control">
+                <el-input
+                  v-model="email"
+                  type="email"
+                  placeholder="用于找回账号"
+                  :disabled="loading || saving"
+                  style="width: 220px"
+                />
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row__label">
+                <div class="settings-row__label-title">手机号（选填）</div>
+              </div>
+              <div class="settings-row__control">
+                <el-input
+                  v-model="phonenumber"
+                  :disabled="loading || saving"
+                  style="width: 220px"
+                />
+              </div>
+            </div>
+          </template>
+          <div class="settings-row">
+            <div class="settings-row__label" />
+            <div class="settings-row__control">
+              <el-button
+                type="primary"
+                :loading="saving"
+                :disabled="loading"
+                @click="authMode === 'login' ? login() : registerAccount()"
+              >
+                {{ authMode === 'login' ? '登录并同步' : '注册并同步' }}
+              </el-button>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
-    <div class="settings-section__field settings-section__field--stack">
-      <span class="settings-section__label">同步范围</span>
-      <div class="settings-section__toggles">
-        <!--
-          同步范围与服务端实体类型的对应关系在 desktop/shared/sync-entity-filter.ts 中定义：
-          - syncTasks -> task / category / tag 等（取决于实现阶段）
-          - syncConfig -> app_settings / task_view / scheduled_summary 配置
-          - syncSummaryResults -> app_message（仅定时汇总结果：source=scheduled_summary）
-          - syncNotes -> widget_note
-        -->
-        <el-checkbox v-model="prefs.syncTasks" :disabled="loading || saving" @change="savePrefs">
-          任务（分类）
-        </el-checkbox>
-        <el-checkbox v-model="prefs.syncConfig" :disabled="loading || saving" @change="savePrefs">
-          配置
-        </el-checkbox>
-        <el-checkbox
-          v-model="prefs.syncSummaryResults"
-          :disabled="loading || saving"
-          @change="savePrefs"
-        >
-          定时汇总结果
-        </el-checkbox>
-        <el-checkbox v-model="prefs.syncNotes" :disabled="loading || saving" @change="savePrefs">
-          便签
-        </el-checkbox>
-      </div>
-      <p class="settings-section__subhint">
-        配置含快捷键、LLM（含 API Key）、提示词、关闭行为、动态保留、挂件启动项、界面偏好、自定义视图与定时汇总配置。定时汇总结果为站内「定时汇总」消息正文。
-      </p>
-    </div>
-
-    <div class="settings-section__field">
-      <span class="settings-section__label">同步频率</span>
-      <el-select
-        v-model="prefs.syncIntervalMs"
-        style="width: 140px"
-        :disabled="loading || saving"
-        @change="savePrefs"
-      >
-        <el-option
-          v-for="opt in intervalOptions"
-          :key="opt.value"
-          :label="opt.label"
-          :value="opt.value"
-        />
-      </el-select>
-    </div>
-
-    <template v-if="!status?.loggedIn">
-      <div class="settings-section__auth-toggle">
-        <el-radio-group v-model="authMode" :disabled="loading || saving">
-          <el-radio-button value="login">登录</el-radio-button>
-          <el-radio-button value="register">注册</el-radio-button>
-        </el-radio-group>
-      </div>
-      <div class="settings-section__field settings-section__field--stack">
-        <span class="settings-section__label">用户名</span>
-        <el-input v-model="username" :disabled="loading || saving" autocomplete="username" />
-      </div>
-      <div class="settings-section__field settings-section__field--stack">
-        <span class="settings-section__label">密码</span>
-        <el-input
-          v-model="password"
-          type="password"
-          show-password
-          :disabled="loading || saving"
-          :autocomplete="authMode === 'register' ? 'new-password' : 'current-password'"
-        />
-      </div>
-      <template v-if="authMode === 'register'">
-        <div class="settings-section__field settings-section__field--stack">
-          <span class="settings-section__label">邮箱</span>
-          <el-input
-            v-model="email"
-            type="email"
-            placeholder="用于找回账号与通知"
-            :disabled="loading || saving"
-            autocomplete="email"
-          />
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">同步</h2>
+      <div class="settings-panel__body">
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">自动同步</div>
+            <div class="settings-row__label-desc">有网络时按间隔自动同步本地变更</div>
+          </div>
+          <div class="settings-row__control">
+            <el-switch
+              :model-value="autoSyncOn"
+              :disabled="loading || saving || !status?.loggedIn"
+              @change="onAutoSyncChange"
+            />
+          </div>
         </div>
-        <div class="settings-section__field settings-section__field--stack">
-          <span class="settings-section__label">手机号（选填）</span>
-          <el-input
-            v-model="phonenumber"
-            placeholder="可选"
-            :disabled="loading || saving"
-            autocomplete="tel"
-          />
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">同步频率</div>
+            <div class="settings-row__label-desc">仅登录后生效</div>
+          </div>
+          <div class="settings-row__control">
+            <el-select
+              v-model="prefs.syncIntervalMs"
+              style="width: 140px"
+              :disabled="loading || saving || !status?.loggedIn"
+              @change="savePrefs"
+            >
+              <el-option
+                v-for="opt in intervalOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
+            </el-select>
+          </div>
         </div>
-      </template>
-      <div class="settings-section__actions">
-        <el-button
-          v-if="authMode === 'login'"
-          type="primary"
-          :loading="saving"
-          :disabled="loading"
-          @click="login"
-        >
-          登录并同步
-        </el-button>
-        <el-button
-          v-else
-          type="primary"
-          :loading="saving"
-          :disabled="loading"
-          @click="registerAccount"
-        >
-          注册并同步
-        </el-button>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">同步状态</div>
+            <div class="settings-row__label-desc">
+              上次同步：{{ status?.lastSyncAt || '尚未同步' }}
+              <template v-if="status?.loggedIn"> · 待推送 {{ status.pendingCount }}</template>
+            </div>
+          </div>
+          <div class="settings-row__control">
+            <el-button
+              type="primary"
+              :loading="saving"
+              :disabled="loading || !status?.loggedIn"
+              @click="triggerSync"
+            >
+              立即同步
+            </el-button>
+          </div>
+        </div>
+        <div v-if="status?.lastError" class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">最近错误</div>
+            <div class="settings-row__label-desc settings-row__label-desc--error">
+              {{ status.lastError }}
+            </div>
+          </div>
+        </div>
       </div>
-    </template>
+    </div>
 
-    <template v-else>
-      <div class="settings-section__field">
-        <span class="settings-section__label">当前账号</span>
-        <span>{{ status.username }}</span>
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">同步内容</h2>
+      <div class="settings-panel__body">
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">任务</div>
+            <div class="settings-row__label-desc">含子任务、标签、清单、提醒</div>
+          </div>
+          <div class="settings-row__control">
+            <el-checkbox
+              v-model="prefs.syncTasks"
+              :disabled="loading || saving"
+              @change="savePrefs"
+            />
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">配置与规则</div>
+            <div class="settings-row__label-desc">快捷键、LLM、提示词、视图与汇总配置等</div>
+          </div>
+          <div class="settings-row__control">
+            <el-checkbox
+              v-model="prefs.syncConfig"
+              :disabled="loading || saving"
+              @change="savePrefs"
+            />
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">定时汇总</div>
+            <div class="settings-row__label-desc">定时汇总结果消息</div>
+          </div>
+          <div class="settings-row__control">
+            <el-checkbox
+              v-model="prefs.syncSummaryResults"
+              :disabled="loading || saving"
+              @change="savePrefs"
+            />
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">便签</div>
+          </div>
+          <div class="settings-row__control">
+            <el-checkbox
+              v-model="prefs.syncNotes"
+              :disabled="loading || saving"
+              @change="savePrefs"
+            />
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">附件</div>
+            <div class="settings-row__label-desc">附件同步即将支持</div>
+          </div>
+          <div class="settings-row__control">
+            <el-checkbox
+              :model-value="attachSync"
+              @change="(v: string | number | boolean) => onAttachSync(Boolean(v))"
+            />
+          </div>
+        </div>
       </div>
-      <div class="settings-section__field">
-        <span class="settings-section__label">设备 ID</span>
-        <span class="settings-section__mono">{{ status.deviceId }}</span>
-      </div>
-      <div class="settings-section__field">
-        <span class="settings-section__label">待推送变更</span>
-        <span>{{ status.pendingCount }}</span>
-      </div>
-      <div class="settings-section__field">
-        <span class="settings-section__label">最近同步</span>
-        <span>{{ status.lastSyncAt || '尚未同步' }}</span>
-      </div>
-      <div v-if="status.lastError" class="settings-section__error">
-        {{ status.lastError }}
-      </div>
-      <div class="settings-section__actions">
-        <el-button type="primary" :loading="saving" :disabled="loading" @click="triggerSync">
-          立即同步
-        </el-button>
-        <el-button :disabled="loading || saving" @click="logout">退出登录</el-button>
-      </div>
-    </template>
+    </div>
 
     <el-dialog
       v-model="dataPolicyVisible"
@@ -200,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   DEFAULT_SYNC_SERVER_URL,
@@ -230,6 +322,7 @@ const loading = ref(false)
 const saving = ref(false)
 const testing = ref(false)
 const prefs = reactive<SyncPreferences>({ ...DEFAULT_SYNC_PREFERENCES })
+const attachSync = ref(false)
 const dataPolicyVisible = ref(false)
 const dataPolicyUsername = ref('')
 const dataPolicySummary = reactive<LocalSyncDataSummary>({
@@ -244,11 +337,29 @@ const intervalOptions = SYNC_INTERVAL_OPTIONS_MS.map((value) => ({
   label: syncIntervalLabel(value)
 }))
 
+/** 自动同步：有登录即视为开启（间隔由下方控制） */
+const autoSyncOn = computed(() => Boolean(status.value?.loggedIn))
+
+function onAccountManage() {
+  ElMessage.info('请通过服务器地址、登录与退出管理账号')
+}
+
+function onAutoSyncChange(on: string | number | boolean) {
+  if (!on) {
+    ElMessage.info('关闭自动同步后仍可手动「立即同步」；间隔设置在登录后生效')
+  }
+}
+
+function onAttachSync(on: boolean) {
+  attachSync.value = on
+  ElMessage.info(on ? '附件同步即将支持，已记录偏好' : '已关闭附件同步偏好')
+}
+
 async function reportUiPrefs() {
   try {
     unwrapIpc(await window.api.sync.reportUiPreferences(collectUiPreferences()))
   } catch {
-    /* 未登录或主进程未就绪时忽略 */
+    /* 忽略 */
   }
 }
 
@@ -279,7 +390,6 @@ async function savePrefs() {
     )
     Object.assign(prefs, next)
   } catch {
-    /* unwrapIpc 已 Toast */
     await refreshStatus()
   } finally {
     saving.value = false
@@ -290,11 +400,8 @@ async function testServer() {
   testing.value = true
   try {
     const result = unwrapIpc(await window.api.sync.testServerUrl(serverUrl.value))
-    if (result.ok) {
-      ElMessage.success(result.message)
-    } else {
-      ElMessage.error(result.message)
-    }
+    if (result.ok) ElMessage.success(result.message)
+    else ElMessage.error(result.message)
   } catch {
     /* unwrapIpc 已 Toast */
   } finally {
@@ -315,9 +422,8 @@ async function saveServerUrl() {
   }
 }
 
-/** 等待用户在弹窗中选择本机数据策略 */
-function waitForDataPolicy(username: string, summary: LocalSyncDataSummary): Promise<SyncLoginDataPolicy> {
-  dataPolicyUsername.value = username
+function waitForDataPolicy(user: string, summary: LocalSyncDataSummary): Promise<SyncLoginDataPolicy> {
+  dataPolicyUsername.value = user
   dataPolicySummary.taskCount = summary.taskCount
   dataPolicySummary.categoryCount = summary.categoryCount
   dataPolicySummary.noteCount = summary.noteCount
@@ -333,14 +439,9 @@ function resolveDataPolicy(policy: SyncLoginDataPolicy) {
   dataPolicyResolver = null
 }
 
-/** 处理 login/register 返回：必要时弹窗并完成二次 confirm */
 async function finishAuthFlow(initial: SyncAuthResult): Promise<boolean> {
-  if (initial.kind === 'completed') {
-    return true
-  }
-  if (initial.kind !== 'needs_data_policy') {
-    return false
-  }
+  if (initial.kind === 'completed') return true
+  if (initial.kind !== 'needs_data_policy') return false
   saving.value = false
   const policy = await waitForDataPolicy(initial.username, initial.summary)
   saving.value = true
@@ -351,11 +452,9 @@ async function finishAuthFlow(initial: SyncAuthResult): Promise<boolean> {
       return false
     }
     if (next.kind === 'completed') {
-      if (policy === 'clear') {
-        ElMessage.success('已清空本机数据并开始同步云端')
-      } else {
-        ElMessage.success('已合并本机数据并开始同步')
-      }
+      ElMessage.success(
+        policy === 'clear' ? '已清空本机数据并开始同步云端' : '已合并本机数据并开始同步'
+      )
       return true
     }
     return false
@@ -387,21 +486,15 @@ async function registerAccount() {
       email: trimmedEmail
     }
     const phone = phonenumber.value.trim()
-    if (phone) {
-      dto.phonenumber = phone
-    }
+    if (phone) dto.phonenumber = phone
     const authResult = unwrapIpc(await window.api.sync.register(dto))
     const ok = await finishAuthFlow(authResult)
-    if (!ok) {
-      return
-    }
+    if (!ok) return
     saveLastSyncUsername(trimmedUser)
     password.value = ''
     email.value = ''
     phonenumber.value = ''
-    if (authResult.kind === 'completed') {
-      ElMessage.success('注册成功，已开始同步')
-    }
+    if (authResult.kind === 'completed') ElMessage.success('注册成功，已开始同步')
     await refreshStatus()
   } catch {
     /* unwrapIpc 已 Toast */
@@ -424,14 +517,10 @@ async function login() {
       })
     )
     const ok = await finishAuthFlow(authResult)
-    if (!ok) {
-      return
-    }
+    if (!ok) return
     saveLastSyncUsername(username.value.trim())
     password.value = ''
-    if (authResult.kind === 'completed') {
-      ElMessage.success('登录成功，已开始同步')
-    }
+    if (authResult.kind === 'completed') ElMessage.success('登录成功，已开始同步')
     await refreshStatus()
   } catch {
     /* unwrapIpc 已 Toast */
@@ -458,11 +547,8 @@ async function triggerSync() {
   try {
     await reportUiPrefs()
     status.value = unwrapIpc(await window.api.sync.trigger())
-    if (status.value.lastError) {
-      ElMessage.warning(status.value.lastError)
-    } else {
-      ElMessage.success('同步完成')
-    }
+    if (status.value.lastError) ElMessage.warning(status.value.lastError)
+    else ElMessage.success('同步完成')
   } catch {
     /* unwrapIpc 已 Toast */
   } finally {
@@ -478,85 +564,13 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.settings-section {
-  max-width: 720px;
-}
-
-.settings-section__title {
-  margin: 0 0 12px;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.settings-section__hint {
-  margin: 0 0 20px;
-  font-size: 13px;
-  color: var(--desktop-muted);
-}
-
-.settings-section__subhint {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--desktop-muted);
-}
-
-.settings-section__field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 16px;
-  border: 1px solid var(--desktop-border);
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-
-.settings-section__field--stack {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.settings-section__label {
-  font-size: 14px;
-  color: var(--desktop-text);
-}
-
-.settings-section__row {
-  display: flex;
-  gap: 8px;
+.settings-row__control--grow {
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.settings-section__toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  margin-top: 8px;
-}
-
-.settings-section__mono {
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  word-break: break-all;
-}
-
-.settings-section__actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.settings-section__auth-toggle {
-  margin-bottom: 12px;
-}
-
-.settings-section__error {
-  padding: 12px 16px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--el-color-danger) 12%, transparent);
+.settings-row__label-desc--error {
   color: var(--el-color-danger);
-  font-size: 13px;
 }
 
 .settings-section__policy-lead {

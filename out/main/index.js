@@ -1502,6 +1502,8 @@ const IPC = {
   APP_UPDATE_GET_STATUS: "appUpdate:getStatus",
   APP_UPDATE_CHECK: "appUpdate:check",
   APP_UPDATE_QUIT_AND_INSTALL: "appUpdate:quitAndInstall",
+  /** 关于页：拉取公开仓 Release 更新日志 */
+  APP_UPDATE_LIST_CHANGELOG: "appUpdate:listChangelog",
   /** Main → Renderer：更新状态推送 */
   APP_UPDATE_STATUS: "appUpdate:status"
 };
@@ -2299,8 +2301,8 @@ const TASK_PRIORITIES = [
     label: "不重要不紧急",
     flagLabel: "P3",
     quadrantTitle: "不重要不紧急",
-    color: "#67c23a",
-    flagColor: "#c0c4cc",
+    color: "#909399",
+    flagColor: "#909399",
     flagOutline: true,
     roman: "Ⅳ"
   }
@@ -10972,7 +10974,7 @@ class FeedResolver {
   fetchText;
   constructor(options = {}) {
     this.config = options.config ?? getUpdateFeedConfig();
-    this.fetchText = options.fetchText ?? defaultFetchText;
+    this.fetchText = options.fetchText ?? defaultFetchText$1;
   }
   async resolve(kind) {
     const errors = [];
@@ -11054,7 +11056,7 @@ class FeedResolver {
     };
   }
 }
-async function defaultFetchText(url2) {
+async function defaultFetchText$1(url2) {
   const res = await fetch(url2, {
     headers: { Accept: "application/json, text/plain, */*", "User-Agent": "ai-todo-desktop-updater" }
   });
@@ -11559,6 +11561,80 @@ function applyPortableUpdateIfPending() {
   } catch (err) {
     console.error("[aiTodo] 免解压更新应用失败，继续使用当前版本", err);
   }
+}
+function defaultFetchText(url2) {
+  return fetch(url2, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "ai-todo-desktop-changelog"
+    }
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${url2}`);
+    return res.text();
+  });
+}
+function normalizeItems(raw, limit) {
+  if (!Array.isArray(raw)) throw new Error("Release 列表格式无效");
+  const items = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const r = entry;
+    const tag = typeof r.tag_name === "string" ? r.tag_name.trim() : "";
+    if (!tag) continue;
+    const title = typeof r.name === "string" && r.name.trim() ? r.name.trim() : tag;
+    const body = typeof r.body === "string" ? r.body.trim() : "";
+    items.push({
+      tag,
+      title,
+      body: body || "（本版本未填写发版说明）",
+      publishedAt: r.published_at ?? r.created_at ?? null,
+      htmlUrl: r.html_url ?? r.url ?? null
+    });
+    if (items.length >= limit) break;
+  }
+  return items;
+}
+function releasesApiUrl(source, config, limit) {
+  if (source === "gitee") {
+    const { owner: owner2, repo: repo2 } = config.gitee;
+    return `https://gitee.com/api/v5/repos/${owner2}/${repo2}/releases?per_page=${limit}&page=1`;
+  }
+  const { owner, repo } = config.github;
+  return `https://api.github.com/repos/${owner}/${repo}/releases?per_page=${limit}&page=1`;
+}
+async function fetchFrom(source, config, fetchText, limit) {
+  const url2 = releasesApiUrl(source, config, limit);
+  const text = await fetchText(url2);
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(`${source} Release JSON 解析失败`);
+  }
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const msg = parsed.message;
+    throw new Error(msg ? `${source}: ${msg}` : `${source} Release 响应无效`);
+  }
+  const items = normalizeItems(parsed, limit);
+  if (items.length === 0) throw new Error(`${source} 暂无 Release`);
+  return { source, items };
+}
+async function fetchReleaseChangelog(options = {}) {
+  const config = options.config ?? getUpdateFeedConfig();
+  const fetchText = options.fetchText ?? defaultFetchText;
+  const limit = Math.min(Math.max(options.limit ?? 10, 1), 30);
+  const errors = [];
+  try {
+    return await fetchFrom("gitee", config, fetchText, limit);
+  } catch (err) {
+    errors.push(`gitee: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  try {
+    return await fetchFrom("github", config, fetchText, limit);
+  } catch (err) {
+    errors.push(`github: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  throw new Error(`无法获取更新日志：${errors.join(" | ")}`);
 }
 function services() {
   const db = getDatabase();
@@ -12296,6 +12372,10 @@ function registerIpcHandlers(getMainWindow) {
     () => wrapIpc(() => {
       getUpdateOrchestrator().quitAndInstall();
     })
+  );
+  electron.ipcMain.handle(
+    IPC.APP_UPDATE_LIST_CHANGELOG,
+    () => wrapIpcAsync(() => fetchReleaseChangelog({ limit: 10 }))
   );
 }
 const SCAN_INTERVAL_MS$1 = 6e4;

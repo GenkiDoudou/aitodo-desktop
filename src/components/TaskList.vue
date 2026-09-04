@@ -7,7 +7,19 @@
     <ul v-else class="task-list__ul">
       <template v-for="(item, idx) in displayItems" :key="itemKey(item, idx)">
         <li v-if="item.type === 'group'" class="task-list__group">
-          {{ item.label }}
+          <button
+            type="button"
+            class="task-list__group-toggle"
+            :aria-expanded="!isGroupCollapsed(item.key)"
+            @click="toggleGroup(item.key)"
+          >
+            <el-icon class="task-list__group-caret">
+              <ArrowDown v-if="!isGroupCollapsed(item.key)" />
+              <ArrowRight v-else />
+            </el-icon>
+            <span class="task-list__group-label">{{ item.label }}</span>
+            <span class="task-list__group-count">{{ groupTaskCount(item.key) }}</span>
+          </button>
         </li>
         <li v-else class="task-list__item">
           <el-dropdown
@@ -55,50 +67,43 @@
                 @toggle="emit('toggle-status', item.task)"
               />
 
-              <div class="task-list__body">
-                <div class="task-list__title-row">
-                  <TaskPriorityBadge :priority="item.task.priority ?? 4" />
-                  <span class="task-list__title" :class="{ 'is-done': item.task.status === 'DONE' }">
-                    {{ item.task.title }}
-                  </span>
-                  <span
-                    v-if="hasChildren(item.task.id) && !isExpanded(item.task.id)"
-                    class="task-list__child-count"
-                  >
-                    {{ childCount(item.task.id) }}
-                  </span>
-                </div>
-                <div v-if="hasMeta(item.task)" class="task-list__meta">
-                  <span
-                    v-if="categoryLabel(item.task)"
-                    class="task-list__meta-item task-list__meta-item--category"
-                    title="清单"
-                  >
-                    {{ categoryLabel(item.task) }}
-                  </span>
-                  <span
-                    v-if="showCompletedAt(item.task)"
-                    class="task-list__meta-item task-list__meta-item--completed"
-                    title="完成时间"
-                  >
-                    完成 {{ formatTaskListTime(item.task.completedAt!) }}
-                  </span>
-                  <span v-if="showCreatedAt(item.task)" class="task-list__meta-item" title="创建时间">
-                    创建 {{ formatTaskCreatedAt(item.task.createdAt) }}
-                  </span>
-                  <span
-                    v-if="showDueAt(item.task)"
-                    class="task-list__meta-item"
-                    :class="{ 'is-overdue': isOverdue(item.task) }"
-                    title="截止时间"
-                  >
-                    截止 {{ formatTaskListTime(item.task.dueAt!) }}
-                  </span>
-                  <span v-if="showRemindAt(item.task)" class="task-list__meta-item" title="提醒时间">
-                    提醒 {{ formatTaskListTime(item.task.remindAt!) }}
-                  </span>
-                </div>
-              </div>
+              <TaskPriorityBadge :priority="item.task.priority ?? 4" variant="text" />
+
+              <span class="task-list__title" :class="{ 'is-done': item.task.status === 'DONE' }">
+                {{ item.task.title }}
+              </span>
+
+              <span class="task-list__meta">
+                <span
+                  v-if="categoryLabel(item.task)"
+                  class="task-list__tag task-list__tag--category"
+                  title="清单"
+                  :style="categoryTagStyle(item.task)"
+                >
+                  {{ categoryLabel(item.task) }}
+                </span>
+                <span v-if="primaryTag(item.task)" class="task-list__tag">{{ primaryTag(item.task) }}</span>
+                <span v-if="showCreatedAt(item.task)" class="task-list__meta-inline" title="创建时间">
+                  创建 {{ formatTaskCreatedAt(item.task.createdAt) }}
+                </span>
+                <span
+                  v-if="showDueAt(item.task)"
+                  class="task-list__meta-inline"
+                  :class="{ 'is-overdue': isOverdue(item.task) }"
+                  title="截止时间"
+                >
+                  截止 {{ formatTaskListTime(item.task.dueAt!) }}
+                </span>
+                <span v-if="showRemindAt(item.task)" class="task-list__meta-inline" title="提醒时间">
+                  提醒 {{ remindDisplay(item.task) }}
+                </span>
+                <span v-if="showCompletedAt(item.task)" class="task-list__meta-inline" title="完成时间">
+                  完成 {{ formatTaskListTime(item.task.completedAt!) }}
+                </span>
+                <span class="task-list__status" :class="statusClass(item.task.status)">
+                  {{ statusText(item.task.status) }}
+                </span>
+              </span>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
@@ -133,6 +138,8 @@ import type { Task } from '@shared/types'
 import { moveItemInOrder } from '@shared/list-order'
 import type { TaskListLayoutItem } from '@shared/task-list-layout'
 import { formatTaskCreatedAt, formatTaskListTime } from '@/utils/format-task-time'
+import { taskStatusLabel } from '@shared/task-status-cycle'
+import { primaryTaskTag } from '@shared/task-tags'
 import type { TaskListMetaVisibility } from '@shared/list-view-preferences'
 import { DEFAULT_TASK_LIST_META_VISIBILITY } from '@shared/list-view-preferences'
 import TaskPriorityBadge from '@/components/TaskPriorityBadge.vue'
@@ -165,6 +172,8 @@ const emit = defineEmits<{
 }>()
 
 const expandedIds = ref<Set<string>>(new Set())
+/** 折叠的分组 key（贴稿可折叠分组头） */
+const collapsedGroupIds = ref<Set<string>>(new Set())
 const taskDragId = ref<string | null>(null)
 const taskDropHint = ref<{ id: string; place: 'before' | 'after' } | null>(null)
 
@@ -214,13 +223,50 @@ function isRowVisible(task: Task, depth: number): boolean {
   return true
 }
 
-/** 分组标题始终展示；子任务仍受折叠控制 */
-const displayItems = computed(() =>
-  props.layoutItems.filter((item) => {
-    if (item.type === 'group') return true
+/** 分组标题始终展示；折叠分组下的任务与折叠子任务一并隐藏 */
+const displayItems = computed(() => {
+  let currentGroup: string | null = null
+  return props.layoutItems.filter((item) => {
+    if (item.type === 'group') {
+      currentGroup = item.key
+      return true
+    }
+    if (currentGroup && collapsedGroupIds.value.has(currentGroup)) return false
     return isRowVisible(item.task, item.depth)
   })
-)
+})
+
+/** 各分组下顶层任务数（用于灰圆计数） */
+const groupRootCounts = computed(() => {
+  const counts = new Map<string, number>()
+  let current: string | null = null
+  for (const item of props.layoutItems) {
+    if (item.type === 'group') {
+      current = item.key
+      if (!counts.has(current)) counts.set(current, 0)
+      continue
+    }
+    if (current && item.depth === 0) {
+      counts.set(current, (counts.get(current) ?? 0) + 1)
+    }
+  }
+  return counts
+})
+
+function isGroupCollapsed(key: string): boolean {
+  return collapsedGroupIds.value.has(key)
+}
+
+function toggleGroup(key: string) {
+  const next = new Set(collapsedGroupIds.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  collapsedGroupIds.value = next
+}
+
+function groupTaskCount(key: string): number {
+  return groupRootCounts.value.get(key) ?? 0
+}
 
 const rootTaskIds = computed(() =>
   displayItems.value
@@ -309,6 +355,18 @@ function categoryLabel(task: Task): string {
   return ''
 }
 
+/** 清单色点标签：用分类色作边框与浅底 */
+function categoryTagStyle(task: Task): Record<string, string> | undefined {
+  if (!task.categoryId) return undefined
+  const color = props.categories.find((c) => c.id === task.categoryId)?.color
+  if (!color) return undefined
+  return {
+    color,
+    background: `${color}18`,
+    borderColor: `${color}55`
+  }
+}
+
 function showCreatedAt(task: Task) {
   return metaVis().createdAt && Boolean(task.createdAt)
 }
@@ -318,7 +376,17 @@ function showDueAt(task: Task) {
 }
 
 function showRemindAt(task: Task) {
-  return metaVis().remindAt && Boolean(task.remindAt)
+  if (!metaVis().remindAt) return false
+  if (task.remindAt) return true
+  return (task.reminders?.length ?? 0) > 0
+}
+
+function remindDisplay(task: Task): string {
+  if (task.remindAt) return formatTaskListTime(task.remindAt)
+  const offset = task.reminders?.find((r) => r.offsetMinutes != null)?.offsetMinutes
+  if (offset != null) return `提前 ${offset} 分钟`
+  if (task.reminders?.length) return formatTaskListTime(task.reminders[0].remindAt)
+  return ''
 }
 
 function showCompletedAt(task: Task) {
@@ -390,13 +458,27 @@ function isOverdue(task: Task) {
   if (task.status === 'DONE' || !task.dueAt) return false
   return dayjs(task.dueAt).isBefore(dayjs(), 'minute')
 }
+
+function statusText(status: Task['status']) {
+  return taskStatusLabel(status)
+}
+
+function statusClass(status: Task['status']) {
+  if (status === 'IN_PROGRESS') return 'is-running'
+  if (status === 'DONE') return 'is-done'
+  return ''
+}
+
+function primaryTag(task: Task) {
+  return primaryTaskTag(task)
+}
 </script>
 
 <style scoped lang="scss">
 .task-list {
   flex: 1;
   overflow: auto;
-  padding: 4px 0 12px;
+  padding: 0 0 28px;
 }
 
 .task-list__empty {
@@ -420,12 +502,52 @@ function isOverdue(task: Task) {
 }
 
 .task-list__group {
-  padding: 12px 16px 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--desktop-muted);
-  letter-spacing: 0.02em;
+  padding: 4px 12px 2px;
   user-select: none;
+  list-style: none;
+}
+
+.task-list__group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 34px;
+  border: none;
+  background: transparent;
+  padding: 0 4px;
+  border-radius: 0;
+  cursor: pointer;
+  color: var(--desktop-text);
+  font-weight: 600;
+
+  &:hover {
+    background: transparent;
+  }
+}
+
+.task-list__group-caret {
+  font-size: 12px;
+  color: var(--desktop-muted);
+}
+
+.task-list__group-label {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  text-align: left;
+}
+
+.task-list__group-count {
+  min-width: auto;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--desktop-muted);
+  font-size: 12px;
+  line-height: 1;
+  text-align: center;
 }
 
 .task-list__item {
@@ -439,21 +561,20 @@ function isOverdue(task: Task) {
 
 .task-list__row {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px 16px 10px 8px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
   cursor: pointer;
   font-size: 14px;
-  min-height: 44px;
-  border-left: 3px solid transparent;
+  height: 54px;
+  border-top: 1px solid #f0f2f5;
 
   &:hover {
-    background: var(--desktop-hover);
+    background: #fafcff;
   }
 
   &.is-selected {
     background: var(--desktop-active);
-    border-left-color: var(--el-color-primary);
   }
 
   &.is-draggable {
@@ -477,9 +598,8 @@ function isOverdue(task: Task) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin-top: 2px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border: none;
   border-radius: 4px;
@@ -495,13 +615,73 @@ function isOverdue(task: Task) {
 }
 
 .task-list__expand-placeholder {
-  width: 22px;
+  width: 0;
   flex-shrink: 0;
 }
 
-.task-list__body {
+.task-list__title {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+
+  &.is-done {
+    text-decoration: line-through;
+    color: #a8abb2;
+  }
+}
+
+.task-list__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 55%;
+  color: #a8abb2;
+  font-size: 12px;
+}
+
+.task-list__tag {
+  display: inline-flex;
+  padding: 1px 6px;
+  background: #f4f4f5;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  color: #909399;
+  font-size: 11px;
+  flex-shrink: 0;
+
+  &--category {
+    font-weight: 500;
+  }
+}
+
+.task-list__meta-inline {
+  font-size: 12px;
+  color: #a8abb2;
+  flex-shrink: 0;
+
+  &.is-overdue {
+    color: var(--desktop-danger);
+  }
+}
+
+.task-list__status {
+  font-size: 12px;
+  color: #909399;
+  flex-shrink: 0;
+
+  &.is-running {
+    color: #409eff;
+  }
+
+  &.is-done {
+    color: #67c23a;
+  }
 }
 
 .task-list__title-row {

@@ -1,25 +1,45 @@
 :root {
-  /* 默认主风格：Claude（运行时由 theme-preferences 覆盖） */
-  --desktop-bg: #faf9f5;
-  --desktop-panel: #f5f0e8;
-  --desktop-sidebar: #efe9de;
-  --desktop-sidebar-rail: #e8e0d2;
-  --desktop-sidebar-panel: #f5f0e8;
-  --desktop-sidebar-item-active: #ffffff;
-  --desktop-border: #e6dfd8;
-  --desktop-hover: rgba(20, 20, 19, 0.05);
-  --desktop-active: rgba(204, 120, 92, 0.15);
-  --desktop-muted: #6c6a64;
-  --desktop-text: #141413;
+  /* 默认：Todo Pro（运行时由 theme-preferences 覆盖） */
+  --desktop-bg: #f0f5fb;
+  --desktop-panel: #ffffff;
+  --desktop-sidebar: #fbfcfe;
+  --desktop-sidebar-rail: #fbfcfe;
+  --desktop-sidebar-panel: #fbfcfe;
+  --desktop-sidebar-item-active: #ecf5ff;
+  --desktop-border: #dcdfe6;
+  --desktop-hover: rgba(64, 158, 255, 0.06);
+  --desktop-active: #ecf5ff;
+  --desktop-muted: #909399;
+  --desktop-text: #303133;
+  --desktop-text-secondary: #606266;
+  --desktop-primary: #409eff;
+  --desktop-primary-hover: #66b1ff;
+  --desktop-primary-light: #ecf5ff;
+  --desktop-danger: #f56c6c;
+  --desktop-success: #67c23a;
+  --desktop-warning: #e6a23c;
+  --desktop-accent-teal: #13c2c2;
+  --desktop-accent-violet: #9254de;
 
-  --desktop-font: "Source Sans 3", -apple-system, BlinkMacSystemFont, sans-serif;
-  --desktop-font-display: "Libre Baskerville", Georgia, serif;
-  --desktop-radius-sm: 6px;
-  --desktop-radius-md: 8px;
-  --desktop-radius-lg: 12px;
-  --desktop-radius-pill: 8px;
-  --desktop-title-weight: 400;
-  --desktop-shadow: none;
+  --desktop-priority-p0: #f56c6c;
+  --desktop-priority-p1: #e6a23c;
+  --desktop-priority-p2: #409eff;
+  --desktop-priority-p3: #909399;
+  --desktop-priority-p0-tint: #fef0f0;
+  --desktop-priority-p1-tint: #fdf6ec;
+  --desktop-priority-p2-tint: #ecf5ff;
+  --desktop-priority-p3-tint: #f4f4f5;
+
+  --desktop-font: "Inter", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --desktop-font-display: "Inter", "PingFang SC", "Microsoft YaHei", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --desktop-radius-sm: 4px;
+  --desktop-radius-md: 4px;
+  --desktop-radius-lg: 7px;
+  --desktop-radius-pill: 4px;
+  --desktop-title-weight: 650;
+  --desktop-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 
   /* AI 入口专用 Teal，与主操作色区分 */
   --desktop-ai: #0d9488;
@@ -31,7 +51,7 @@
 
   --el-font-size-base: 14px;
   --el-component-size: 32px;
-  --el-border-radius-base: 8px;
+  --el-border-radius-base: 4px;
 }
 
 body {
@@ -60,10 +80,6 @@ body {
   border-radius: var(--desktop-radius-md);
 }
 
-.el-button--primary {
-  border-radius: var(--desktop-radius-pill);
-}
-
 .el-input__wrapper {
   border-radius: var(--desktop-radius-md);
 }
@@ -73,10 +89,180 @@ body {
   box-shadow: var(--desktop-shadow);
 }
 
-/* Figma / Notion / Airtable / Airbnb 药丸主按钮 */
-[data-desktop-theme='notion'] .el-button--primary,
-[data-desktop-theme='figma'] .el-button--primary,
-[data-desktop-theme='airtable'] .el-button--primary,
-[data-desktop-theme='airbnb'] .el-button--primary {
-  border-radius: var(--desktop-radius-pill);
+/* Todo Pro 主按钮 4px 圆角 */
+.el-button--primary {
+  border-radius: var(--desktop-radius-sm);
+}
+
+/* 设置页 panel / setting-row 视觉（Todo Pro HTML 原型） */
+.settings-panel {
+  border: 1px solid #ebeef5;
+  border-radius: 7px;
+  background: var(--desktop-panel);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.settings-panel__title {
+  margin: 0;
+  padding: 16px 18px 10px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.settings-panel__body {
+  padding: 0;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  min-height: 58px;
+  gap: 16px;
+  border-top: 1px solid #f2f3f5;
+  padding: 11px 18px;
+
+  &:first-child {
+    border-top: 1px solid #f2f3f5;
+  }
+}
+
+.settings-row__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row__label-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--desktop-text);
+}
+
+.settings-row__label-desc {
+  font-size: 12px;
+  color: var(--desktop-muted);
+  margin-top: 2px;
+  word-break: break-all;
+}
+
+.settings-row__control {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.settings-status-pill {
+  font-size: 12px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #f0f9eb;
+  color: #67c23a;
+  white-space: nowrap;
+
+  &.is-warn {
+    background: #fdf6ec;
+    color: #e6a23c;
+  }
+
+  &.is-danger {
+    background: #fef0f0;
+    color: #f56c6c;
+  }
+}
+
+.settings-shortcut-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 3px 7px;
+  color: #606266;
+  font-size: 12px;
+}
+
+.settings-notice {
+  padding: 10px 12px;
+  border-radius: 5px;
+  background: #f4f4f5;
+  color: #606266;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.settings-import-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.settings-dropbox {
+  border: 1px dashed #c0c4cc;
+  border-radius: 7px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--desktop-muted);
+  background: #fcfcfc;
+  cursor: pointer;
+  margin: 0 18px 18px;
+  gap: 4px;
+
+  &:hover {
+    border-color: #a0cfff;
+    color: #409eff;
+  }
+}
+
+.settings-about {
+  text-align: center;
+  padding: 45px 0 12px;
+}
+
+.settings-about__logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  background: #409eff;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 auto 14px;
+}
+
+.settings-about__name {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+}
+
+.settings-about__slogan {
+  color: var(--desktop-muted);
+  margin: 4px 0 24px;
+  font-size: 13px;
+}
+
+.settings-about__links {
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.settings-about__links .settings-row {
+  border: 1px solid #ebeef5;
+  margin-bottom: 1px;
+  border-radius: 0;
+}
+
+.settings-about__copy {
+  margin-top: 22px;
+  font-size: 12px;
+  color: var(--desktop-muted);
 }

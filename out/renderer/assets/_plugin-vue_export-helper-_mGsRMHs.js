@@ -14488,21 +14488,6 @@ var _sfc_main18 = /* @__PURE__ */ defineComponent({
     ]));
   }
 }), bell_default = _sfc_main18;
-var _sfc_main27 = /* @__PURE__ */ defineComponent({
-  name: "Brush",
-  __name: "brush",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M896 448H128v192a64 64 0 0 0 64 64h192v192h256V704h192a64 64 0 0 0 64-64zm-770.752-64c0-47.552 5.248-90.24 15.552-128 14.72-54.016 42.496-107.392 83.2-160h417.28l-15.36 70.336L736 96h211.2c-24.832 42.88-41.92 96.256-51.2 160a664 664 0 0 0-6.144 128H960v256a128 128 0 0 1-128 128H704v160a32 32 0 0 1-32 32H352a32 32 0 0 1-32-32V768H192A128 128 0 0 1 64 640V384zm64 0h636.544c-2.048-45.824.256-91.584 6.848-137.216 4.48-30.848 10.688-59.776 18.688-86.784h-96.64l-221.12 141.248L561.92 160H256.512c-25.856 37.888-43.776 75.456-53.952 112.832-8.768 32.064-13.248 69.12-13.312 111.168"
-      })
-    ]));
-  }
-}), brush_default = _sfc_main27;
 var _sfc_main29 = /* @__PURE__ */ defineComponent({
   name: "Calendar",
   __name: "calendar",
@@ -14669,67 +14654,6 @@ var _sfc_main56 = /* @__PURE__ */ defineComponent({
     ]));
   }
 }), close_default = _sfc_main56;
-var _sfc_main60 = /* @__PURE__ */ defineComponent({
-  name: "Coin",
-  __name: "coin",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "m161.92 580.736 29.888 58.88C171.328 659.776 160 681.728 160 704c0 82.304 155.328 160 352 160s352-77.696 352-160c0-22.272-11.392-44.16-31.808-64.32l30.464-58.432C903.936 615.808 928 657.664 928 704c0 129.728-188.544 224-416 224S96 833.728 96 704c0-46.592 24.32-88.576 65.92-123.264"
-      }),
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "m161.92 388.736 29.888 58.88C171.328 467.84 160 489.792 160 512c0 82.304 155.328 160 352 160s352-77.696 352-160c0-22.272-11.392-44.16-31.808-64.32l30.464-58.432C903.936 423.808 928 465.664 928 512c0 129.728-188.544 224-416 224S96 641.728 96 512c0-46.592 24.32-88.576 65.92-123.264"
-      }),
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M512 544c-227.456 0-416-94.272-416-224S284.544 96 512 96s416 94.272 416 224-188.544 224-416 224m0-64c196.672 0 352-77.696 352-160S708.672 160 512 160s-352 77.696-352 160 155.328 160 352 160"
-      })
-    ]));
-  }
-}), coin_default = _sfc_main60;
-var _sfc_main66 = /* @__PURE__ */ defineComponent({
-  name: "Connection",
-  __name: "connection",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M640 384v64H448a128 128 0 0 0-128 128v128a128 128 0 0 0 128 128h320a128 128 0 0 0 128-128V576a128 128 0 0 0-64-110.848V394.88c74.56 26.368 128 97.472 128 181.056v128a192 192 0 0 1-192 192H448a192 192 0 0 1-192-192V576a192 192 0 0 1 192-192z"
-      }),
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M384 640v-64h192a128 128 0 0 0 128-128V320a128 128 0 0 0-128-128H256a128 128 0 0 0-128 128v128a128 128 0 0 0 64 110.848v70.272A192.06 192.06 0 0 1 64 448V320a192 192 0 0 1 192-192h320a192 192 0 0 1 192 192v128a192 192 0 0 1-192 192z"
-      })
-    ]));
-  }
-}), connection_default = _sfc_main66;
-var _sfc_main69 = /* @__PURE__ */ defineComponent({
-  name: "Cpu",
-  __name: "cpu",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M320 256a64 64 0 0 0-64 64v384a64 64 0 0 0 64 64h384a64 64 0 0 0 64-64V320a64 64 0 0 0-64-64zm0-64h384a128 128 0 0 1 128 128v384a128 128 0 0 1-128 128H320a128 128 0 0 1-128-128V320a128 128 0 0 1 128-128"
-      }),
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M512 64a32 32 0 0 1 32 32v128h-64V96a32 32 0 0 1 32-32m160 0a32 32 0 0 1 32 32v128h-64V96a32 32 0 0 1 32-32m-320 0a32 32 0 0 1 32 32v128h-64V96a32 32 0 0 1 32-32m160 896a32 32 0 0 1-32-32V800h64v128a32 32 0 0 1-32 32m160 0a32 32 0 0 1-32-32V800h64v128a32 32 0 0 1-32 32m-320 0a32 32 0 0 1-32-32V800h64v128a32 32 0 0 1-32 32M64 512a32 32 0 0 1 32-32h128v64H96a32 32 0 0 1-32-32m0-160a32 32 0 0 1 32-32h128v64H96a32 32 0 0 1-32-32m0 320a32 32 0 0 1 32-32h128v64H96a32 32 0 0 1-32-32m896-160a32 32 0 0 1-32 32H800v-64h128a32 32 0 0 1 32 32m0-160a32 32 0 0 1-32 32H800v-64h128a32 32 0 0 1 32 32m0 320a32 32 0 0 1-32 32H800v-64h128a32 32 0 0 1 32 32"
-      })
-    ]));
-  }
-}), cpu_default = _sfc_main69;
 var _sfc_main72 = /* @__PURE__ */ defineComponent({
   name: "DArrowLeft",
   __name: "d-arrow-left",
@@ -14820,21 +14744,6 @@ var _sfc_main103 = /* @__PURE__ */ defineComponent({
     ]));
   }
 }), filter_default = _sfc_main103;
-var _sfc_main111 = /* @__PURE__ */ defineComponent({
-  name: "FolderOpened",
-  __name: "folder-opened",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M878.08 448H241.92l-96 384h636.16zM832 384v-64H485.76L357.504 192H128v448l57.92-231.744A32 32 0 0 1 216.96 384zm-24.96 512H96a32 32 0 0 1-32-32V160a32 32 0 0 1 32-32h287.872l128.384 128H864a32 32 0 0 1 32 32v96h23.04a32 32 0 0 1 31.04 39.744l-112 448A32 32 0 0 1 807.04 896"
-      })
-    ]));
-  }
-}), folder_opened_default = _sfc_main111;
 var _sfc_main113 = /* @__PURE__ */ defineComponent({
   name: "Folder",
   __name: "folder",
@@ -14914,21 +14823,6 @@ var _sfc_main143 = /* @__PURE__ */ defineComponent({
     ]));
   }
 }), info_filled_default = _sfc_main143;
-var _sfc_main145 = /* @__PURE__ */ defineComponent({
-  name: "Key",
-  __name: "key",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M448 456.064V96a32 32 0 0 1 32-32.064L672 64a32 32 0 0 1 0 64H512v128h160a32 32 0 0 1 0 64H512v128a256 256 0 1 1-64 8.064M512 896a192 192 0 1 0 0-384 192 192 0 0 0 0 384"
-      })
-    ]));
-  }
-}), key_default = _sfc_main145;
 var _sfc_main149 = /* @__PURE__ */ defineComponent({
   name: "List",
   __name: "list",
@@ -14989,21 +14883,6 @@ var _sfc_main169 = /* @__PURE__ */ defineComponent({
     ]));
   }
 }), minus_default = _sfc_main169;
-var _sfc_main171 = /* @__PURE__ */ defineComponent({
-  name: "Monitor",
-  __name: "monitor",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M544 768v128h192a32 32 0 1 1 0 64H288a32 32 0 1 1 0-64h192V768H192A128 128 0 0 1 64 640V256a128 128 0 0 1 128-128h640a128 128 0 0 1 128 128v384a128 128 0 0 1-128 128zM192 192a64 64 0 0 0-64 64v384a64 64 0 0 0 64 64h640a64 64 0 0 0 64-64V256a64 64 0 0 0-64-64z"
-      })
-    ]));
-  }
-}), monitor_default = _sfc_main171;
 var _sfc_main174 = /* @__PURE__ */ defineComponent({
   name: "MoreFilled",
   __name: "more-filled",
@@ -15184,21 +15063,6 @@ var _sfc_main231 = /* @__PURE__ */ defineComponent({
     ]));
   }
 }), setting_default = _sfc_main231;
-var _sfc_main232 = /* @__PURE__ */ defineComponent({
-  name: "Share",
-  __name: "share",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "m679.872 348.8-301.76 188.608a127.8 127.8 0 0 1 5.12 52.16l279.936 104.96a128 128 0 1 1-22.464 59.904l-279.872-104.96a128 128 0 1 1-16.64-166.272l301.696-188.608a128 128 0 1 1 33.92 54.272z"
-      })
-    ]));
-  }
-}), share_default = _sfc_main232;
 var _sfc_main242 = /* @__PURE__ */ defineComponent({
   name: "SortDown",
   __name: "sort-down",
@@ -15289,40 +15153,6 @@ var _sfc_main249 = /* @__PURE__ */ defineComponent({
     ]));
   }
 }), success_filled_default = _sfc_main249;
-var _sfc_main253 = /* @__PURE__ */ defineComponent({
-  name: "Sunny",
-  __name: "sunny",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M512 704a192 192 0 1 0 0-384 192 192 0 0 0 0 384m0 64a256 256 0 1 1 0-512 256 256 0 0 1 0 512m0-704a32 32 0 0 1 32 32v64a32 32 0 0 1-64 0V96a32 32 0 0 1 32-32m0 768a32 32 0 0 1 32 32v64a32 32 0 1 1-64 0v-64a32 32 0 0 1 32-32M195.2 195.2a32 32 0 0 1 45.248 0l45.248 45.248a32 32 0 1 1-45.248 45.248L195.2 240.448a32 32 0 0 1 0-45.248m543.104 543.104a32 32 0 0 1 45.248 0l45.248 45.248a32 32 0 0 1-45.248 45.248l-45.248-45.248a32 32 0 0 1 0-45.248M64 512a32 32 0 0 1 32-32h64a32 32 0 0 1 0 64H96a32 32 0 0 1-32-32m768 0a32 32 0 0 1 32-32h64a32 32 0 1 1 0 64h-64a32 32 0 0 1-32-32M195.2 828.8a32 32 0 0 1 0-45.248l45.248-45.248a32 32 0 0 1 45.248 45.248L240.448 828.8a32 32 0 0 1-45.248 0m543.104-543.104a32 32 0 0 1 0-45.248l45.248-45.248a32 32 0 0 1 45.248 45.248l-45.248 45.248a32 32 0 0 1-45.248 0"
-      })
-    ]));
-  }
-}), sunny_default = _sfc_main253;
-var _sfc_main256 = /* @__PURE__ */ defineComponent({
-  name: "SwitchButton",
-  __name: "switch-button",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M352 159.872V230.4a352 352 0 1 0 320 0v-70.528A416.128 416.128 0 0 1 512 960a416 416 0 0 1-160-800.128"
-      }),
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M512 64q32 0 32 32v320q0 32-32 32t-32-32V96q0-32 32-32"
-      })
-    ]));
-  }
-}), switch_button_default = _sfc_main256;
 var _sfc_main262 = /* @__PURE__ */ defineComponent({
   name: "Timer",
   __name: "timer",
@@ -15346,21 +15176,6 @@ var _sfc_main262 = /* @__PURE__ */ defineComponent({
     ]));
   }
 }), timer_default = _sfc_main262;
-var _sfc_main267 = /* @__PURE__ */ defineComponent({
-  name: "Top",
-  __name: "top",
-  setup(__props) {
-    return (_ctx, _cache) => (openBlock(), createElementBlock("svg", {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: "0 0 1024 1024"
-    }, [
-      createBaseVNode("path", {
-        fill: "currentColor",
-        d: "M572.235 205.282v600.365a30.118 30.118 0 1 1-60.235 0V205.282L292.382 438.633a28.913 28.913 0 0 1-42.646 0 33.43 33.43 0 0 1 0-45.236l271.058-288.045a28.913 28.913 0 0 1 42.647 0L834.5 393.397a33.43 33.43 0 0 1 0 45.176 28.913 28.913 0 0 1-42.647 0l-219.618-233.23z"
-      })
-    ]));
-  }
-}), top_default = _sfc_main267;
 var _sfc_main283 = /* @__PURE__ */ defineComponent({
   name: "View",
   __name: "view",
@@ -66043,7 +65858,6 @@ const TASK_PRIORITIES = [
     value: 1,
     code: "P0",
     label: "重要且紧急",
-    badgeLabel: "紧急重要",
     flagLabel: "P0",
     quadrantTitle: "重要且紧急",
     color: "#f56c6c",
@@ -66055,7 +65869,6 @@ const TASK_PRIORITIES = [
     value: 2,
     code: "P1",
     label: "重要不紧急",
-    badgeLabel: "重要",
     flagLabel: "P1",
     quadrantTitle: "重要不紧急",
     color: "#e6a23c",
@@ -66067,7 +65880,6 @@ const TASK_PRIORITIES = [
     value: 3,
     code: "P2",
     label: "不重要但紧急",
-    badgeLabel: "紧急",
     flagLabel: "P2",
     quadrantTitle: "不重要但紧急",
     color: "#409eff",
@@ -66079,11 +65891,10 @@ const TASK_PRIORITIES = [
     value: 4,
     code: "P3",
     label: "不重要不紧急",
-    badgeLabel: "普通",
     flagLabel: "P3",
     quadrantTitle: "不重要不紧急",
-    color: "#67c23a",
-    flagColor: "#c0c4cc",
+    color: "#909399",
+    flagColor: "#909399",
     flagOutline: true,
     roman: "Ⅳ"
   }
@@ -66112,7 +65923,7 @@ const _export_sfc = (sfc, props) => {
   return target;
 };
 export {
-  files_default as $,
+  circle_check_default as $,
   onScopeDispose as A,
   reactive as B,
   nextTick as C,
@@ -66124,77 +65935,64 @@ export {
   shallowRef as I,
   h$1 as J,
   provide as K,
-  renderSlot as L,
-  createBlock as M,
-  Fragment as N,
-  renderList as O,
-  createTextVNode as P,
-  ElMessage as Q,
-  dayjs as R,
-  ElMessageBox as S,
-  commonjsGlobal as T,
-  getDefaultExportFromCjs as U,
-  resolveDirective as V,
-  withDirectives as W,
+  createBlock as L,
+  Fragment as M,
+  renderList as N,
+  createTextVNode as O,
+  ElMessage as P,
+  dayjs as Q,
+  ElMessageBox as R,
+  renderSlot as S,
+  normalizeStyle as T,
+  resolveDynamicComponent as U,
+  folder_default as V,
+  withKeys as W,
   timer_default as X,
-  resolveDynamicComponent as Y,
-  bell_default as Z,
+  files_default as Y,
+  message_box_default as Z,
   _export_sfc as _,
   onUnmounted as a,
-  message_box_default as a0,
-  clock_default as a1,
-  sunny_default as a2,
-  calendar_default$1 as a3,
-  circle_check_default as a4,
-  delete_default as a5,
-  grid_default as a6,
-  folder_default as a7,
-  normalizeStyle as a8,
-  list_default as a9,
-  getCurrentInstance as aA,
-  scale_to_original_default as aB,
-  full_screen_default as aC,
-  top_default as aD,
-  share_default as aE,
-  close_default as aF,
-  createStaticVNode as aG,
-  coin_default as aH,
-  connection_default as aI,
-  key_default as aJ,
-  cpu_default as aK,
-  folder_opened_default as aL,
-  switch_button_default as aM,
-  brush_default as aN,
-  monitor_default as aO,
-  info_filled_default as aP,
-  check_default as aQ,
-  normalizeTaskPriority as aR,
-  document_default as aa,
-  setting_default as ab,
-  getTaskPriorityMeta as ac,
-  withKeys as ad,
-  search_default as ae,
-  arrow_down_default as af,
-  useModel as ag,
-  filter_default as ah,
-  sort_default as ai,
-  TASK_PRIORITIES as aj,
-  operation_default as ak,
-  warning_filled_default as al,
-  arrow_right_default as am,
-  star_default as an,
-  more_filled_default as ao,
-  mergeModels as ap,
-  isValidTaskPriority as aq,
-  onBeforeUnmount as ar,
-  d_arrow_left_default as as,
-  d_arrow_right_default as at,
-  vShow as au,
-  vModelText as av,
-  view_default as aw,
-  refresh_default as ax,
-  watchEffect as ay,
-  customRef as az,
+  grid_default as a0,
+  calendar_default$1 as a1,
+  commonjsGlobal as a2,
+  getDefaultExportFromCjs as a3,
+  resolveDirective as a4,
+  withDirectives as a5,
+  bell_default as a6,
+  search_default as a7,
+  useModel as a8,
+  sort_default as a9,
+  setting_default as aA,
+  view_default as aB,
+  createStaticVNode as aC,
+  check_default as aD,
+  normalizeTaskPriority as aE,
+  arrow_down_default as aa,
+  mergeModels as ab,
+  Teleport as ac,
+  getTaskPriorityMeta as ad,
+  vShow as ae,
+  vModelText as af,
+  refresh_default as ag,
+  watchEffect as ah,
+  onBeforeUnmount as ai,
+  customRef as aj,
+  getCurrentInstance as ak,
+  scale_to_original_default as al,
+  full_screen_default as am,
+  close_default as an,
+  TASK_PRIORITIES as ao,
+  delete_default as ap,
+  filter_default as aq,
+  list_default as ar,
+  clock_default as as,
+  operation_default as at,
+  warning_filled_default as au,
+  arrow_right_default as av,
+  more_filled_default as aw,
+  isValidTaskPriority as ax,
+  d_arrow_left_default as ay,
+  d_arrow_right_default as az,
   openBlock as b,
   createElementBlock as c,
   defineComponent as d,

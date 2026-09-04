@@ -264,6 +264,8 @@ emit('change', { ...prefs })
   padding: 8px !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
-  overflow: visible !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  max-height: min(70vh, 520px) !important;
 }
 </style>

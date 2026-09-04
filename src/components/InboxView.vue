@@ -85,7 +85,7 @@ function notePreview(content: string): string {
 
 <style scoped lang="scss">
 .inbox-view {
-  padding: 8px 0 24px;
+  padding: 8px 24px 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -169,10 +169,12 @@ function notePreview(content: string): string {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--el-border-color-lighter);
-  background: var(--el-fill-color-blank);
+  min-height: 54px;
+  padding: 0 10px;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid #f2f3f5;
+  background: transparent;
 }
 
 .inbox-view__task-title {

@@ -101,6 +101,7 @@ import { buildTaskReminderExternalCopy, type NotificationConfig, type NotifyEven
 import { parseTaskInputWithConfig } from '../services/task-parse-service'
 import type { AiParseCategoryRef } from '@shared/ai-task-parser'
 import { getUpdateOrchestrator } from '../update/update-orchestrator'
+import { fetchReleaseChangelog } from '../update/fetch-release-changelog'
 
 function services() {
   const db = getDatabase()
@@ -848,5 +849,8 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     wrapIpc(() => {
       getUpdateOrchestrator().quitAndInstall()
     })
+  )
+  ipcMain.handle(IPC.APP_UPDATE_LIST_CHANGELOG, () =>
+    wrapIpcAsync(() => fetchReleaseChangelog({ limit: 10 }))
   )
 }

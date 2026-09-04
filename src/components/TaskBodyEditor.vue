@@ -343,7 +343,14 @@ function flushWysiwygToMarkdown() {
   syncToModel()
 }
 
-defineExpose({ flushWysiwygToMarkdown })
+defineExpose({
+  flushWysiwygToMarkdown,
+  pickAttachment,
+  attachments,
+  openAttachment,
+  downloadAttachment,
+  removeAttachment
+})
 </script>
 
 <style scoped lang="scss">

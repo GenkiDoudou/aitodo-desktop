@@ -1,26 +1,91 @@
 <template>
+  <!--
+    导入导出：贴 preview.html 双栏导出/导入 + 第三方导入。
+    真实：Todo Backup(配置)/JSON/Markdown 导出导入；第三方仅 Toast。
+  -->
   <section class="settings-section">
-    <h2 class="settings-section__title">导入 / 导出</h2>
+    <div class="settings-import-grid">
+      <div class="settings-panel">
+        <h2 class="settings-panel__title">导出数据</h2>
+        <div class="settings-panel__body">
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">Todo Backup</div>
+              <div class="settings-row__label-desc">个人配置备份（快捷键、大模型、提示词与界面偏好）</div>
+            </div>
+            <div class="settings-row__control">
+              <el-button type="primary" :loading="exportingConfig" @click="onExportConfig">
+                导出
+              </el-button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">JSON</div>
+              <div class="settings-row__label-desc">适合开发者和数据迁移（全部任务）</div>
+            </div>
+            <div class="settings-row__control">
+              <el-button :loading="exportingTasksJson" @click="onExportTasksJson">导出</el-button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">Markdown</div>
+              <div class="settings-row__label-desc">适合阅读与归档</div>
+            </div>
+            <div class="settings-row__control">
+              <el-button :loading="exportingTasksMd" @click="onExportTasksMarkdown">导出</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <h3 class="settings-section__subtitle">个人配置</h3>
-    <p class="settings-section__hint">
-      导出或导入个人配置，包括快捷键、大模型、提示词及界面偏好（清单分组、视图模式等）。
-      不包含任务数据与数据库内容。
-    </p>
-    <div class="settings-section__actions">
-      <el-button type="primary" :loading="exportingConfig" @click="onExportConfig">导出配置</el-button>
-      <el-button :loading="importingConfig" @click="onImportConfig">导入配置</el-button>
+      <div class="settings-panel">
+        <h2 class="settings-panel__title">导入数据</h2>
+        <div class="settings-panel__body">
+          <button
+            type="button"
+            class="settings-dropbox"
+            :disabled="importingConfig || importingTasks"
+            @click="onImportPick"
+          >
+            <span>点击选择文件</span>
+            <span class="settings-dropbox__muted">支持 Todo Backup / JSON</span>
+          </button>
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">导入配置</div>
+              <div class="settings-row__label-desc">覆盖快捷键、大模型与提示词</div>
+            </div>
+            <div class="settings-row__control">
+              <el-button :loading="importingConfig" @click="onImportConfig">导入配置</el-button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row__label">
+              <div class="settings-row__label-title">导入任务 JSON</div>
+              <div class="settings-row__label-desc">合并模式：同 id 更新，新 id 新增</div>
+            </div>
+            <div class="settings-row__control">
+              <el-button :loading="importingTasks" @click="onImportTasksJson">导入任务</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <h3 class="settings-section__subtitle">任务数据</h3>
-    <p class="settings-section__hint">
-      导出全部未删除任务（含清单、标签、提醒等）；支持 JSON 备份与 Markdown 阅读。
-      JSON 导入为合并模式：相同 id 的任务会更新，新 id 会新增。
-    </p>
-    <div class="settings-section__actions settings-section__actions--wrap">
-      <el-button :loading="exportingTasksJson" @click="onExportTasksJson">导出任务 JSON</el-button>
-      <el-button :loading="exportingTasksMd" @click="onExportTasksMarkdown">导出任务 Markdown</el-button>
-      <el-button :loading="importingTasks" @click="onImportTasksJson">导入任务 JSON</el-button>
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">第三方导入</h2>
+      <div class="settings-panel__body">
+        <div v-for="name in thirdParties" :key="name" class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">{{ name }}</div>
+          </div>
+          <div class="settings-row__control">
+            <el-button @click="onThirdParty(name)">导入</el-button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>
@@ -42,6 +107,8 @@ const exportingTasksJson = ref(false)
 const exportingTasksMd = ref(false)
 const importingTasks = ref(false)
 
+const thirdParties = ['Microsoft To Do', 'Todoist', '滴答清单']
+
 const llmStore = useLlmStore()
 const promptStore = useAiPromptStore()
 const shortcutStore = useShortcutStore()
@@ -51,12 +118,8 @@ const categoryStore = useCategoryStore()
 async function onExportConfig() {
   exportingConfig.value = true
   try {
-    const path = unwrapIpc(
-      await window.api.app.exportUserConfig(collectUiPreferences())
-    )
-    if (path) {
-      ElMessage.success(`配置已导出至：${path}`)
-    }
+    const path = unwrapIpc(await window.api.app.exportUserConfig(collectUiPreferences()))
+    if (path) ElMessage.success(`配置已导出至：${path}`)
   } catch {
     /* unwrapIpc 已 Toast */
   } finally {
@@ -79,13 +142,8 @@ async function onImportConfig() {
   try {
     const result = unwrapIpc(await window.api.app.importUserConfig())
     if (!result) return
-
     applyUiPreferences(result.applied.uiPreferences)
-    await Promise.all([
-      shortcutStore.load(),
-      llmStore.load(),
-      promptStore.load()
-    ])
+    await Promise.all([shortcutStore.load(), llmStore.load(), promptStore.load()])
     ElMessage.success('配置已导入，部分界面偏好需刷新页面后生效')
   } catch {
     /* unwrapIpc 已 Toast */
@@ -147,38 +205,28 @@ async function onImportTasksJson() {
     importingTasks.value = false
   }
 }
+
+function onImportPick() {
+  void ElMessageBox.confirm('请选择导入类型', '导入数据', {
+    distinguishCancelAndClose: true,
+    confirmButtonText: '导入任务 JSON',
+    cancelButtonText: '导入配置',
+    type: 'info'
+  })
+    .then(() => onImportTasksJson())
+    .catch((action) => {
+      if (action === 'cancel') void onImportConfig()
+    })
+}
+
+function onThirdParty(name: string) {
+  ElMessage.info(`已进入「${name}」导入流程（即将支持）`)
+}
 </script>
 
 <style scoped lang="scss">
-.settings-section {
-  max-width: 720px;
-}
-
-.settings-section__title {
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.settings-section__subtitle {
-  margin: 24px 0 8px;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.settings-section__hint {
-  font-size: 13px;
+.settings-dropbox__muted {
+  font-size: 12px;
   color: var(--desktop-muted);
-  margin: 0 0 20px;
-  line-height: 1.6;
-}
-
-.settings-section__actions {
-  display: flex;
-  gap: 8px;
-
-  &--wrap {
-    flex-wrap: wrap;
-  }
 }
 </style>

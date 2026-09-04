@@ -1,4 +1,4 @@
-import { R as dayjs, ac as getTaskPriorityMeta, aR as normalizeTaskPriority } from "./_plugin-vue_export-helper-Dbtz7Eox.js";
+import { Q as dayjs, ad as getTaskPriorityMeta, aE as normalizeTaskPriority } from "./_plugin-vue_export-helper-_mGsRMHs.js";
 function isDueSmartList(smart) {
   return smart === "today" || smart === "week" || smart === "last7days";
 }
@@ -257,6 +257,238 @@ function coerceHideDoneScope(value, fallback = "all") {
   }
   return fallback;
 }
+const TAG_NAME_RE = /^[\u4e00-\u9fa5\w-]{1,32}$/;
+function stripMarkupForTags(text) {
+  return text.replace(/<[^>]+>/g, " ").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`~>-]/g, " ");
+}
+function extractTagsFromText(title, description) {
+  const raw = `${title} ${stripMarkupForTags(description ?? "")}`;
+  const found = /* @__PURE__ */ new Set();
+  const re = /#([\u4e00-\u9fa5\w-]{1,32})/g;
+  let m;
+  while ((m = re.exec(raw)) !== null) {
+    found.add(m[1]);
+  }
+  return [...found].sort((a, b) => a.localeCompare(b, "zh-CN"));
+}
+function normalizeTagName(raw) {
+  const name = raw.trim().replace(/^#+/, "");
+  if (!name || !TAG_NAME_RE.test(name)) {
+    return null;
+  }
+  return name;
+}
+function normalizeTagNames(names) {
+  const set = /* @__PURE__ */ new Set();
+  for (const raw of names) {
+    const norm = normalizeTagName(raw);
+    if (norm) {
+      set.add(norm);
+    }
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, "zh-CN"));
+}
+function extractTaskTags(task) {
+  if (task.tags?.length) {
+    return [...task.tags].sort((a, b) => a.localeCompare(b, "zh-CN"));
+  }
+  return extractTagsFromText(task.title, task.description);
+}
+function primaryTaskTag(task) {
+  return extractTaskTags(task)[0] ?? "";
+}
+const TASK_GROUP_BY_LABELS = {
+  custom: "自定义",
+  time: "时间",
+  tag: "标签",
+  priority: "任务级别",
+  status: "任务状态",
+  none: "无"
+};
+const TASK_SORT_BY_LABELS = {
+  custom: "自定义",
+  time: "截止时间",
+  createdAt: "创建时间",
+  completedAt: "完成时间",
+  remindAt: "提醒时间",
+  priority: "任务级别",
+  title: "标题",
+  tag: "标签"
+};
+function taskSortTimeIso(task) {
+  return task.dueAt ?? task.createdAt ?? null;
+}
+function compareByTimeField(a, b, field) {
+  const ia = a[field] ?? null;
+  const ib = b[field] ?? null;
+  if (!ia && !ib) return a.title.localeCompare(b.title, "zh-CN");
+  if (!ia) return 1;
+  if (!ib) return -1;
+  const cmp = ia.localeCompare(ib);
+  if (cmp !== 0) return cmp;
+  return a.title.localeCompare(b.title, "zh-CN");
+}
+function compareTasks(a, b, sortBy) {
+  if (sortBy === "custom") {
+    const so = a.sortOrder - b.sortOrder;
+    if (so !== 0) return so;
+    return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
+  }
+  if (sortBy === "title") {
+    return a.title.localeCompare(b.title, "zh-CN");
+  }
+  if (sortBy === "priority") {
+    const pa = a.priority ?? 4;
+    const pb = b.priority ?? 4;
+    if (pa !== pb) return pa - pb;
+    return a.title.localeCompare(b.title, "zh-CN");
+  }
+  if (sortBy === "tag") {
+    const ta = primaryTaskTag(a);
+    const tb = primaryTaskTag(b);
+    if (ta !== tb) {
+      if (!ta) return 1;
+      if (!tb) return -1;
+      return ta.localeCompare(tb, "zh-CN");
+    }
+    return a.title.localeCompare(b.title, "zh-CN");
+  }
+  if (sortBy === "createdAt") {
+    return -compareByTimeField(a, b, "createdAt");
+  }
+  if (sortBy === "completedAt") {
+    return compareByTimeField(a, b, "completedAt");
+  }
+  if (sortBy === "remindAt") {
+    return compareByTimeField(a, b, "remindAt");
+  }
+  const ia = taskSortTimeIso(a);
+  const ib = taskSortTimeIso(b);
+  if (!ia && !ib) return a.title.localeCompare(b.title, "zh-CN");
+  if (!ia) return 1;
+  if (!ib) return -1;
+  const cmp = ia.localeCompare(ib);
+  if (cmp !== 0) return cmp;
+  return a.title.localeCompare(b.title, "zh-CN");
+}
+function timeGroupKey(task, base = dayjs()) {
+  if (!task.dueAt) {
+    return { key: "no-date", label: "无日期", order: 50 };
+  }
+  const due = dayjs(task.dueAt);
+  if (!due.isValid()) {
+    return { key: "no-date", label: "无日期", order: 50 };
+  }
+  const today = base.startOf("day");
+  const dueDay = due.startOf("day");
+  if (task.status !== "DONE" && dueDay.isBefore(today)) {
+    return { key: "overdue", label: "已过期", order: 0 };
+  }
+  if (dueDay.isSame(today, "day")) {
+    return { key: "today", label: "今天", order: 10 };
+  }
+  if (dueDay.isSame(today.add(1, "day"), "day")) {
+    return { key: "tomorrow", label: "明天", order: 20 };
+  }
+  const weekStart = startOfWeekMonday(base);
+  const weekEnd = endOfWeekSunday(base);
+  if (!dueDay.isBefore(weekStart, "day") && !dueDay.isAfter(weekEnd, "day")) {
+    return { key: "this-week", label: "本周", order: 30 };
+  }
+  if (dueDay.isAfter(weekEnd, "day")) {
+    return { key: "later", label: "以后", order: 40 };
+  }
+  return { key: dueDay.format("YYYY-MM-DD"), label: dueDay.format("M月D日"), order: 35 };
+}
+function priorityGroup(task) {
+  const p = task.priority ?? 4;
+  const meta = getTaskPriorityMeta(p);
+  return { key: `p${p}`, label: meta.label, order: p };
+}
+function tagGroup(task) {
+  const tag = primaryTaskTag(task);
+  if (!tag) return { key: "__none__", label: "无标签", order: 9999 };
+  return { key: tag, label: `#${tag}`, order: 0 };
+}
+function statusGroup(task) {
+  if (task.status === "IN_PROGRESS") {
+    return { key: "IN_PROGRESS", label: "进行中", order: 1 };
+  }
+  if (task.status === "DONE") {
+    return { key: "DONE", label: "已完成", order: 2 };
+  }
+  return { key: "TODO", label: "待办", order: 0 };
+}
+function sortTaskList(tasks, sortBy) {
+  return [...tasks].sort((a, b) => compareTasks(a, b, sortBy));
+}
+function bucketRoots(roots, groupBy, base = dayjs()) {
+  const map = /* @__PURE__ */ new Map();
+  for (const task of roots) {
+    let meta;
+    if (groupBy === "time") meta = timeGroupKey(task, base);
+    else if (groupBy === "priority") meta = priorityGroup(task);
+    else if (groupBy === "tag") meta = tagGroup(task);
+    else if (groupBy === "status") meta = statusGroup(task);
+    else continue;
+    if (!map.has(meta.key)) {
+      map.set(meta.key, { key: meta.key, label: meta.label, order: meta.order, tasks: [] });
+    }
+    map.get(meta.key).tasks.push(task);
+  }
+  return [...map.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, "zh-CN"));
+}
+function buildTaskListLayout(allTasks, groupBy, sortBy, base = dayjs()) {
+  const idSet = new Set(allTasks.map((t) => t.id));
+  const byParent = /* @__PURE__ */ new Map();
+  for (const t of allTasks) {
+    const key = t.parentId;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key).push(t);
+  }
+  let roots = byParent.get(null) ?? [];
+  const orphans = allTasks.filter((t) => t.parentId && !idSet.has(t.parentId));
+  roots = [...roots, ...orphans.filter((o) => !roots.some((r) => r.id === o.id))];
+  const result = [];
+  const listed = /* @__PURE__ */ new Set();
+  function walk(task, depth) {
+    result.push({ type: "task", task, depth });
+    listed.add(task.id);
+    const children = sortTaskList(byParent.get(task.id) ?? [], sortBy);
+    for (const child of children) {
+      walk(child, depth + 1);
+    }
+  }
+  const shouldGroup = groupBy === "time" || groupBy === "tag" || groupBy === "priority" || groupBy === "status";
+  if (!shouldGroup) {
+    const sortedRoots = sortTaskList(roots, sortBy);
+    for (const root of sortedRoots) {
+      walk(root, 0);
+    }
+  } else {
+    const buckets = bucketRoots(roots, groupBy, base);
+    for (const bucket of buckets) {
+      result.push({ type: "group", key: bucket.key, label: bucket.label });
+      const sorted = sortTaskList(bucket.tasks, sortBy);
+      for (const root of sorted) {
+        walk(root, 0);
+      }
+    }
+  }
+  for (const task of allTasks) {
+    if (listed.has(task.id)) continue;
+    if (task.parentId && !idSet.has(task.parentId)) {
+      walk(task, 0);
+    }
+  }
+  return result;
+}
+const DEFAULT_TASK_LIST_META_VISIBILITY = {
+  createdAt: true,
+  dueAt: true,
+  remindAt: true,
+  completedAt: true
+};
 const TIME_FIELDS = ["dueAt", "createdAt", "completedAt"];
 function createEmptyAndGroup() {
   return { type: "group", op: "and", children: [] };
@@ -536,7 +768,6 @@ function isFilterRuleActive(rule) {
   return true;
 }
 const DEFAULT_TASK_VIEW_ALL_ID = "view-default-all";
-const DEFAULT_TASK_VIEW_KANBAN_ID = "view-default-kanban";
 function findFallbackViewId(views, excludeId) {
   const ordered = [...views].sort((a, b) => a.sortOrder - b.sortOrder);
   const pick = ordered.find((v) => v.id !== excludeId);
@@ -609,238 +840,6 @@ function flattenTasksForViewWidget(tasks) {
   }
   return result;
 }
-const TAG_NAME_RE = /^[\u4e00-\u9fa5\w-]{1,32}$/;
-function stripMarkupForTags(text) {
-  return text.replace(/<[^>]+>/g, " ").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`~>-]/g, " ");
-}
-function extractTagsFromText(title, description) {
-  const raw = `${title} ${stripMarkupForTags(description ?? "")}`;
-  const found = /* @__PURE__ */ new Set();
-  const re = /#([\u4e00-\u9fa5\w-]{1,32})/g;
-  let m;
-  while ((m = re.exec(raw)) !== null) {
-    found.add(m[1]);
-  }
-  return [...found].sort((a, b) => a.localeCompare(b, "zh-CN"));
-}
-function normalizeTagName(raw) {
-  const name = raw.trim().replace(/^#+/, "");
-  if (!name || !TAG_NAME_RE.test(name)) {
-    return null;
-  }
-  return name;
-}
-function normalizeTagNames(names) {
-  const set = /* @__PURE__ */ new Set();
-  for (const raw of names) {
-    const norm = normalizeTagName(raw);
-    if (norm) {
-      set.add(norm);
-    }
-  }
-  return [...set].sort((a, b) => a.localeCompare(b, "zh-CN"));
-}
-function extractTaskTags(task) {
-  if (task.tags?.length) {
-    return [...task.tags].sort((a, b) => a.localeCompare(b, "zh-CN"));
-  }
-  return extractTagsFromText(task.title, task.description);
-}
-function primaryTaskTag(task) {
-  return extractTaskTags(task)[0] ?? "";
-}
-const TASK_GROUP_BY_LABELS = {
-  custom: "自定义",
-  time: "截止日期",
-  tag: "标签",
-  priority: "任务级别",
-  status: "任务状态",
-  none: "无"
-};
-const TASK_SORT_BY_LABELS = {
-  custom: "自定义",
-  time: "截止时间",
-  createdAt: "创建时间",
-  completedAt: "完成时间",
-  remindAt: "提醒时间",
-  priority: "任务级别",
-  title: "标题",
-  tag: "标签"
-};
-function taskSortTimeIso(task) {
-  return task.dueAt ?? task.createdAt ?? null;
-}
-function compareByTimeField(a, b, field) {
-  const ia = a[field] ?? null;
-  const ib = b[field] ?? null;
-  if (!ia && !ib) return a.title.localeCompare(b.title, "zh-CN");
-  if (!ia) return 1;
-  if (!ib) return -1;
-  const cmp = ia.localeCompare(ib);
-  if (cmp !== 0) return cmp;
-  return a.title.localeCompare(b.title, "zh-CN");
-}
-function compareTasks(a, b, sortBy) {
-  if (sortBy === "custom") {
-    const so = a.sortOrder - b.sortOrder;
-    if (so !== 0) return so;
-    return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
-  }
-  if (sortBy === "title") {
-    return a.title.localeCompare(b.title, "zh-CN");
-  }
-  if (sortBy === "priority") {
-    const pa = a.priority ?? 4;
-    const pb = b.priority ?? 4;
-    if (pa !== pb) return pa - pb;
-    return a.title.localeCompare(b.title, "zh-CN");
-  }
-  if (sortBy === "tag") {
-    const ta = primaryTaskTag(a);
-    const tb = primaryTaskTag(b);
-    if (ta !== tb) {
-      if (!ta) return 1;
-      if (!tb) return -1;
-      return ta.localeCompare(tb, "zh-CN");
-    }
-    return a.title.localeCompare(b.title, "zh-CN");
-  }
-  if (sortBy === "createdAt") {
-    return -compareByTimeField(a, b, "createdAt");
-  }
-  if (sortBy === "completedAt") {
-    return compareByTimeField(a, b, "completedAt");
-  }
-  if (sortBy === "remindAt") {
-    return compareByTimeField(a, b, "remindAt");
-  }
-  const ia = taskSortTimeIso(a);
-  const ib = taskSortTimeIso(b);
-  if (!ia && !ib) return a.title.localeCompare(b.title, "zh-CN");
-  if (!ia) return 1;
-  if (!ib) return -1;
-  const cmp = ia.localeCompare(ib);
-  if (cmp !== 0) return cmp;
-  return a.title.localeCompare(b.title, "zh-CN");
-}
-function timeGroupKey(task, base = dayjs()) {
-  if (!task.dueAt) {
-    return { key: "no-date", label: "无日期", order: 50 };
-  }
-  const due = dayjs(task.dueAt);
-  if (!due.isValid()) {
-    return { key: "no-date", label: "无日期", order: 50 };
-  }
-  const today = base.startOf("day");
-  const dueDay = due.startOf("day");
-  if (task.status !== "DONE" && dueDay.isBefore(today)) {
-    return { key: "overdue", label: "已过期", order: 0 };
-  }
-  if (dueDay.isSame(today, "day")) {
-    return { key: "today", label: "今天", order: 10 };
-  }
-  if (dueDay.isSame(today.add(1, "day"), "day")) {
-    return { key: "tomorrow", label: "明天", order: 20 };
-  }
-  const weekStart = startOfWeekMonday(base);
-  const weekEnd = endOfWeekSunday(base);
-  if (!dueDay.isBefore(weekStart, "day") && !dueDay.isAfter(weekEnd, "day")) {
-    return { key: "this-week", label: "本周", order: 30 };
-  }
-  if (dueDay.isAfter(weekEnd, "day")) {
-    return { key: "later", label: "以后", order: 40 };
-  }
-  return { key: dueDay.format("YYYY-MM-DD"), label: dueDay.format("M月D日"), order: 35 };
-}
-function priorityGroup(task) {
-  const p = task.priority ?? 4;
-  const meta = getTaskPriorityMeta(p);
-  return { key: `p${p}`, label: meta.label, order: p };
-}
-function tagGroup(task) {
-  const tag = primaryTaskTag(task);
-  if (!tag) return { key: "__none__", label: "无标签", order: 9999 };
-  return { key: tag, label: `#${tag}`, order: 0 };
-}
-function statusGroup(task) {
-  if (task.status === "IN_PROGRESS") {
-    return { key: "IN_PROGRESS", label: "进行中", order: 1 };
-  }
-  if (task.status === "DONE") {
-    return { key: "DONE", label: "已完成", order: 2 };
-  }
-  return { key: "TODO", label: "待办", order: 0 };
-}
-function sortTaskList(tasks, sortBy) {
-  return [...tasks].sort((a, b) => compareTasks(a, b, sortBy));
-}
-function bucketRoots(roots, groupBy, base = dayjs()) {
-  const map = /* @__PURE__ */ new Map();
-  for (const task of roots) {
-    let meta;
-    if (groupBy === "time") meta = timeGroupKey(task, base);
-    else if (groupBy === "priority") meta = priorityGroup(task);
-    else if (groupBy === "tag") meta = tagGroup(task);
-    else if (groupBy === "status") meta = statusGroup(task);
-    else continue;
-    if (!map.has(meta.key)) {
-      map.set(meta.key, { key: meta.key, label: meta.label, order: meta.order, tasks: [] });
-    }
-    map.get(meta.key).tasks.push(task);
-  }
-  return [...map.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, "zh-CN"));
-}
-function buildTaskListLayout(allTasks, groupBy, sortBy, base = dayjs()) {
-  const idSet = new Set(allTasks.map((t) => t.id));
-  const byParent = /* @__PURE__ */ new Map();
-  for (const t of allTasks) {
-    const key = t.parentId;
-    if (!byParent.has(key)) byParent.set(key, []);
-    byParent.get(key).push(t);
-  }
-  let roots = byParent.get(null) ?? [];
-  const orphans = allTasks.filter((t) => t.parentId && !idSet.has(t.parentId));
-  roots = [...roots, ...orphans.filter((o) => !roots.some((r) => r.id === o.id))];
-  const result = [];
-  const listed = /* @__PURE__ */ new Set();
-  function walk(task, depth) {
-    result.push({ type: "task", task, depth });
-    listed.add(task.id);
-    const children = sortTaskList(byParent.get(task.id) ?? [], sortBy);
-    for (const child of children) {
-      walk(child, depth + 1);
-    }
-  }
-  const shouldGroup = groupBy === "time" || groupBy === "tag" || groupBy === "priority" || groupBy === "status";
-  if (!shouldGroup) {
-    const sortedRoots = sortTaskList(roots, sortBy);
-    for (const root of sortedRoots) {
-      walk(root, 0);
-    }
-  } else {
-    const buckets = bucketRoots(roots, groupBy, base);
-    for (const bucket of buckets) {
-      result.push({ type: "group", key: bucket.key, label: bucket.label });
-      const sorted = sortTaskList(bucket.tasks, sortBy);
-      for (const root of sorted) {
-        walk(root, 0);
-      }
-    }
-  }
-  for (const task of allTasks) {
-    if (listed.has(task.id)) continue;
-    if (task.parentId && !idSet.has(task.parentId)) {
-      walk(task, 0);
-    }
-  }
-  return result;
-}
-const DEFAULT_TASK_LIST_META_VISIBILITY = {
-  createdAt: true,
-  dueAt: true,
-  remindAt: true,
-  completedAt: true
-};
 const KEY_PREFIX = "aitodo_view_display_";
 function storageKey(viewId) {
   return `${KEY_PREFIX}${viewId}`;
@@ -862,7 +861,7 @@ function readViewDisplayPreferences(viewId, kanbanBoardMode) {
     const hideDoneScope = parsed.hideDoneScope !== void 0 ? coerceHideDoneScope(parsed.hideDoneScope, fallback.hideDoneScope) : typeof parsed.hideDone === "boolean" ? hideDoneScopeFromLegacy(parsed.hideDone) : fallback.hideDoneScope;
     return {
       hideDoneScope,
-      detailStyle: "sidebar",
+      detailStyle: parsed.detailStyle === "dialog" || parsed.detailStyle === "sidebar" ? parsed.detailStyle : fallback.detailStyle,
       metaVisibility: {
         ...fallback.metaVisibility,
         ...parsed.metaVisibility ?? {}
@@ -1005,71 +1004,70 @@ function flattenQuadrantTaskTree(roots, allTasks, expandedIds) {
   return result;
 }
 export {
-  DONE_TIME_RANGE_LABELS as $,
-  persistViewDisplayPreferences as A,
-  taskStatusLabel as B,
-  endOfWeekSunday as C,
+  isFilterRuleActive as $,
+  validateFilterNode as A,
+  HIDE_DONE_SCOPE_LABELS as B,
+  DEFAULT_TASK_LIST_META_VISIBILITY as C,
   DEFAULT_TASK_VIEW_ALL_ID as D,
-  extractTaskTags as E,
-  KANBAN_UNGROUPED_ID as F,
-  KANBAN_STATUS_COLUMNS as G,
+  filterNodeToPersist as E,
+  persistViewDisplayPreferences as F,
+  extractTaskTags as G,
   HIDE_DONE_SCOPE_OPTIONS as H,
-  statusLabelFor as I,
-  shouldShowKanbanDoneColumn as J,
+  KANBAN_UNGROUPED_ID as I,
+  KANBAN_STATUS_COLUMNS as J,
   KANBAN_DONE_COLUMN_ID as K,
-  readKanbanConfig as L,
-  startOfWeekMonday as M,
-  buildTaskListLayout as N,
-  completedTaskDisplayTitle as O,
-  groupCompletedTasksByDate as P,
-  flattenQuadrantTaskTree as Q,
-  splitTasksByPriority as R,
-  buildChildCountMap as S,
+  statusLabelFor as L,
+  shouldShowKanbanDoneColumn as M,
+  readKanbanConfig as N,
+  buildTaskListLayout as O,
+  completedTaskDisplayTitle as P,
+  groupCompletedTasksByDate as Q,
+  flattenQuadrantTaskTree as R,
+  splitTasksByPriority as S,
   TASK_SORT_BY_LABELS as T,
-  normalizeTagName as U,
-  normalizeTagNames as V,
+  buildChildCountMap as U,
+  kanbanScopeKey as V,
   WIDGET_NOTE_COLORS as W,
-  kanbanScopeKey as X,
-  readKanbanBoardMode as Y,
-  persistKanbanBoardMode as Z,
-  TASK_DATE_FIELD_LABELS as _,
+  readKanbanBoardMode as X,
+  persistKanbanBoardMode as Y,
+  TASK_DATE_FIELD_LABELS as Z,
+  DONE_TIME_RANGE_LABELS as _,
   taskMatchesSmartListDate as a,
-  isFilterRuleActive as a0,
-  matchTask as a1,
-  resolveTaskDateIso as a2,
-  CALENDAR_RANGE_PRESET_LABELS as a3,
-  calendarPresetBounds as a4,
-  WIDGET_KIND_LABELS as a5,
-  widgetInstanceDisplayName as a6,
-  categoryLogoInitial as a7,
-  DEFAULT_KANBAN_STATUS_LABELS as a8,
-  WIDGET_KANBAN_DEFAULT_WIDTH as a9,
-  WIDGET_KANBAN_DEFAULT_HEIGHT as aa,
-  filterTasksForViewWidget as ab,
-  flattenTasksForViewWidget as ac,
+  matchTask as a0,
+  resolveTaskDateIso as a1,
+  CALENDAR_RANGE_PRESET_LABELS as a2,
+  calendarPresetBounds as a3,
+  WIDGET_KIND_LABELS as a4,
+  widgetInstanceDisplayName as a5,
+  categoryLogoInitial as a6,
+  DEFAULT_KANBAN_STATUS_LABELS as a7,
+  WIDGET_KANBAN_DEFAULT_WIDTH as a8,
+  WIDGET_KANBAN_DEFAULT_HEIGHT as a9,
+  filterTasksForViewWidget as aa,
+  flattenTasksForViewWidget as ab,
   taskDateIsoInRange as b,
   coerceHideDoneScope as c,
   doneTimeRangeBounds as d,
-  deriveAppliedViewState as e,
-  findFallbackViewId as f,
-  DEFAULT_TASK_VIEW_KANBAN_ID as g,
+  TASK_GROUP_BY_LABELS as e,
+  taskStatusLabel as f,
+  endOfWeekSunday as g,
   hideDoneScopeFromLegacy as h,
   isDueSmartList as i,
-  TASK_GROUP_BY_LABELS as j,
-  compareTasks as k,
-  timeGroupKey as l,
-  normalizeFilterNode as m,
+  normalizeTagName as j,
+  normalizeTagNames as k,
+  compareTasks as l,
+  timeGroupKey as m,
   nextTaskStatus as n,
-  createEmptyAndGroup as o,
+  findFallbackViewId as o,
   primaryTaskTag as p,
-  filterNodeForEditor as q,
+  deriveAppliedViewState as q,
   resolveHideDoneScope as r,
-  readViewDisplayPreferences as s,
+  startOfWeekMonday as s,
   taskMatchesHideDoneScope as t,
-  defaultViewDisplayPreferences as u,
-  isEmptyFilterNode as v,
-  validateFilterNode as w,
-  HIDE_DONE_SCOPE_LABELS as x,
-  DEFAULT_TASK_LIST_META_VISIBILITY as y,
-  filterNodeToPersist as z
+  normalizeFilterNode as u,
+  createEmptyAndGroup as v,
+  filterNodeForEditor as w,
+  readViewDisplayPreferences as x,
+  defaultViewDisplayPreferences as y,
+  isEmptyFilterNode as z
 };

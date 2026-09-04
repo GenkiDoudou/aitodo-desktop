@@ -1,6 +1,6 @@
 "use strict";
 const electron = require("electron");
-const ipcChannels = require("./chunks/ipc-channels-CP9YXcGk.js");
+const ipcChannels = require("./chunks/ipc-channels-GOp2-xn5.js");
 const captureApi = {
   tasks: {
     create: (dto) => electron.ipcRenderer.invoke(ipcChannels.IPC.TASKS_CREATE, dto)

@@ -13,7 +13,7 @@
       </button>
     </template>
 
-    <div class="task-view-menu">
+    <div class="task-view-menu task-view-menu--scroll">
       <div class="task-view-menu__sub task-view-menu__sub--top">
         <div class="task-view-menu__sub-title">展示模式</div>
         <el-radio-group v-model="viewMode" class="task-view-menu__radio-group" size="small">
@@ -352,7 +352,13 @@ function updateMeta(key: keyof TaskListMetaVisibility, value: boolean) {
   padding: 8px !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
-  /* 下拉不 teleport 时，避免裁剪多选清单面板 */
-  overflow: visible !important;
+  /* 列表设置项较多：限制高度并允许纵向滚动，避免底部选项看不见 */
+  max-height: min(70vh, 520px) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.task-view-menu--scroll {
+  max-height: inherit;
 }
 </style>

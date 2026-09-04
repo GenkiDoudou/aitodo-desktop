@@ -1,96 +1,118 @@
 <template>
-  <section class="settings-section settings-section--wide">
-    <h2 class="settings-section__title">快捷键</h2>
-    <p class="settings-section__hint">
-      点击「设置」或「更改」录入快捷键，按 Esc 取消录入。「清除」可禁用该动作；「全局」类在窗口隐藏时仍可通过系统级快捷键触发。
-      同一快捷键不可绑定多个动作，保存前会自动检测冲突。
-    </p>
-
+  <!--
+    快捷键：贴 preview.html 全局 / 应用分组 + shortcut-key 行。
+    点击键位按钮开始录制，保留冲突检测与恢复默认。
+  -->
+  <section class="settings-section">
     <el-alert
       v-if="conflictInfos.length"
       type="error"
       :closable="false"
       show-icon
-      class="settings-section__conflict-alert"
+      class="settings-shortcuts__alert"
       title="检测到快捷键冲突"
     >
-      <ul class="settings-section__conflict-list">
+      <ul class="settings-shortcuts__conflict-list">
         <li v-for="item in conflictInfos" :key="item.accelerator">
-          <kbd class="settings-section__kbd is-conflict">{{
+          <span class="settings-shortcut-key is-conflict">{{
             formatAcceleratorForDisplay(item.accelerator, isMac)
-          }}</kbd>
+          }}</span>
           被占用：{{ item.labels.join('、') }}
         </li>
       </ul>
     </el-alert>
 
-    <div class="settings-section__toolbar">
-      <el-button size="small" @click="runConflictCheck">检测冲突</el-button>
-      <el-button class="settings-section__reset" size="small" @click="resetAllShortcuts">
-        全部恢复默认
-      </el-button>
-    </div>
-
-    <div v-for="category in categories" :key="category" class="settings-section__group">
-      <h3 class="settings-section__group-title">{{ SHORTCUT_CATEGORY_LABELS[category] }}</h3>
-      <el-table :data="rowsFor(category)" size="small" class="settings-section__table" row-class-name="shortcut-row">
-        <el-table-column prop="label" label="动作" min-width="120">
-          <template #default="{ row }">
-            <span :class="{ 'is-conflict-label': row.hasConflict }">{{ row.label }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="description" label="说明" min-width="180" />
-        <el-table-column label="快捷键" min-width="160">
-          <template #default="{ row }">
-            <div class="settings-section__key-cell">
-              <kbd
-                class="settings-section__kbd"
-                :class="{ 'is-empty': !row.bound, 'is-conflict': row.hasConflict }"
-              >
-                {{ row.display }}
-              </kbd>
-              <span v-if="row.hasConflict" class="settings-section__conflict-tag">冲突</span>
-            </div>
-            <p v-if="row.conflictHint" class="settings-section__conflict-hint">{{ row.conflictHint }}</p>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" min-width="200">
-          <template #default="{ row }">
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">全局快捷键</h2>
+      <div class="settings-panel__body">
+        <div v-for="row in globalRows" :key="row.id" class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">{{ row.label }}</div>
+            <div class="settings-row__label-desc">{{ row.description }}</div>
+          </div>
+          <div class="settings-row__control">
+            <button
+              type="button"
+              class="settings-shortcuts__key-btn"
+              :class="{ 'is-capturing': capturingId === row.id, 'is-conflict': row.hasConflict }"
+              @click="startCapture(row.id)"
+            >
+              <span class="settings-shortcut-key">{{
+                capturingId === row.id ? '按下组合键…' : row.display
+              }}</span>
+            </button>
             <ShortcutEditor
               :value="shortcutStore.bindings[row.id]"
               :is-default="row.isDefault"
               @change="(accel) => onShortcutChange(row.id, accel)"
               @reset="() => onShortcutReset(row.id)"
             />
-          </template>
-        </el-table-column>
-      </el-table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">应用快捷键</h2>
+      <div class="settings-panel__body">
+        <div v-for="row in appRows" :key="row.id" class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">{{ row.label }}</div>
+            <div class="settings-row__label-desc">{{ row.description }}</div>
+          </div>
+          <div class="settings-row__control">
+            <button
+              type="button"
+              class="settings-shortcuts__key-btn"
+              :class="{ 'is-capturing': capturingId === row.id, 'is-conflict': row.hasConflict }"
+              @click="startCapture(row.id)"
+            >
+              <span class="settings-shortcut-key">{{
+                capturingId === row.id ? '按下组合键…' : row.display
+              }}</span>
+            </button>
+            <ShortcutEditor
+              :value="shortcutStore.bindings[row.id]"
+              :is-default="row.isDefault"
+              @change="(accel) => onShortcutChange(row.id, accel)"
+              @reset="() => onShortcutReset(row.id)"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-notice">
+      点击快捷键后即可重新录制，录制时按下组合键即可保存。Esc 取消录入。
+    </div>
+
+    <div class="settings-shortcuts__toolbar">
+      <el-button size="small" @click="runConflictCheck">检测冲突</el-button>
+      <el-button size="small" @click="resetAllShortcuts">全部恢复默认</el-button>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   SHORTCUT_ACTIONS,
-  SHORTCUT_CATEGORY_LABELS,
-  SHORTCUT_CATEGORY_ORDER,
   findActionsUsingAccelerator,
   formatAcceleratorForDisplay,
   formatShortcutConflictMessage,
   getDefaultShortcutBindings,
   isShortcutBound,
   listShortcutConflicts,
-  type ShortcutActionCategory,
+  normalizeAccelerator,
   type ShortcutActionId
 } from '@shared/shortcuts'
 import ShortcutEditor from '@/components/ShortcutEditor.vue'
 import { useShortcutStore } from '@/stores/shortcut-store'
 
 const shortcutStore = useShortcutStore()
-const categories = SHORTCUT_CATEGORY_ORDER
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent)
+const capturingId = ref<ShortcutActionId | null>(null)
 
 const conflictInfos = computed(() => listShortcutConflicts(shortcutStore.bindings))
 
@@ -106,27 +128,57 @@ const shortcutRows = computed(() => {
   const defaults = getDefaultShortcutBindings()
   return SHORTCUT_ACTIONS.map((action) => {
     const hasConflict = conflictActionIds.value.has(action.id)
-    const peers = hasConflict
-      ? conflictInfos.value.find((c) => c.actionIds.includes(action.id))?.labels.filter(
-          (l) => l !== action.label
-        ) ?? []
-      : []
     return {
       id: action.id,
       category: action.category,
       label: action.label,
       description: action.description,
-      display: shortcutStore.displayFor(action.id),
-      bound: isShortcutBound(shortcutStore.bindings[action.id]),
+      display: isShortcutBound(shortcutStore.bindings[action.id])
+        ? shortcutStore.displayFor(action.id)
+        : '未设置',
       isDefault: shortcutStore.bindings[action.id] === defaults[action.id],
-      hasConflict,
-      conflictHint: peers.length ? `与「${peers.join('、')}」冲突` : ''
+      hasConflict
     }
   })
 })
 
-function rowsFor(category: ShortcutActionCategory) {
-  return shortcutRows.value.filter((row) => row.category === category)
+const globalRows = computed(() => shortcutRows.value.filter((r) => r.category === 'global'))
+const appRows = computed(() => shortcutRows.value.filter((r) => r.category !== 'global'))
+
+function buildAccelerator(e: KeyboardEvent): string | null {
+  if (e.key === 'Escape' || ['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return null
+  const parts: string[] = []
+  if (e.ctrlKey || e.metaKey) parts.push('Mod')
+  if (e.altKey) parts.push('Alt')
+  if (e.shiftKey) parts.push('Shift')
+  const key = e.key === ',' ? ',' : e.key.length === 1 ? e.key.toUpperCase() : e.key
+  parts.push(key)
+  return normalizeAccelerator(parts.join('+'))
+}
+
+function onCaptureKeydown(e: KeyboardEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+  if (e.key === 'Escape') {
+    stopCapture()
+    return
+  }
+  const accel = buildAccelerator(e)
+  if (!accel || !capturingId.value) return
+  const id = capturingId.value
+  stopCapture()
+  void onShortcutChange(id, accel)
+}
+
+function startCapture(id: ShortcutActionId) {
+  stopCapture()
+  capturingId.value = id
+  window.addEventListener('keydown', onCaptureKeydown, true)
+}
+
+function stopCapture() {
+  capturingId.value = null
+  window.removeEventListener('keydown', onCaptureKeydown, true)
 }
 
 function runConflictCheck() {
@@ -184,109 +236,49 @@ async function resetAllShortcuts() {
     await shortcutStore.resetAll()
     ElMessage.success('已全部恢复默认')
   } catch {
-    /* 用户取消 */
+    /* 取消 */
   }
 }
 
 onMounted(async () => {
-  if (!shortcutStore.loaded) {
-    await shortcutStore.load()
-  }
+  if (!shortcutStore.loaded) await shortcutStore.load()
 })
+
+onUnmounted(stopCapture)
 </script>
 
 <style scoped lang="scss">
-.settings-section--wide {
-  max-width: 960px;
-}
-
-.settings-section__title {
-  margin: 0 0 12px;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.settings-section__hint {
-  font-size: 13px;
-  color: var(--desktop-muted);
-  margin: 0 0 16px;
-  line-height: 1.5;
-}
-
-.settings-section__conflict-alert {
+.settings-shortcuts__alert {
   margin-bottom: 12px;
 }
 
-.settings-section__conflict-list {
+.settings-shortcuts__conflict-list {
   margin: 6px 0 0;
   padding-left: 18px;
   font-size: 13px;
   line-height: 1.7;
 }
 
-.settings-section__toolbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
+.settings-shortcuts__key-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 
-.settings-section__group {
-  margin-bottom: 20px;
-}
-
-.settings-section__group-title {
-  margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--desktop-text);
-}
-
-.settings-section__table {
-  width: 100%;
-}
-
-.settings-section__key-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.settings-section__kbd {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  border: 1px solid var(--desktop-border);
-  background: var(--desktop-panel);
-  font-family: Consolas, monospace;
-  font-size: 12px;
-
-  &.is-empty {
-    color: var(--desktop-muted);
-    border-style: dashed;
-    font-family: inherit;
+  &.is-capturing .settings-shortcut-key {
+    border-color: #409eff;
+    color: #409eff;
   }
 
-  &.is-conflict {
-    border-color: var(--el-color-danger);
-    color: var(--el-color-danger);
-    background: var(--el-color-danger-light-9);
+  &.is-conflict .settings-shortcut-key {
+    border-color: #f56c6c;
+    color: #f56c6c;
   }
 }
 
-.settings-section__conflict-tag {
-  font-size: 12px;
-  color: var(--el-color-danger);
-  font-weight: 600;
-}
-
-.settings-section__conflict-hint {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: var(--el-color-danger);
-}
-
-.is-conflict-label {
-  color: var(--el-color-danger);
-  font-weight: 600;
+.settings-shortcuts__toolbar {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }
 </style>

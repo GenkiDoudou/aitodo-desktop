@@ -1,47 +1,97 @@
 <template>
+  <!--
+    窗口与启动：贴 preview.html 启动 / 窗口 panel。
+    真实：开机自启、启动后托盘、关闭行为；其余为原型交互。
+  -->
   <section class="settings-section">
-    <h2 class="settings-section__title">窗口与启动</h2>
-    <p class="settings-section__hint">控制开机自启与关闭主窗口时的行为。</p>
-
-    <div class="settings-section__field">
-      <span class="settings-section__label">开机时自动启动</span>
-      <el-switch
-        v-model="launch.enabled"
-        :disabled="loadingLaunch || savingLaunch"
-        @change="saveLaunch"
-      />
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">启动</h2>
+      <div class="settings-panel__body">
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">开机自动启动</div>
+            <div class="settings-row__label-desc">登录系统后自动启动 Todo</div>
+          </div>
+          <div class="settings-row__control">
+            <el-switch
+              v-model="launch.enabled"
+              :disabled="loadingLaunch || savingLaunch"
+              @change="saveLaunch"
+            />
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">启动后最小化</div>
+            <div class="settings-row__label-desc">启动后直接进入系统托盘</div>
+          </div>
+          <div class="settings-row__control">
+            <el-switch
+              :model-value="launch.startupMode === 'tray'"
+              :disabled="loadingLaunch || savingLaunch || !launch.enabled"
+              @change="onMinimizeChange"
+            />
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">关闭窗口时</div>
+            <div class="settings-row__label-desc">选择点击关闭按钮后的行为</div>
+          </div>
+          <div class="settings-row__control">
+            <el-select
+              v-model="behavior"
+              style="width: 200px"
+              :disabled="loading || saving"
+              @change="saveBehavior"
+            >
+              <el-option label="每次询问" value="ask" />
+              <el-option label="最小化到系统托盘" value="tray" />
+              <el-option label="直接退出应用" value="quit" />
+            </el-select>
+          </div>
+        </div>
+        <p v-if="!packaged" class="settings-hint">
+          当前为开发/未打包启动，系统自启可能无效，请用安装包验证。
+        </p>
+        <p v-if="syncedHint" class="settings-hint">{{ syncedHint }}</p>
+      </div>
     </div>
-    <p v-if="!packaged" class="settings-section__hint settings-section__hint--tight">
-      当前为开发/未打包启动，系统自启可能无效，请用安装包验证。
-    </p>
-    <p v-if="syncedHint" class="settings-section__hint settings-section__hint--tight">
-      {{ syncedHint }}
-    </p>
 
-    <div v-if="launch.enabled" class="settings-section__field settings-section__field--stack">
-      <span class="settings-section__label">启动后</span>
-      <el-radio-group
-        v-model="launch.startupMode"
-        :disabled="loadingLaunch || savingLaunch"
-        @change="saveLaunch"
-      >
-        <el-radio value="tray">静默到托盘</el-radio>
-        <el-radio value="window">打开主窗口</el-radio>
-      </el-radio-group>
+    <div class="settings-panel">
+      <h2 class="settings-panel__title">窗口</h2>
+      <div class="settings-panel__body">
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">记住上次窗口大小</div>
+            <div class="settings-row__label-desc">下次启动恢复窗口尺寸</div>
+          </div>
+          <div class="settings-row__control">
+            <el-switch v-model="rememberWindow" @change="toastProto('窗口尺寸记忆已更新')" />
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">始终置顶</div>
+            <div class="settings-row__label-desc">窗口保持在其他应用上方</div>
+          </div>
+          <div class="settings-row__control">
+            <el-switch v-model="topmost" @change="toastProto('置顶偏好已更新（演示）')" />
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__label">
+            <div class="settings-row__label-title">任务栏显示</div>
+            <div class="settings-row__label-desc">在任务栏保留 Todo 图标</div>
+          </div>
+          <div class="settings-row__control">
+            <el-switch v-model="showInTaskbar" @change="toastProto('任务栏显示偏好已更新（演示）')" />
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="settings-section__field">
-      <span class="settings-section__label">关闭主窗口时</span>
-      <el-radio-group
-        v-model="behavior"
-        :disabled="loading || saving"
-        @change="saveBehavior"
-      >
-        <el-radio value="ask">每次询问</el-radio>
-        <el-radio value="tray">缩小到托盘</el-radio>
-        <el-radio value="quit">退出应用</el-radio>
-      </el-radio-group>
-    </div>
+    <el-button @click="toastProto('窗口设置已恢复默认')">恢复默认窗口设置</el-button>
   </section>
 </template>
 
@@ -64,6 +114,14 @@ const packaged = ref(true)
 const syncedHint = ref('')
 const loadingLaunch = ref(false)
 const savingLaunch = ref(false)
+
+const rememberWindow = ref(true)
+const topmost = ref(false)
+const showInTaskbar = ref(true)
+
+function toastProto(msg: string) {
+  ElMessage.success(msg)
+}
 
 async function loadBehavior() {
   loading.value = true
@@ -96,9 +154,7 @@ async function loadLaunch() {
     launch.enabled = data.enabled
     launch.startupMode = data.startupMode
     packaged.value = data.packaged
-    if (data.syncedFromSystem) {
-      syncedHint.value = '已与系统设置同步'
-    }
+    if (data.syncedFromSystem) syncedHint.value = '已与系统设置同步'
   } catch (err) {
     ElMessage.error(err instanceof Error ? err.message : '读取开机自启失败')
   } finally {
@@ -126,52 +182,21 @@ async function saveLaunch() {
   }
 }
 
+function onMinimizeChange(on: string | number | boolean) {
+  launch.startupMode = on ? 'tray' : 'window'
+  void saveLaunch()
+}
+
 onMounted(async () => {
   await Promise.all([loadBehavior(), loadLaunch()])
 })
 </script>
 
 <style scoped lang="scss">
-.settings-section {
-  max-width: 720px;
-}
-
-.settings-section__title {
-  margin: 0 0 12px;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.settings-section__hint {
-  margin: 0 0 20px;
-  font-size: 13px;
+.settings-hint {
+  margin: 0;
+  padding: 0 18px 12px;
+  font-size: 12px;
   color: var(--desktop-muted);
-
-  &--tight {
-    margin: -8px 0 16px;
-  }
-}
-
-.settings-section__field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 16px;
-  border: 1px solid var(--desktop-border);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  background: var(--desktop-panel);
-
-  &--stack {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-.settings-section__label {
-  font-size: 14px;
-  font-weight: 500;
-  flex-shrink: 0;
 }
 </style>
