@@ -12,6 +12,7 @@ const SCAN_INTERVAL_MS = 60_000
  * 主进程定时扫描 task_reminders，触发应用内消息（系统通知由 pushAppMessageToRenderer 统一弹出）。
  * 支持持续提醒与循环（触发后推进 dueAt 并重算相对提醒）。
  * 法定节假日循环依赖 HolidayService（timor.tech API + 本地缓存）。
+ * 已登录时本机不执行自动到点写消息/外发，改由服务端调度 + pending/backfill。
  */
 export class ReminderService {
   private timer: NodeJS.Timeout | null = null
@@ -23,7 +24,9 @@ export class ReminderService {
     private readonly reminderRepo: TaskReminderRepository,
     private readonly messageService: AppMessageService,
     private readonly holidayService: HolidayService,
-    private readonly onInAppMessage?: (message: AppMessage) => void
+    private readonly onInAppMessage?: (message: AppMessage) => void,
+    /** 返回 true 表示已登录：自动 tick 空转 */
+    private readonly isLoggedIn?: () => boolean
   ) {}
 
   start(): void {
@@ -41,6 +44,7 @@ export class ReminderService {
   }
 
   private async tick(): Promise<void> {
+    if (this.isLoggedIn?.()) return
     if (this.ticking) return
     this.ticking = true
     try {

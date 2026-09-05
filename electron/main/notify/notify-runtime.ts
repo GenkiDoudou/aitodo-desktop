@@ -22,7 +22,8 @@ import type { NotifyDispatchPayload } from '@shared/notification-config'
 type InAppPush = (message: AppMessage, opts?: { skipExternalNotify?: boolean }) => void
 
 /**
- * 通知运行时：代发客户端、租约心跳、Dispatcher（登录后 relay）。
+ * 通知运行时：代发客户端、租约心跳、Dispatcher。
+ * 登录后启心跳台账；自动到点由服务端调度，本机汇总/提醒 tick 在登录态停发。
  */
 export class NotifyRuntime {
   private client: NotifyApiClient | null = null

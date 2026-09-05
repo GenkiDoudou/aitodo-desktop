@@ -82,4 +82,27 @@ describe('SummarySchedulerService runNow vs auto', () => {
       vi.useRealTimers()
     }
   })
+
+  it('tick skips auto send when logged in', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-07T09:05:00'))
+    const loggedInScheduler = new SummarySchedulerService(
+      summaryRepo,
+      {
+        buildSummaryBody,
+        markSent: (id: string, sentAt: string) => summaryRepo.markSent(id, sentAt)
+      } as unknown as ScheduledSummaryService,
+      messageService,
+      undefined,
+      () => true
+    )
+    try {
+      await (loggedInScheduler as unknown as { tick: () => Promise<void> }).tick()
+      expect(summaryRepo.findById('sum-1')!.lastSentAt).toBeNull()
+      expect(messageService.list('notification', 'scheduled_summary')).toHaveLength(0)
+      expect(buildSummaryBody).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

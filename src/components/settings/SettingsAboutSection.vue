@@ -1,7 +1,7 @@
 <template>
   <!--
     关于：贴 preview.html 居中品牌区 + 链接行。
-    保留真实版本与检查更新；隐私/条款内嵌草案；更新日志拉公开仓 Release Body。
+    保留真实版本与检查更新；隐私/条款内嵌正式文案；更新日志拉公开仓 Release Body。
   -->
   <section class="settings-section">
     <div class="settings-about">
@@ -43,7 +43,7 @@
         <div class="settings-row">
           <div class="settings-row__label">
             <div class="settings-row__label-title">更新日志</div>
-            <div class="settings-row__label-desc">来自公开发版说明（Gitee / GitHub）</div>
+            <div class="settings-row__label-desc">来自公开发版说明（GitHub）</div>
           </div>
           <div class="settings-row__control">
             <el-button :loading="changelogLoading" @click="onChangelog">查看</el-button>
@@ -52,7 +52,7 @@
         <div class="settings-row">
           <div class="settings-row__label">
             <div class="settings-row__label-title">隐私政策</div>
-            <div class="settings-row__label-desc">本地优先 · 草案可再审</div>
+            <div class="settings-row__label-desc">本地优先</div>
           </div>
           <div class="settings-row__control">
             <el-button @click="openLegal('privacy')">查看</el-button>
@@ -61,7 +61,7 @@
         <div class="settings-row">
           <div class="settings-row__label">
             <div class="settings-row__label-title">服务条款</div>
-            <div class="settings-row__label-desc">本地优先 · 草案可再审</div>
+            <div class="settings-row__label-desc">本地优先</div>
           </div>
           <div class="settings-row__control">
             <el-button @click="openLegal('terms')">查看</el-button>
@@ -121,7 +121,7 @@
 
 <script setup lang="ts">
 /**
- * 设置 · 关于：版本/更新 + 内嵌法律草案弹窗 + 远程 Release 更新日志。
+ * 设置 · 关于：版本/更新 + 内嵌正式法律文案弹窗 + 远程 Release 更新日志。
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'

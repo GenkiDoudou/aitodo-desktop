@@ -1,8 +1,8 @@
-import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import extractZip from 'extract-zip'
 import type { UpdateFeedSource } from '@shared/app-update'
-import type { FeedResolver, ResolvedFeed } from './feed-resolver'
+import type { FeedResolver } from './feed-resolver'
 import {
   portablePendingPath,
   portableStagingPath,
@@ -36,7 +36,7 @@ export type DownloadToFile = (
 ) => Promise<void>
 
 /**
- * Windows 免解压：下载 zip（或 Gitee 分卷合并）→ sha512 → staging → pending。
+ * Windows 免解压：下载完整 zip → sha512 → staging → pending。
  */
 export class PortableZipUpdater {
   private readonly feedResolver: FeedResolver
@@ -76,7 +76,7 @@ export class PortableZipUpdater {
     const zipPath = join(stagingDir, feed.manifest.path)
 
     try {
-      await this.downloadPackage(feed, zipPath)
+      await this.downloadToFile(feed.assetUrl, zipPath, (p) => this.hooks.onProgress?.(p))
       const actual = sha512FileBase64(zipPath, (p) => readFileSync(p))
       assertSha512Match(actual, feed.manifest.sha512)
       const extractDir = join(stagingDir, '_extracted')
@@ -84,10 +84,6 @@ export class PortableZipUpdater {
       // Electron 会拦截对 .asar 的 fs 写入；解压免解压包内 app.asar 必须临时 noAsar
       await withNoAsarAsync(() => extractZip(zipPath, { dir: extractDir }))
       rmSync(zipPath, { force: true })
-      // 清理分卷临时文件
-      for (const name of feed.manifest.parts) {
-        rmSync(join(stagingDir, name), { force: true })
-      }
       const marker: PortablePendingMarker = {
         version: feed.manifest.version,
         stagingDir: extractDir,
@@ -104,31 +100,6 @@ export class PortableZipUpdater {
       }
       throw err
     }
-  }
-
-  private async downloadPackage(feed: ResolvedFeed, zipPath: string): Promise<void> {
-    if (feed.assetUrl) {
-      await this.downloadToFile(feed.assetUrl, zipPath, (p) => this.hooks.onProgress?.(p))
-      return
-    }
-    if (!feed.partUrls.length) {
-      throw new Error('更新源既无完整包也无分卷')
-    }
-    const stagingDir = join(zipPath, '..')
-    const partFiles: string[] = []
-    const total = feed.partUrls.length
-    for (let i = 0; i < feed.partUrls.length; i++) {
-      const url = feed.partUrls[i]!
-      const partName = feed.manifest.parts[i] ?? `part-${i + 1}`
-      const partPath = join(stagingDir, partName)
-      await this.downloadToFile(url, partPath, (p) => {
-        const overall = Math.round(((i + p / 100) / total) * 100)
-        this.hooks.onProgress?.(overall)
-      })
-      partFiles.push(partPath)
-    }
-    await concatFiles(partFiles, zipPath)
-    this.hooks.onProgress?.(100)
   }
 
   /** 启动时若有 pending，则应用并清理；失败抛错且不删用户 data */
@@ -149,22 +120,6 @@ export class PortableZipUpdater {
     removeDirForce(stagingParent)
     return { applied: true, version: marker.version }
   }
-}
-
-async function concatFiles(partPaths: string[], outPath: string): Promise<void> {
-  mkdirSync(join(outPath, '..'), { recursive: true })
-  const out = createWriteStream(outPath)
-  for (const part of partPaths) {
-    const data = readFileSync(part)
-    const ok = out.write(data)
-    if (!ok) {
-      await new Promise<void>((resolve) => out.once('drain', resolve))
-    }
-  }
-  await new Promise<void>((resolve, reject) => {
-    out.end(() => resolve())
-    out.on('error', reject)
-  })
 }
 
 async function defaultDownloadToFile(

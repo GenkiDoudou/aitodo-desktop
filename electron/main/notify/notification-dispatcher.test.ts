@@ -140,4 +140,41 @@ describe('NotificationDispatcher', () => {
 
     rmSync(dataDir, { recursive: true, force: true })
   })
+
+  it('logged in does not local-send channels (relay only)', async () => {
+    dataDir = mkdtempSync(join(tmpdir(), 'aitodo-notify-login-'))
+    writeNotificationConfig(
+      dataDir,
+      mergeNotificationConfig({
+        systemTrayEnabled: false,
+        activeChannel: 'iyuu',
+        relayWhenOnline: true,
+        iyuu: { token: 'tok', events: ['task_reminder'] }
+      })
+    )
+
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ errcode: 0 }), { status: 200 }))
+    const relay = vi.fn(async () => true)
+
+    resetNotificationDispatcherForTests()
+    const d = new NotificationDispatcher({
+      getDataDir: () => dataDir,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      isLoggedIn: () => true,
+      relayIfLoggedIn: relay
+    })
+
+    const records = await d.dispatch({
+      event: 'task_reminder',
+      title: '写周报',
+      body: '写周报',
+      entityId: 't1'
+    })
+
+    expect(records).toHaveLength(0)
+    expect(relay).toHaveBeenCalled()
+    expect(fetchImpl).not.toHaveBeenCalled()
+
+    rmSync(dataDir, { recursive: true, force: true })
+  })
 })

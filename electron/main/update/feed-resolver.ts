@@ -9,12 +9,8 @@ export interface ResolvedFeed {
   /** generic provider 目录 URL（以 / 结尾） */
   baseUrl: string
   manifest: UpdateManifest
-  /**
-   * 整包直链。若源上只有分卷、没有完整 path 文件，则为 null，此时用 partUrls。
-   */
-  assetUrl: string | null
-  /** 有序分卷直链；无分卷时为空数组 */
-  partUrls: string[]
+  /** 安装包 / zip 直链 */
+  assetUrl: string
 }
 
 export type FetchText = (url: string) => Promise<string>
@@ -30,10 +26,7 @@ export interface FeedResolverOptions {
   fetchText?: FetchText
 }
 
-/**
- * 更新源：仅 GitHub Releases（latest/download）。
- * 分卷字段仍解析，便于清单兼容；GitHub 通常提供完整 zip。
- */
+/** 更新源：仅 GitHub Releases（latest/download），要求清单含完整 path 资产。 */
 export class FeedResolver {
   private readonly config: UpdateFeedConfig
   private readonly fetchText: FetchText
@@ -55,29 +48,16 @@ export class FeedResolver {
     const { manifestUrl, baseUrl, resolveAsset } = this.resolveGithubUrls(manifestName)
     const text = await this.fetchText(manifestUrl)
     const manifest = parseUpdateYml(text)
-    const single = resolveAsset(manifest.path)
-    const partUrls = manifest.parts.map((p) => {
-      const url = resolveAsset(p)
-      if (!url) throw new Error(`更新源缺少分卷 ${p}`)
-      return url
-    })
-
-    if (!single && partUrls.length === 0) {
+    const assetUrl = resolveAsset(manifest.path)
+    if (!assetUrl) {
       throw new Error(`更新源缺少安装包 ${manifest.path}`)
-    }
-    if (!single && partUrls.length > 0 && manifest.parts.length === 0) {
-      throw new Error(`更新源缺少安装包 ${manifest.path}`)
-    }
-    if (!single && manifest.parts.length > 0 && partUrls.length !== manifest.parts.length) {
-      throw new Error(`更新源分卷不完整`)
     }
 
     return {
       source: 'github',
       baseUrl,
       manifest,
-      assetUrl: single,
-      partUrls: single ? [] : partUrls
+      assetUrl
     }
   }
 

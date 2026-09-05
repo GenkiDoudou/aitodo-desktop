@@ -17,7 +17,6 @@
 | `小柒todo Setup x.y.z.exe` + `.blockmap` | Windows NSIS 安装版 + 差分 |
 | `latest.yml` | NSIS 自动更新清单 |
 | `*-win.zip` | 免解压全量包 |
-| `*.part01`… | 可选分卷（历史兼容；GitHub 以完整 zip 为主） |
 | `latest-portable.yml` | 免解压清单 |
 | Mac zip + `latest-mac.yml` | macOS 自动更新 |
 

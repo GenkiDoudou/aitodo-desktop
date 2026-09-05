@@ -161,12 +161,14 @@ app.whenReady().then(() => {
     return { baseUrl: state.serverBaseUrl, accessToken: creds.accessToken }
   })
   setHolidayService(holidayService)
+  const isLoggedIn = (): boolean => Boolean(readSyncCredentials(getActiveDataDir())?.accessToken)
   reminderService = new ReminderService(
     taskRepo,
     reminderRepo,
     messageService,
     holidayService,
-    pushAppMessageToRenderer
+    pushAppMessageToRenderer,
+    isLoggedIn
   )
   reminderService.start()
 
@@ -176,7 +178,8 @@ app.whenReady().then(() => {
     summaryRepo,
     new ScheduledSummaryService(summaryRepo, taskRepo, categoryRepo, syncOutbox),
     messageService,
-    pushAppMessageToRenderer
+    pushAppMessageToRenderer,
+    isLoggedIn
   )
   setSummarySchedulerService(summarySchedulerService)
   summarySchedulerService.start()

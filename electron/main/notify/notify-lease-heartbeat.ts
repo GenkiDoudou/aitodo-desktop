@@ -4,9 +4,9 @@ import type { NotifyApiClient } from './notify-api-client'
 /**
  * 登录态设备租约心跳。
  *
- * 作用：告诉 Sync/Notify 服务端「本机仍在线」。
- * - 租约有效期间：到点外发优先由在线端 / relayWhenOnline 路径处理；
- * - 租约过期（关端且心跳停）：若开启 relayWhenOffline，服务端可自行到点外发。
+ * 作用：告诉 Sync/Notify 服务端「本机仍在线」（多设备台账），供运维可见性。
+ * 到点外发由服务端调度，与租约是否有效解耦；本机已登录时停自动调度，但仍须继续心跳。
+ * 登出 / 关断 runtime 时 release 本 deviceId，不影响同账号其它设备。
  *
  * TTL / 心跳间隔来自本机 notification config，便于用户调优。
  */
@@ -37,8 +37,8 @@ export class NotifyLeaseHeartbeat {
   }
 
   /**
-   * 退出登录 / 关断 notify runtime 时主动释放租约，
-   * 让服务端更快进入「可离线代发」状态（失败忽略，避免挡 logout）。
+   * 退出登录 / 关断 notify runtime 时主动释放本机 deviceId 租约行
+   *（失败忽略，避免挡 logout）。
    */
   async release(): Promise<void> {
     this.stop()

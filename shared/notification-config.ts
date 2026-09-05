@@ -35,7 +35,12 @@ export interface WebhookChannelConfig {
 export interface NotificationConfig {
   systemTrayEnabled: boolean
   activeChannel: ActiveNotifyChannel
+  /** 已登录时手动/本机触发的通知是否走服务端 /dispatch 代发（默认 true） */
   relayWhenOnline: boolean
+  /**
+   * 历史字段：曾表示「仅离线时允许服务端到点代发」。
+   * 现网服务端调度已与租约解耦且默认始终到点尝试外发；保留字段以兼容配置读写，语义不再门禁调度器。
+   */
   relayWhenOffline: boolean
   quietHours: QuietHoursConfig
   iyuu: IyuuChannelConfig

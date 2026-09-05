@@ -10914,10 +10914,6 @@ function envOr(name, fallback) {
 }
 function getUpdateFeedConfig() {
   return {
-    gitee: {
-      owner: envOr("AITODO_UPDATE_GITEE_OWNER", "GenkiDoudou"),
-      repo: envOr("AITODO_UPDATE_GITEE_REPO", "aitodo-desktop")
-    },
     github: {
       owner: envOr("AITODO_UPDATE_GITHUB_OWNER", "GenkiDoudou"),
       repo: envOr("AITODO_UPDATE_GITHUB_REPO", "aitodo-desktop")
@@ -10977,22 +10973,14 @@ class FeedResolver {
     this.fetchText = options.fetchText ?? defaultFetchText$1;
   }
   async resolve(kind) {
-    const errors = [];
-    try {
-      return await this.resolveFrom("gitee", kind);
-    } catch (err) {
-      errors.push(`gitee: ${err instanceof Error ? err.message : String(err)}`);
-    }
-    try {
-      return await this.resolveFrom("github", kind);
-    } catch (err) {
-      errors.push(`github: ${err instanceof Error ? err.message : String(err)}`);
-    }
-    throw new Error(`更新源均不可用：${errors.join(" | ")}`);
+    return await this.resolveFrom("github", kind);
   }
   async resolveFrom(source, kind) {
+    if (source !== "github") {
+      throw new Error(`不支持的更新源: ${source}`);
+    }
     const manifestName = MANIFEST_FILE[kind];
-    const { manifestUrl, baseUrl, resolveAsset } = await this.resolveUrls(source, manifestName);
+    const { manifestUrl, baseUrl, resolveAsset } = this.resolveGithubUrls(manifestName);
     const text = await this.fetchText(manifestUrl);
     const manifest = parseUpdateYml(text);
     const single = resolveAsset(manifest.path);
@@ -11011,48 +10999,20 @@ class FeedResolver {
       throw new Error(`更新源分卷不完整`);
     }
     return {
-      source,
+      source: "github",
       baseUrl,
       manifest,
       assetUrl: single,
       partUrls: single ? [] : partUrls
     };
   }
-  async resolveUrls(source, manifestName) {
-    if (source === "github") {
-      const { owner: owner2, repo: repo2 } = this.config.github;
-      const baseUrl2 = `https://github.com/${owner2}/${repo2}/releases/latest/download/`;
-      return {
-        baseUrl: baseUrl2,
-        manifestUrl: `${baseUrl2}${manifestName}`,
-        // GitHub latest/download 对存在的文件直接可下；整包优先
-        resolveAsset: (fileName) => `${baseUrl2}${fileName}`
-      };
-    }
-    const { owner, repo } = this.config.gitee;
-    const apiUrl = `https://gitee.com/api/v5/repos/${owner}/${repo}/releases/latest`;
-    const raw = await this.fetchText(apiUrl);
-    let release;
-    try {
-      release = JSON.parse(raw);
-    } catch {
-      throw new Error("Gitee release JSON 解析失败");
-    }
-    const assets = release.assets ?? [];
-    const manifestAsset = assets.find((a) => a.name === manifestName);
-    if (!manifestAsset?.browser_download_url) {
-      throw new Error(`Gitee release 缺少 ${manifestName}`);
-    }
-    const manifestUrl = manifestAsset.browser_download_url;
-    const slash = manifestUrl.lastIndexOf("/");
-    const baseUrl = slash >= 0 ? manifestUrl.slice(0, slash + 1) : manifestUrl;
+  resolveGithubUrls(manifestName) {
+    const { owner, repo } = this.config.github;
+    const baseUrl = `https://github.com/${owner}/${repo}/releases/latest/download/`;
     return {
       baseUrl,
-      manifestUrl,
-      resolveAsset: (fileName) => {
-        const hit = assets.find((a) => a.name === fileName);
-        return hit?.browser_download_url ?? null;
-      }
+      manifestUrl: `${baseUrl}${manifestName}`,
+      resolveAsset: (fileName) => `${baseUrl}${fileName}`
     };
   }
 }
@@ -11134,7 +11094,7 @@ class NsisMacUpdater {
       this.hooks.onError?.(err instanceof Error ? err.message : String(err));
     });
   }
-  lastSource = "gitee";
+  lastSource = "github";
   async checkAndDownload() {
     this.ensureListeners();
     const feed = await this.feedResolver.resolve(this.kind);
@@ -11594,47 +11554,29 @@ function normalizeItems(raw, limit) {
   }
   return items;
 }
-function releasesApiUrl(source, config, limit) {
-  if (source === "gitee") {
-    const { owner: owner2, repo: repo2 } = config.gitee;
-    return `https://gitee.com/api/v5/repos/${owner2}/${repo2}/releases?per_page=${limit}&page=1`;
-  }
+function githubReleasesApiUrl(config, limit) {
   const { owner, repo } = config.github;
   return `https://api.github.com/repos/${owner}/${repo}/releases?per_page=${limit}&page=1`;
-}
-async function fetchFrom(source, config, fetchText, limit) {
-  const url2 = releasesApiUrl(source, config, limit);
-  const text = await fetchText(url2);
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error(`${source} Release JSON 解析失败`);
-  }
-  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-    const msg = parsed.message;
-    throw new Error(msg ? `${source}: ${msg}` : `${source} Release 响应无效`);
-  }
-  const items = normalizeItems(parsed, limit);
-  if (items.length === 0) throw new Error(`${source} 暂无 Release`);
-  return { source, items };
 }
 async function fetchReleaseChangelog(options = {}) {
   const config = options.config ?? getUpdateFeedConfig();
   const fetchText = options.fetchText ?? defaultFetchText;
   const limit = Math.min(Math.max(options.limit ?? 10, 1), 30);
-  const errors = [];
+  const url2 = githubReleasesApiUrl(config, limit);
+  const text = await fetchText(url2);
+  let parsed;
   try {
-    return await fetchFrom("gitee", config, fetchText, limit);
-  } catch (err) {
-    errors.push(`gitee: ${err instanceof Error ? err.message : String(err)}`);
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("GitHub Release JSON 解析失败");
   }
-  try {
-    return await fetchFrom("github", config, fetchText, limit);
-  } catch (err) {
-    errors.push(`github: ${err instanceof Error ? err.message : String(err)}`);
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const msg = parsed.message;
+    throw new Error(msg ? `github: ${msg}` : "GitHub Release 响应无效");
   }
-  throw new Error(`无法获取更新日志：${errors.join(" | ")}`);
+  const items = normalizeItems(parsed, limit);
+  if (items.length === 0) throw new Error("GitHub 暂无 Release");
+  return { source: "github", items };
 }
 function services() {
   const db = getDatabase();
@@ -12825,6 +12767,7 @@ let mainWindow = null;
 let reminderService = null;
 let summarySchedulerService = null;
 registerNotificationSupport();
+electron.app.setName("小柒todo");
 function createWindow(options) {
   const startHidden = Boolean(options?.startHidden);
   const win = new electron.BrowserWindow({

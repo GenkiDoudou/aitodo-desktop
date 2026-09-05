@@ -12,6 +12,8 @@ const SCAN_INTERVAL_MS = 60_000
 
 /**
  * 定时扫描汇总任务，到点生成汇总并推送应用内消息 + 系统通知。
+ * 已登录（有 accessToken）时本机不执行自动 tick 发送，到点外发改由服务端调度；
+ * runNow 仍可用且不占用自动 lastSentAt。
  */
 export class SummarySchedulerService {
   private timer: NodeJS.Timeout | null = null
@@ -23,7 +25,9 @@ export class SummarySchedulerService {
     private readonly summaryRepo: ScheduledSummaryRepository,
     private readonly summaryService: ScheduledSummaryService,
     private readonly messageService: AppMessageService,
-    private readonly onInAppMessage?: (message: AppMessage) => void
+    private readonly onInAppMessage?: (message: AppMessage) => void,
+    /** 返回 true 表示已登录：自动 tick 空转 */
+    private readonly isLoggedIn?: () => boolean
   ) {}
 
   start(): void {
@@ -70,6 +74,8 @@ export class SummarySchedulerService {
   }
 
   private async tick(): Promise<void> {
+    // 登录态：自动到点仅由服务端负责，本机不写汇总消息、不外发。
+    if (this.isLoggedIn?.()) return
     if (this.ticking) return
     this.ticking = true
     try {

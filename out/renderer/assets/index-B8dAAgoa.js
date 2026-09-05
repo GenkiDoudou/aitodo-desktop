@@ -3442,14 +3442,14 @@ const _sfc_main$W = /* @__PURE__ */ defineComponent({
         createBaseVNode("button", {
           type: "button",
           class: "sidebar__brand",
-          title: "Todo Pro",
+          title: "小柒todo",
           onClick: _cache[0] || (_cache[0] = ($event) => emit("select-tasks"))
         }, [..._cache[4] || (_cache[4] = [
           createBaseVNode("span", {
             class: "sidebar__brand-logo",
             "aria-hidden": "true"
           }, "✓", -1),
-          createBaseVNode("span", { class: "sidebar__brand-text" }, "Todo Pro", -1)
+          createBaseVNode("span", { class: "sidebar__brand-text" }, "小柒todo", -1)
         ])]),
         createBaseVNode("div", _hoisted_2$Q, [
           _cache[10] || (_cache[10] = createBaseVNode("p", { class: "sidebar__group-title sidebar__group-title--blue" }, "工作台", -1)),
@@ -3627,7 +3627,7 @@ const _sfc_main$W = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const AppSidebar = /* @__PURE__ */ _export_sfc(_sfc_main$W, [["__scopeId", "data-v-e2e77116"]]);
+const AppSidebar = /* @__PURE__ */ _export_sfc(_sfc_main$W, [["__scopeId", "data-v-b6ef923c"]]);
 const useMessageStore = /* @__PURE__ */ defineStore("messages", () => {
   const notifications = ref([]);
   const activities = ref([]);
@@ -4882,7 +4882,7 @@ const _sfc_main$Q = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TaskDetailDrawer = /* @__PURE__ */ _export_sfc(_sfc_main$Q, [["__scopeId", "data-v-dfedfd7a"]]);
+const TaskDetailDrawer = /* @__PURE__ */ _export_sfc(_sfc_main$Q, [["__scopeId", "data-v-d3080095"]]);
 function toPlainCreateTaskDto(dto) {
   return JSON.parse(JSON.stringify(dto));
 }
@@ -41757,7 +41757,7 @@ const _sfc_main$C = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const TaskEditorModal = /* @__PURE__ */ _export_sfc(_sfc_main$C, [["__scopeId", "data-v-3dda758a"]]);
+const TaskEditorModal = /* @__PURE__ */ _export_sfc(_sfc_main$C, [["__scopeId", "data-v-49e0f406"]]);
 const QUADRANT_GROUP_BY_LABELS = {
   status: "按状态（过期/已安排/已完成）",
   time: "按时间（今天/明天/本周…）",
@@ -48634,7 +48634,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SummaryWorkbench = /* @__PURE__ */ _export_sfc(_sfc_main$n, [["__scopeId", "data-v-c94bcf5e"]]);
+const SummaryWorkbench = /* @__PURE__ */ _export_sfc(_sfc_main$n, [["__scopeId", "data-v-2e6b4ad8"]]);
 function resolveRootTaskId(taskId, tasks) {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   let current = byId.get(taskId);
@@ -51176,7 +51176,7 @@ const _sfc_main$g = /* @__PURE__ */ defineComponent({
     });
     const calendarTasks = computed(() => {
       const { start, end } = visibleRange.value;
-      const active = taskStore.tasks.filter((t) => !t.deletedAt);
+      const active = taskStore.tasks.filter((t) => !t.deletedAt && !t.parentId);
       const expanded = expandTasksForCalendar(
         active,
         start,
@@ -51188,8 +51188,8 @@ const _sfc_main$g = /* @__PURE__ */ defineComponent({
       let result = expanded;
       if (isFilterRuleActive(rule)) {
         const hasSubtasksById = /* @__PURE__ */ new Map();
-        for (const t of active) {
-          if (t.parentId) hasSubtasksById.set(t.parentId, true);
+        for (const t of taskStore.tasks) {
+          if (!t.deletedAt && t.parentId) hasSubtasksById.set(t.parentId, true);
         }
         result = expanded.filter((instance) => {
           const dateKey = instance.dueAt?.slice(0, 10) ?? void 0;
@@ -51679,7 +51679,7 @@ const _sfc_main$g = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const CalendarView = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-7d5e0c66"]]);
+const CalendarView = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-f82b0a43"]]);
 const _hoisted_1$f = { class: "settings-section" };
 const _hoisted_2$d = { class: "settings-panel" };
 const _hoisted_3$d = { class: "settings-panel__body" };
@@ -56002,9 +56002,9 @@ const SettingsWidgetSection = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scop
 const PRIVACY_POLICY_MARKDOWN = `# 隐私政策（草案）
 
 **更新日期：2026-09-04**  
-**适用产品：Todo Pro 桌面端**
+**适用产品：小柒todo 桌面端**
 
-感谢你使用 Todo Pro。本政策说明我们如何处理与本应用相关的信息。本应用以**本机数据优先**为设计原则。
+感谢你使用小柒todo。本政策说明我们如何处理与本应用相关的信息。本应用以**本机数据优先**为设计原则。
 
 ## 1. 我们收集哪些信息
 
@@ -56021,7 +56021,7 @@ const PRIVACY_POLICY_MARKDOWN = `# 隐私政策（草案）
 我们不会为广告画像目的收集你的任务正文；也不会在未开启同步/AI 时把本地任务内容上传到我们的业务服务器。
 
 ## 2. 我们如何使用信息
-仅用于提供、维护与改进 Todo Pro 功能，包括本地管理、你开启的同步、通知、更新检查与你主动使用的 AI 能力。
+仅用于提供、维护与改进小柒todo 功能，包括本地管理、你开启的同步、通知、更新检查与你主动使用的 AI 能力。
 
 ## 3. 共享与披露
 除下列情况外，我们不会出售你的个人任务数据：
@@ -56048,12 +56048,12 @@ const PRIVACY_POLICY_MARKDOWN = `# 隐私政策（草案）
 const TERMS_OF_SERVICE_MARKDOWN = `# 服务条款（草案）
 
 **更新日期：2026-09-04**  
-**适用产品：Todo Pro 桌面端**
+**适用产品：小柒todo 桌面端**
 
-请在使用 Todo Pro 前阅读本条款。继续安装或使用即表示你同意本条款。
+请在使用小柒todo 前阅读本条款。继续安装或使用即表示你同意本条款。
 
 ## 1. 服务说明
-Todo Pro 是一款桌面任务管理应用，提供本机任务管理，以及可选的云同步、通知、自动更新与 AI 辅助等能力。功能以你安装的版本及设置为准。
+小柒todo 是一款桌面任务管理应用，提供本机任务管理，以及可选的云同步、通知、自动更新与 AI 辅助等能力。功能以你安装的版本及设置为准。
 
 ## 2. 账号与本机使用
 - 核心任务数据默认保存在本机。你应自行负责设备安全、备份与导出。
@@ -56069,7 +56069,7 @@ Todo Pro 是一款桌面任务管理应用，提供本机任务管理，以及�
 我们可能通过公开更新源提供版本更新。你可以选择检查并安装更新；跳过更新可能导致无法获得安全与功能修复。
 
 ## 6. 知识产权
-Todo Pro 的软件、标识与文档受适用法律保护。除开源许可另有规定外，未授予你商标或超出使用所需的其他权利。
+小柒todo 的软件、标识与文档受适用法律保护。除开源许可另有规定外，未授予你商标或超出使用所需的其他权利。
 
 ## 7. 免责声明
 在法律允许的最大范围内，本软件按「现状」提供，不对适销性、特定用途适用性作明示或默示担保。因设备故障、误操作、第三方服务或不可抗力导致的数据丢失，我们将在合理范围内协助排查，但不承担超出法律强制规定的赔偿责任。
@@ -56371,7 +56371,7 @@ const _sfc_main$1 = /* @__PURE__ */ defineComponent({
             class: "settings-about__logo",
             "aria-hidden": "true"
           }, "✓", -1)),
-          _cache[16] || (_cache[16] = createBaseVNode("h2", { class: "settings-about__name" }, "Todo Pro", -1)),
+          _cache[16] || (_cache[16] = createBaseVNode("h2", { class: "settings-about__name" }, "小柒todo", -1)),
           _cache[17] || (_cache[17] = createBaseVNode("p", { class: "settings-about__slogan" }, "让每件事都有结果", -1)),
           createBaseVNode("div", _hoisted_3$1, [
             createBaseVNode("div", _hoisted_4$1, [
@@ -56503,7 +56503,7 @@ const _sfc_main$1 = /* @__PURE__ */ defineComponent({
           class: "settings-about-dialog"
         }, {
           default: withCtx(() => [
-            changelogSource.value ? (openBlock(), createElementBlock("p", _hoisted_22, " 数据源：" + toDisplayString(changelogSource.value === "gitee" ? "Gitee" : "GitHub"), 1)) : createCommentVNode("", true),
+            changelogSource.value ? (openBlock(), createElementBlock("p", _hoisted_22, " 数据源：GitHub ")) : createCommentVNode("", true),
             changelogError.value ? (openBlock(), createElementBlock("p", _hoisted_23, toDisplayString(changelogError.value), 1)) : changelogLoading.value ? (openBlock(), createElementBlock("div", _hoisted_24, "加载中…")) : (openBlock(), createElementBlock("div", _hoisted_25, [
               (openBlock(true), createElementBlock(Fragment$2, null, renderList(changelogItems.value, (item) => {
                 return openBlock(), createElementBlock("article", {
@@ -56529,7 +56529,7 @@ const _sfc_main$1 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SettingsAboutSection = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-beab110a"]]);
+const SettingsAboutSection = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-912da71d"]]);
 const _hoisted_1 = { class: "settings-page" };
 const _hoisted_2 = { class: "settings-page__layout" };
 const _hoisted_3 = {
@@ -56608,7 +56608,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       closeBehavior: { title: "窗口与启动", desc: "控制应用启动方式、窗口行为和系统托盘。" },
       workday: { title: "工作日", desc: "用于截止日期、重复任务和智能提醒。" },
       widget: { title: "桌面挂件", desc: "在桌面快速查看和管理任务。" },
-      about: { title: "关于", desc: "Todo Pro 桌面任务管理应用。" }
+      about: { title: "关于", desc: "小柒todo 桌面任务管理应用。" }
     };
     const pageMeta = computed(() => PAGE_META[activeSection.value]);
     watch(
@@ -56716,7 +56716,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SettingsView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-30786d19"]]);
+const SettingsView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-b74d6fb3"]]);
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [

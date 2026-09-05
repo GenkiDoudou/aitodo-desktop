@@ -80,8 +80,32 @@ export class NotificationDispatcher {
     const loggedIn = this.deps.isLoggedIn?.() ?? false
     const now = this.deps.now?.() ?? new Date()
 
-    if (loggedIn && !cfg.relayWhenOnline) {
-      // 已登录且关闭在线代发：禁止本机直连绕过
+    // 登录态：到点外发由服务端负责。手动 runNow 仍可经 relayWhenOnline 走服务端代发；
+    // 禁止本机直连 IYUU/Webhook，避免与服务端调度双发。
+    if (loggedIn) {
+      if (cfg.relayWhenOnline && this.deps.relayIfLoggedIn) {
+        if (inQuietHours(now, cfg.quietHours)) {
+          const end = quietEnd(now, cfg.quietHours)
+          if (end) {
+            upsertDeferredNotify(this.deps.getDataDir(), {
+              id: uuidv4(),
+              event: input.event,
+              entityId: input.entityId,
+              title: payload.title,
+              body: payload.body,
+              fireAt,
+              deferredTo: end.toISOString()
+            })
+          }
+          return records
+        }
+        try {
+          const handled = await this.deps.relayIfLoggedIn(payload)
+          if (handled) return records
+        } catch (err) {
+          console.error('[notify] relay failed (no local fallback when logged in)', err)
+        }
+      }
       return records
     }
 
@@ -100,18 +124,6 @@ export class NotificationDispatcher {
         })
       }
       return records
-    }
-
-    if (this.deps.relayIfLoggedIn && loggedIn) {
-      try {
-        const handled = await this.deps.relayIfLoggedIn(payload)
-        if (handled) {
-          // 已由 relay 走完外发：本机不再继续直连渠道。
-          return records
-        }
-      } catch (err) {
-        console.error('[notify] relay failed, fallback to local', err)
-      }
     }
 
     const ready = activeChannelReady(cfg, input.event)

@@ -60,16 +60,16 @@ describe('parseUpdateYml / compareSemver', () => {
     expect(m).toEqual({
       version: '1.2.3',
       path: 'app-1.2.3-win.zip',
-      sha512: 'abc=',
-      parts: []
+      sha512: 'abc='
     })
   })
 
-  it('parses ordered part lines', () => {
+  it('ignores legacy part lines', () => {
     const m = parseUpdateYml(
       `version: 1.0.0\npath: a.zip\nsha512: x=\npart: a.zip.part01\npart: a.zip.part02\n`
     )
-    expect(m.parts).toEqual(['a.zip.part01', 'a.zip.part02'])
+    expect(m.path).toBe('a.zip')
+    expect(m).not.toHaveProperty('parts')
   })
 
   it('compares semver', () => {
@@ -100,28 +100,7 @@ describe('FeedResolver', () => {
     expect(feed.manifest.version).toBe('1.1.0')
     expect(feed.assetUrl).toContain('github.com')
     expect(feed.assetUrl).toContain('Setup.exe')
-    expect(feed.partUrls).toEqual([])
     expect(calls.every((u) => u.includes('github.com'))).toBe(true)
-  })
-
-  it('resolves portable parts from GitHub when listed in yml', async () => {
-    const resolver = new FeedResolver({
-      config: {
-        github: { owner: 'o', repo: 'r' }
-      },
-      fetchText: async (url) => {
-        if (url.includes('gitee.com')) throw new Error('should not hit gitee')
-        if (url.endsWith('latest-portable.yml')) {
-          return 'version: 1.0.0\npath: a.zip\nsha512: zz=\npart: a.zip.part01\npart: a.zip.part02\n'
-        }
-        throw new Error(url)
-      }
-    })
-    const feed = await resolver.resolve('portable')
-    expect(feed.source).toBe('github')
-    // GitHub resolveAsset 总是返回直链；有 path 时优先整包
-    expect(feed.assetUrl).toContain('a.zip')
-    expect(feed.partUrls).toEqual([])
   })
 
   it('uses GitHub latest download base', async () => {

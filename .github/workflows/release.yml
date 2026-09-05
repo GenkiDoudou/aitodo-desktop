@@ -41,7 +41,6 @@ jobs:
             dist/*.yml
             dist/*-win.zip
             dist/*.zip
-            dist/*.part*
           body: |
             ## 下载说明
             - **安装版**：下载 `小柒todo Setup *.exe`
