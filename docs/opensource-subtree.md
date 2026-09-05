@@ -59,8 +59,7 @@ pnpm run release:opensource
 # 默认会等待 Actions 结束；失败则清远端并重推 tag 一次
 # 不需等待：
 .\scripts\release-opensource.ps1 -SkipWait
-# 强制删同名 tag 后重推（重跑失败过的版本）：
-.\scripts\release-opensource.ps1 -SkipSync -ForceRetag
+# 同版本重复发版会自动删旧 tag/Release 再推，无需额外参数
 ```
 
 本机等待/重推需安装并登录 [GitHub CLI](https://cli.github.com/)（`gh auth login`）。

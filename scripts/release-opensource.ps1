@@ -3,16 +3,14 @@
 # 默认会自动 commit desktop/ 未提交改动（含版本号 bump）。
 #
 # 失败重试相关:
-#   - Actions Release 工作流失败时会自动删除 GitHub Release+tag
-#   - 本脚本默认等待工作流结束；失败则清远端并重新推 tag（最多 -MaxRetries 次）
-#   - -ForceRetag：远端已有同名 tag 时先删再推，强制重跑 Actions
+#   - 同版本重复执行会自动删除本地/远端旧 tag 与 GitHub Release，再打到当前 main 并推送
+#   - Actions Release 工作流失败时会自动删除 GitHub Release+tag；本脚本等待失败后也会清远端再重推
 #   - -SkipWait：推完 tag 即退出，不等待 Actions
 #
 # 示例:
 #   .\scripts\release-opensource.ps1
 #   .\scripts\release-opensource.ps1 -Version 1.1.0
 #   .\scripts\release-opensource.ps1 -NoAutoCommit
-#   .\scripts\release-opensource.ps1 -ForceRetag
 #   .\scripts\release-opensource.ps1 -SkipWait
 [CmdletBinding()]
 param(
@@ -22,11 +20,9 @@ param(
   [switch]$Force,
   [switch]$SkipSync,
   [switch]$SkipTag,
-  # 远端已有同名 tag 时先删 GitHub Release/tag 再推，用于强制重跑
-  [switch]$ForceRetag,
   # 推完 tag 后不等待 Actions（默认会等待）
   [switch]$SkipWait,
-  # 等待 Actions 成功；失败时自动 ForceRetag 再推，最多重试次数（不含首次）
+  # 等待 Actions 成功；失败时清远端再推，最多重试次数（不含首次）
   [int]$MaxRetries = 1
 )
 
@@ -106,14 +102,14 @@ function Remove-GithubReleaseAndTag {
   $ErrorActionPreference = $oldEap
 }
 
-# 向 GitHub 开源仓推送（或强制重推）发版 tag。
+# 向 GitHub 开源仓推送发版 tag。
+# 同版本重复发版：一律先删本地 tag、远端 Release+tag，再打到当前 desktop-github/main 并推送。
 # 返回是否实际执行了 git push tag
 function Publish-DesktopGithubTag {
   param(
     [string]$RepoRoot,
     [string]$DesktopDir,
-    [string]$Tag,
-    [bool]$DoForceRetag
+    [string]$Tag
   )
 
   Push-Location $RepoRoot
@@ -132,40 +128,28 @@ function Publish-DesktopGithubTag {
       throw ('cannot resolve {0}/main' -f $r)
     }
 
+    # 本地同名 tag（无论指向哪次 commit）一律删掉，按当前 tip 重建
     $existing = git tag -l $Tag
     if ($existing) {
       $tagCommit = git rev-list -n 1 $Tag
-      if ($tagCommit -ne $tip) {
-        if ($DoForceRetag) {
-          Write-Host ('>>> ForceRetag: delete local tag {0} (was {1})' -f $Tag, $tagCommit)
-          git tag -d $Tag
-          if ($LASTEXITCODE -ne 0) { throw ('delete local tag {0} failed' -f $Tag) }
-        } else {
-          throw ('local tag {0} exists on other commit ({1} != {2}). Delete local tag or use -ForceRetag.' -f $Tag, $tagCommit, $tip)
-        }
-      } else {
-        Write-Host ('OK: local tag {0} already points at {1}/main' -f $Tag, $r)
-      }
+      Write-Host ('>>> delete local tag {0} (was {1}); will recreate at {2}' -f $Tag, $tagCommit, $tip)
+      git tag -d $Tag
+      if ($LASTEXITCODE -ne 0) { throw ('delete local tag {0} failed' -f $Tag) }
     }
 
-    if (-not (git tag -l $Tag)) {
-      Write-Host ('>>> create annotated tag {0} -> {1} ({2}/main)' -f $Tag, $tip, $r)
-      git tag -a $Tag $tip -m ('Release {0}' -f $Tag)
-      if ($LASTEXITCODE -ne 0) {
-        throw ('create tag {0} failed' -f $Tag)
-      }
-    }
-
+    # 远端已有同名 Release/tag：先清产物与 tag，再推，触发 Actions 重跑
     $remoteTagLine = git ls-remote $r "refs/tags/${Tag}" 2>$null
     if ($remoteTagLine) {
       $remoteSha = ($remoteTagLine -split '\s+')[0]
-      if ($remoteSha -eq $tip -and -not $DoForceRetag) {
-        Write-Host ('OK: {0} already has {1} at same commit ({2}). Use -ForceRetag to delete and re-push.' -f $r, $Tag, $tip)
-        return $false
-      }
-      Write-Host ('>>> cleanup remote {0} then re-push' -f $Tag)
+      Write-Host ('>>> remote already has {0} at {1}; cleanup Release/tag then re-push' -f $Tag, $remoteSha)
       Remove-GithubReleaseAndTag -Tag $Tag
       git push $r ":refs/tags/${Tag}" 2>$null | Out-Null
+    }
+
+    Write-Host ('>>> create annotated tag {0} -> {1} ({2}/main)' -f $Tag, $tip, $r)
+    git tag -a $Tag $tip -m ('Release {0}' -f $Tag)
+    if ($LASTEXITCODE -ne 0) {
+      throw ('create tag {0} failed' -f $Tag)
     }
 
     Write-Host ('>>> push tag {0} -> {1}' -f $Tag, $r)
@@ -173,7 +157,7 @@ function Publish-DesktopGithubTag {
     if ($LASTEXITCODE -ne 0) {
       throw ('push tag to {0} failed' -f $r)
     }
-    Write-Host ('OK: {0} has {1}' -f $r, $Tag)
+    Write-Host ('OK: {0} has {1} at {2}' -f $r, $Tag, $tip)
     return $true
   } finally {
     Pop-Location
@@ -294,14 +278,13 @@ if ($SkipTag) {
 
 $attempt = 0
 $maxAttempts = 1 + [Math]::Max(0, $MaxRetries)
-$useForce = [bool]$ForceRetag
 
 while ($attempt -lt $maxAttempts) {
   $attempt += 1
   Write-Host ''
-  Write-Host ('======== release attempt {0} / {1} (ForceRetag={2}) ========' -f $attempt, $maxAttempts, $useForce)
+  Write-Host ('======== release attempt {0} / {1} ========' -f $attempt, $maxAttempts)
 
-  [void](Publish-DesktopGithubTag -RepoRoot $repoRoot -DesktopDir $desktopDir -Tag $tag -DoForceRetag $useForce)
+  [void](Publish-DesktopGithubTag -RepoRoot $repoRoot -DesktopDir $desktopDir -Tag $tag)
 
   if ($SkipWait) {
     Write-Host 'skip: WaitForActions (-SkipWait)'
@@ -323,19 +306,11 @@ while ($attempt -lt $maxAttempts) {
 
   Write-Host ('FAIL: Release workflow not successful: {0}' -f $result)
   if ($attempt -ge $maxAttempts) {
-    throw ('release failed after {0} attempt(s). Later: .\scripts\release-opensource.ps1 -SkipSync -ForceRetag' -f $maxAttempts)
+    throw ('release failed after {0} attempt(s). Re-run: pnpm run release:opensource' -f $maxAttempts)
   }
 
-  Write-Host '>>> cleanup remote Release/tag then re-push to re-trigger Actions...'
-  Remove-GithubReleaseAndTag -Tag $tag
-  Push-Location $repoRoot
-  try {
-    git push desktop-github ":refs/tags/${tag}" 2>$null | Out-Null
-  } finally {
-    Pop-Location
-  }
+  Write-Host '>>> workflow failed; next attempt will delete Release/tag and re-push...'
   Start-Sleep -Seconds 5
-  $useForce = $true
 }
 
 Write-Host ''

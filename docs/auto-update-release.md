@@ -35,7 +35,7 @@
 ```powershell
 cd desktop
 pnpm run release:opensource
-# 默认等待 Actions；失败可 -ForceRetag 重推
+# 默认等待 Actions；同版本重复执行会自动删旧 tag/Release 再推
 ```
 
 需本机对 GitHub 公开仓有 push 权限；等待 Actions 需安装并登录 [GitHub CLI](https://cli.github.com/)。
