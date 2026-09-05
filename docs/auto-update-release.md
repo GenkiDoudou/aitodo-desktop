@@ -46,6 +46,7 @@
    node scripts/prune-gitee-attachments.cjs
    ```
 3. 发版脚本 `publish-gitee-release.cjs` 会在上传前**自动修剪**（默认保留最新 8 个 semver 版本）；修剪后若分卷仍失败，GitHub Release 仍有完整 zip，CI 不会因分卷失败而整体失败。
+4. 上传支持 **同名附件跳过** + **网络瞬断重试**（`ECONNRESET` 等）；CI 失败后可直接 **Re-run**，不会重复堆已成功的小文件。
 
 需在 GitHub 仓库配置 `GITEE_TOKEN`。
 

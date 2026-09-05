@@ -7,6 +7,11 @@
  *   GITEE_REPO   - 默认 aitodo-desktop
  *   RELEASE_TAG  - 如 v1.0.0（默认读 GITHUB_REF_NAME）
  *   DIST_DIR     - 默认 dist
+ *
+ * 加固：
+ *   - 上传前拉取已有附件，同名跳过（便于 CI 安全重跑）
+ *   - ECONNRESET 等瞬断错误指数退避重试
+ *   - 大文件上传拉长 socket 超时
  */
 const fs = require('fs')
 const path = require('path')
@@ -44,12 +49,69 @@ const GITEE_MAX_UPLOAD_BYTES = 95 * 1024 * 1024
 /** 发布前保留的最新 semver 版本数（更早版本的附件会被修剪） */
 const DEFAULT_KEEP_RELEASES = Number.parseInt(process.env.GITEE_KEEP_RELEASES || '8', 10) || 8
 
+/** 瞬断重试次数（不含首次） */
+const UPLOAD_RETRY_MAX = Number.parseInt(process.env.GITEE_UPLOAD_RETRIES || '3', 10) || 3
+
+/** 首次退避毫秒；之后 2x（上限 30s） */
+const UPLOAD_RETRY_BASE_MS = Number.parseInt(process.env.GITEE_UPLOAD_RETRY_MS || '2000', 10) || 2000
+
+/** 单次上传 socket 超时（毫秒），大文件默认 15 分钟 */
+const UPLOAD_TIMEOUT_MS = Number.parseInt(process.env.GITEE_UPLOAD_TIMEOUT_MS || String(15 * 60 * 1000), 10)
+
 function isQuotaError(message) {
   return /附件配额|1\s*GB|quota|超出仓库/i.test(message)
 }
 
 function isOversizeError(message) {
   return /100\s*MB|超出限制|file size/i.test(message)
+}
+
+/** 可重试的网络瞬断（含 Node syscall code 与常见文案） */
+function isTransientNetworkError(err) {
+  if (!err) return false
+  const code = err.code || ''
+  if (
+    /^(ECONNRESET|ETIMEDOUT|ECONNREFUSED|EPIPE|ENOTFOUND|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH|ERR_SOCKET_CONNECTION_TIMEOUT)$/.test(
+      code
+    )
+  ) {
+    return true
+  }
+  const msg = err instanceof Error ? err.message : String(err)
+  return /ECONNRESET|ETIMEDOUT|socket hang up|TLSWrap|network|temporarily unavailable|Gateway Time-out|502|503|504/i.test(
+    msg
+  )
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * 对异步操作做有限次重试；仅瞬断类错误重试，其它错误立即抛出。
+ * @param {string} label 日志前缀
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ * @template T
+ */
+async function withRetry(label, fn) {
+  let lastErr
+  for (let attempt = 0; attempt <= UPLOAD_RETRY_MAX; attempt += 1) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      const retryable = isTransientNetworkError(err)
+      if (!retryable || attempt >= UPLOAD_RETRY_MAX) throw err
+      const delay = Math.min(UPLOAD_RETRY_BASE_MS * 2 ** attempt, 30_000)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.warn(
+        `[publish-gitee-release] ${label} 瞬断（${msg}），${delay}ms 后重试 ${attempt + 1}/${UPLOAD_RETRY_MAX}`
+      )
+      await sleep(delay)
+    }
+  }
+  throw lastErr
 }
 
 function listAssets() {
@@ -159,6 +221,9 @@ function apiRequest(method, apiPath, { query, form, json } = {}) {
         })
       }
     )
+    req.setTimeout(60_000, () => {
+      req.destroy(Object.assign(new Error('apiRequest timeout'), { code: 'ETIMEDOUT' }))
+    })
     req.on('error', reject)
     if (bodyBuf) req.write(bodyBuf)
     req.end()
@@ -167,9 +232,8 @@ function apiRequest(method, apiPath, { query, form, json } = {}) {
 
 async function ensureRelease() {
   try {
-    const existing = await apiRequest(
-      'GET',
-      `/repos/${owner}/${repo}/releases/tags/${encodeURIComponent(tag)}`
+    const existing = await withRetry(`GET release ${tag}`, () =>
+      apiRequest('GET', `/repos/${owner}/${repo}/releases/tags/${encodeURIComponent(tag)}`)
     )
     if (existing.data && existing.data.id) {
       console.log(`[publish-gitee-release] 已有 Release id=${existing.data.id}`)
@@ -179,20 +243,43 @@ async function ensureRelease() {
     /* create below */
   }
 
-  const created = await apiRequest('POST', `/repos/${owner}/${repo}/releases`, {
-    form: {
-      tag_name: tag,
-      name: tag,
-      body: `Desktop release ${tag}`,
-      target_commitish: 'main',
-      prerelease: 'false'
-    }
-  })
+  const created = await withRetry(`POST release ${tag}`, () =>
+    apiRequest('POST', `/repos/${owner}/${repo}/releases`, {
+      form: {
+        tag_name: tag,
+        name: tag,
+        body: `Desktop release ${tag}`,
+        target_commitish: 'main',
+        prerelease: 'false'
+      }
+    })
+  )
   console.log(`[publish-gitee-release] 已创建 Release id=${created.data.id}`)
   return created.data.id
 }
 
-function uploadFile(releaseId, filePath) {
+/** 拉取 Release 已有附件文件名集合（同名则跳过上传，避免重跑重复） */
+async function listExistingAttachNames(releaseId) {
+  const names = new Set()
+  try {
+    const { data } = await withRetry(`GET attach_files ${releaseId}`, () =>
+      apiRequest('GET', `/repos/${owner}/${repo}/releases/${releaseId}/attach_files`, {
+        query: { per_page: '100' }
+      })
+    )
+    const list = Array.isArray(data) ? data : []
+    for (const item of list) {
+      if (item && item.name) names.add(String(item.name))
+    }
+    console.log(`[publish-gitee-release] Release 已有附件 ${names.size} 个`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.warn(`[publish-gitee-release] 无法列出已有附件（将全部尝试上传）: ${msg}`)
+  }
+  return names
+}
+
+function uploadFileOnce(releaseId, filePath) {
   const boundary = '----AitodoBoundary' + Date.now()
   const fileName = path.basename(filePath)
   const fileBuf = fs.readFileSync(filePath)
@@ -228,15 +315,28 @@ function uploadFile(releaseId, filePath) {
             console.log(`[publish-gitee-release] uploaded ${fileName}`)
             resolve(text)
           } else {
-            reject(new Error(`upload ${fileName} -> HTTP ${res.statusCode}: ${text}`))
+            // 5xx 视为可重试
+            const err = new Error(`upload ${fileName} -> HTTP ${res.statusCode}: ${text}`)
+            if (res.statusCode && res.statusCode >= 500) {
+              err.code = 'ECONNRESET'
+            }
+            reject(err)
           }
         })
       }
     )
+    req.setTimeout(UPLOAD_TIMEOUT_MS, () => {
+      req.destroy(Object.assign(new Error(`upload ${fileName} timeout after ${UPLOAD_TIMEOUT_MS}ms`), { code: 'ETIMEDOUT' }))
+    })
     req.on('error', reject)
     req.write(body)
     req.end()
   })
+}
+
+async function uploadFile(releaseId, filePath) {
+  const fileName = path.basename(filePath)
+  await withRetry(`upload ${fileName}`, () => uploadFileOnce(releaseId, filePath))
 }
 
 async function main() {
@@ -254,16 +354,26 @@ async function main() {
     `[publish-gitee-release] tag=${tag} upload=${uploadList.length}/${assets.length}`
   )
   const releaseId = await ensureRelease()
+  const existingNames = await listExistingAttachNames(releaseId)
+
   let ok = 0
+  let skipped = 0
   let failed = 0
   for (const file of uploadList) {
+    const base = path.basename(file)
+    if (existingNames.has(base)) {
+      console.log(`[publish-gitee-release] skip existing ${base}`)
+      skipped += 1
+      ok += 1
+      continue
+    }
     try {
       await uploadFile(releaseId, file)
+      existingNames.add(base)
       ok += 1
     } catch (err) {
       failed += 1
       const msg = err instanceof Error ? err.message : String(err)
-      const base = path.basename(file)
       if (isOversizeError(msg)) {
         console.warn(`[publish-gitee-release] skip oversized ${base}: ${msg}`)
         continue
@@ -278,16 +388,16 @@ async function main() {
   if (ok === 0) {
     throw new Error('Gitee 没有成功上传任何附件')
   }
-  const partFailed = uploadList.some(
-    (p) => /\.part\d+$/i.test(p) && failed > 0
-  )
+  const partFailed = uploadList.some((p) => /\.part\d+$/i.test(p) && failed > 0)
   if (failed > 0) {
     console.warn(
       `[publish-gitee-release] 有 ${failed} 个附件未上传（多为配额或单文件 100MB 限制）。` +
         ' 可在本地运行 node scripts/prune-gitee-attachments.cjs 后重试，或到 Gitee Release 手动清理旧版附件。'
     )
   }
-  console.log(`[publish-gitee-release] done ok=${ok} failed=${failed}`)
+  console.log(
+    `[publish-gitee-release] done ok=${ok} skipped=${skipped} failed=${failed}`
+  )
   if (partFailed && ok > 0) {
     console.warn(
       '[publish-gitee-release] 分卷未全部上传：Gitee 免解压包可能不可用，GitHub Release 仍有完整 zip。'
