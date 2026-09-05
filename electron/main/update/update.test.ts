@@ -103,6 +103,21 @@ describe('FeedResolver', () => {
     expect(calls.every((u) => u.includes('github.com'))).toBe(true)
   })
 
+  it('encodes spaces in asset file names', async () => {
+    const resolver = new FeedResolver({
+      config: { github: { owner: 'o', repo: 'r' } },
+      fetchText: async (url) => {
+        if (url.endsWith('latest.yml')) {
+          return 'version: 1.0.0\npath: My App Setup 1.0.0.exe\nsha512: x=\n'
+        }
+        throw new Error(url)
+      }
+    })
+    const feed = await resolver.resolve('nsis')
+    expect(feed.assetUrl).toContain('My%20App%20Setup%201.0.0.exe')
+    expect(feed.assetUrl).not.toMatch(/My App Setup/)
+  })
+
   it('uses GitHub latest download base', async () => {
     const resolver = new FeedResolver({
       config: {

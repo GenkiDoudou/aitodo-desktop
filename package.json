@@ -92,17 +92,20 @@
         "nsis",
         "zip"
       ],
+      "artifactName": "XiaoQiTodo-${version}-win.${ext}",
       "signAndEditExecutable": false
     },
     "mac": {
       "target": [
         "dmg",
         "zip"
-      ]
+      ],
+      "artifactName": "XiaoQiTodo-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "XiaoQiTodo-Setup-${version}.${ext}"
     }
   }
 }

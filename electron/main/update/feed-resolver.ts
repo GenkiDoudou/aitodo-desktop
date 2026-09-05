@@ -71,7 +71,14 @@ export class FeedResolver {
     return {
       baseUrl,
       manifestUrl: `${baseUrl}${manifestName}`,
-      resolveAsset: (fileName) => `${baseUrl}${fileName}`
+      resolveAsset: (fileName) => {
+        // 对文件名做百分号编码，避免空格/非 ASCII 导致 GitHub 直链 404
+        const encoded = fileName
+          .split('/')
+          .map((seg) => encodeURIComponent(seg))
+          .join('/')
+        return `${baseUrl}${encoded}`
+      }
     }
   }
 }

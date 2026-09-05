@@ -16,6 +16,7 @@ function findWinZip() {
   }
   const names = fs.readdirSync(distDir).filter((n) => /-win\.zip$/i.test(n) || /\.zip$/i.test(n))
   const preferred =
+    names.find((n) => /^XiaoQiTodo-.*-win\.zip$/i.test(n) && n.includes(pkg.version)) ||
     names.find((n) => n.includes(pkg.version) && /win/i.test(n) && !/\.part\d+$/i.test(n)) ||
     names.find((n) => /win/i.test(n) && n.endsWith('.zip') && !/\.part\d+$/i.test(n)) ||
     names.find((n) => n.endsWith('.zip') && !/mac|darwin/i.test(n) && !/\.part\d+$/i.test(n))

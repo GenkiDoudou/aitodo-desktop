@@ -39,13 +39,14 @@ jobs:
             dist/*.exe
             dist/*.blockmap
             dist/*.yml
-            dist/*-win.zip
+            dist/XiaoQiTodo-*-win.zip
             dist/*.zip
           body: |
             ## 下载说明
-            - **安装版**：下载 `小柒todo Setup *.exe`
-            - **免解压版**：下载完整 `*-win.zip` 解压即可（数据目录默认在 exe 同级 `data/`）
+            - **安装版**：下载 `XiaoQiTodo-Setup-*.exe`
+            - **免解压版**：下载完整 `XiaoQiTodo-*-win.zip` 解压即可（数据目录默认在 exe 同级 `data/`）
             - 客户端自动更新仅从本 GitHub Release 读取 `latest.yml` / `latest-portable.yml`
+            - 界面品牌名仍为「小柒todo」；发版资产使用 ASCII 文件名以免更新直链 404
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

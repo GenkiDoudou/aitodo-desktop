@@ -82,7 +82,7 @@ pnpm run release:opensource
 ### 自动更新（概要）
 
 - **NSIS / macOS**：`electron-updater` + `latest.yml` / `latest-mac.yml`
-- **免解压目录**：`*-win.zip` + `latest-portable.yml`；更新**不会**覆盖同级 `data/`
+- **免解压目录**：`XiaoQiTodo-*-win.zip` + `latest-portable.yml`；更新**不会**覆盖同级 `data/`
 - 发布与检查更新均仅使用 **GitHub Releases**
 - 首版**无代码签名**，可能出现 SmartScreen / Gatekeeper 提示
 - 仓库名可用环境变量 `AITODO_UPDATE_GITHUB_*` 覆盖
