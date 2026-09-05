@@ -57,11 +57,36 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Gitee tag 不在此用 git push：checkout 已含 GitHub 的 v* tag，再 git tag 会冲突。
-      # 本机 release 脚本已 subtree 同步 main 到 Gitee；tag 由 publish-gitee-release.cjs 调 API 创建。
-      - name: Upload Gitee Release assets
+      # 本机 release 脚本已 subtree 同步 main 到 Gitee；tag 由 publish 脚本调 API 创建。
+      # 使用 reset-and-publish：同 tag 重跑 / 配额占满时会先清该版附件再传，无需本机配 TOKEN。
+      - name: Reset and upload Gitee Release assets
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
           GITEE_OWNER: GenkiDoudou
           GITEE_REPO: aitodo-desktop
           RELEASE_TAG: ${{ github.ref_name }}
-        run: node scripts/publish-gitee-release.cjs
+          KEEP_OTHERS: '3'
+        run: node scripts/reset-and-publish-gitee-release.cjs
+
+      # 任一步失败：删掉本次已创建的 GitHub Release+tag、以及 Gitee 同版本 Release/附件，
+      # 便于本机 release-opensource.ps1 重新推 tag 触发完整重跑（避免「tag 已在、跳过推送」）。
+      - name: Cleanup Release and tags on failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_OWNER: GenkiDoudou
+          GITEE_REPO: aitodo-desktop
+          RELEASE_TAG: ${{ github.ref_name }}
+          SKIP_PUBLISH: 'true'
+          KEEP_OTHERS: '3'
+          DRY_RUN: 'false'
+        run: |
+          set +e
+          echo "[cleanup] tag=$RELEASE_TAG"
+          gh release delete "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+          echo "[cleanup] GitHub release/tag 清理结束 (exit=$?)"
+          node scripts/reset-and-publish-gitee-release.cjs
+          echo "[cleanup] Gitee 重置结束 (exit=$?)"
+          exit 0

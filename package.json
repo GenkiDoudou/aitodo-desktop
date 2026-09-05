@@ -1,7 +1,7 @@
 {
   "name": "ai-todo-desktop",
   "productName": "小柒todo",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "小柒todo 纯本地桌面客户端（Electron + Vue3 + SQLite）",
   "main": "./out/main/index.js",
   "author": "小柒todo",
@@ -16,6 +16,9 @@
     "generate:portable-yml": "node scripts/generate-portable-yml.cjs",
     "sync:opensource": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/sync-opensource.ps1",
     "release:opensource": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/release-opensource.ps1",
+    "publish:gitee": "node scripts/publish-gitee-release.cjs",
+    "prune:gitee": "node scripts/prune-gitee-attachments.cjs",
+    "reset:publish:gitee": "node scripts/reset-and-publish-gitee-release.cjs",
     "test": "electron ./node_modules/vitest/vitest.mjs run",
     "postinstall": "npm run rebuild:native"
   },

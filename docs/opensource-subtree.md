@@ -48,15 +48,24 @@ git subtree push --prefix=desktop desktop-gitee main
 
 ## 发版（自动打包 + 自更新）
 
-公开仓 `.github/workflows/release.yml`：推送 `v*` tag 后自动 `build:win` 并上传 GitHub / Gitee Releases。
+公开仓 `.github/workflows/release.yml`：推送 `v*` tag 后自动 `build:win` 并上传 GitHub / Gitee Releases。  
+工作流**失败时会自动删除**本次 GitHub Release+tag，并重置 Gitee 同版本，便于重新推 tag 重跑。
 
 ```powershell
 cd desktop
 pnpm run release:opensource
 
 # 升版本并自动 commit package.json
-.\scripts\release-opensource.ps1 -Version 1.1.0 -CommitBump
+.\scripts\release-opensource.ps1 -Version 1.1.0
+
+# 默认会等待 Actions 结束；失败则清远端并重推 tag 一次
+# 不需等待：
+.\scripts\release-opensource.ps1 -SkipWait
+# 强制删同名 tag 后重推（重跑失败过的版本）：
+.\scripts\release-opensource.ps1 -SkipSync -ForceRetag
 ```
+
+本机等待/重推需安装并登录 [GitHub CLI](https://cli.github.com/)（`gh auth login`）。清 Gitee 可选设 `GITEE_TOKEN`（无则依赖 Actions 失败清理）。
 
 前置：`desktop/` 已提交；GitHub 公开仓配置 Secret `GITEE_TOKEN`；本机对两公开仓有 push 权限。
 

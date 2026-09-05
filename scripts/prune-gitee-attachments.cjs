@@ -5,7 +5,7 @@
  *   GITEE_TOKEN  - 必填
  *   GITEE_OWNER  - 默认 GenkiDoudou
  *   GITEE_REPO   - 默认 aitodo-desktop
- *   KEEP         - 保留最新 N 个 semver tag 的附件，默认 8
+ *   KEEP         - 保留最新 N 个 semver tag 的附件，默认 3
  *   DRY_RUN      - true 时只打印不删除
  */
 const https = require('https')
@@ -14,7 +14,7 @@ const { URL, URLSearchParams } = require('url')
 const owner = process.env.GITEE_OWNER || 'GenkiDoudou'
 const repo = process.env.GITEE_REPO || 'aitodo-desktop'
 const token = process.env.GITEE_TOKEN
-const keepCount = Math.max(1, Number.parseInt(process.env.KEEP || '8', 10) || 8)
+const keepCount = Math.max(1, Number.parseInt(process.env.KEEP || '3', 10) || 3)
 const dryRun = /^true|1|yes$/i.test(process.env.DRY_RUN || '')
 
 if (!token) {

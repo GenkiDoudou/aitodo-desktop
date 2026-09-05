@@ -46,8 +46,8 @@ const ASSET_PATTERNS = [
 /** Gitee 附件硬限制 100MB，低于此值才上传 */
 const GITEE_MAX_UPLOAD_BYTES = 95 * 1024 * 1024
 
-/** 发布前保留的最新 semver 版本数（更早版本的附件会被修剪） */
-const DEFAULT_KEEP_RELEASES = Number.parseInt(process.env.GITEE_KEEP_RELEASES || '8', 10) || 8
+/** 发布前保留的最新 semver 版本数（更早版本的附件会被修剪；默认 3，避免 1GB 配额被历史 Setup/分卷撑满） */
+const DEFAULT_KEEP_RELEASES = Number.parseInt(process.env.GITEE_KEEP_RELEASES || '3', 10) || 3
 
 /** 瞬断重试次数（不含首次） */
 const UPLOAD_RETRY_MAX = Number.parseInt(process.env.GITEE_UPLOAD_RETRIES || '3', 10) || 3

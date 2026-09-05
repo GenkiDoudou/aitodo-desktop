@@ -1,0 +1,72 @@
+# 手动：按版本号重置 Gitee Release 附件后，从 GitHub Release 拉产物再上传到 Gitee。
+# 用于配额满 / 上传中断后补发，无需本机配置 GITEE_TOKEN。
+#
+# 前置：仓库 Secrets 已配置 GITEE_TOKEN；对应 tag 的 GitHub Release 已有完整产物。
+
+name: Reset and Publish Gitee
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 版本 tag（如 v1.0.9）
+        required: true
+        type: string
+      dry_run:
+        description: 仅打印将删除的内容，不删除、不上传
+        type: boolean
+        default: false
+      keep_others:
+        description: 重置后保留其它最新版本附件数
+        required: false
+        default: '3'
+      skip_publish:
+        description: 只重置（删附件/Release），不上传
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitee-attachments
+  cancel-in-progress: false
+
+jobs:
+  reset-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download assets from GitHub Release
+        if: ${{ !inputs.dry_run && !inputs.skip_publish }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          mkdir -p dist
+          gh release download "${{ inputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --dir dist \
+            --clobber
+          echo "=== dist ==="
+          ls -lah dist
+
+      - name: Reset and publish to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_OWNER: GenkiDoudou
+          GITEE_REPO: aitodo-desktop
+          RELEASE_TAG: ${{ inputs.tag }}
+          KEEP_OTHERS: ${{ inputs.keep_others }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SKIP_PUBLISH: ${{ inputs.skip_publish }}
+          DIST_DIR: dist
+        run: node scripts/reset-and-publish-gitee-release.cjs

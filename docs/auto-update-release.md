@@ -34,19 +34,24 @@
 
 ### Gitee 1GB 配额满了怎么办
 
-1. **GitHub Actions**：仓库 → Actions → **Cleanup Gitee Attachments** → Run workflow（先 dry-run 看清单，再 `dry_run=false` 实删）
-2. **本地**（需 `GITEE_TOKEN`）：
+**常见原因**：仓库附件配额是**全仓合计约 1GB**（所有历史 Release 的 Setup / `.part*` 等）。  
+自动修剪只删「保留窗口之外」的版本；若窗口过大（例如 KEEP=8）而实际只有 6～8 个版本，会**删 0 个附件**，配额仍满，新上传 Setup 就会 `HTTP 400 超出仓库附件配额：1 GB`。
+
+1. **用 GitHub Actions 补发（推荐，不用本机配 TOKEN）**  
+   公开仓 → Actions → **Reset and Publish Gitee** → Run workflow：填入 `tag`（如 `v1.0.9`）。  
+   会从该 tag 的 **GitHub Release** 下载产物 → 重置 Gitee 同名 Release/附件 → 再上传。  
+   （需先 `subtree` 把本仓库的 workflow 同步到公开仓。）
+正式发版打 `v*` tag 触发 **Release** 工作流。  
+失败时工作流会**自动清理** GitHub Release+tag 与 Gitee 同版本；本机 `release-opensource.ps1` 默认等待 Actions，失败则重推 tag（可用 `-SkipWait` / `-ForceRetag`）。
+3. **只修剪旧附件**：Actions → **Cleanup Gitee Attachments**（先 dry-run，再实删；`keep` 建议 3）。
+4. **本机**（可选，需自行设 `GITEE_TOKEN` / `RELEASE_TAG`）：
    ```powershell
    cd desktop
    $env:GITEE_TOKEN = "你的令牌"
-   $env:KEEP = "6"          # 只保留最新 6 个版本附件
-   $env:DRY_RUN = "true"    # 先预演
-   node scripts/prune-gitee-attachments.cjs
-   $env:DRY_RUN = "false"   # 确认后实删
-   node scripts/prune-gitee-attachments.cjs
+   $env:RELEASE_TAG = "v1.0.9"
+   pnpm run reset:publish:gitee
    ```
-3. 发版脚本 `publish-gitee-release.cjs` 会在上传前**自动修剪**（默认保留最新 8 个 semver 版本）；修剪后若分卷仍失败，GitHub Release 仍有完整 zip，CI 不会因分卷失败而整体失败。
-4. 上传支持 **同名附件跳过** + **网络瞬断重试**（`ECONNRESET` 等）；CI 失败后可直接 **Re-run**，不会重复堆已成功的小文件。
+5. 上传支持 **同名附件跳过** + **网络瞬断重试**；分卷仍失败时 GitHub Release 仍有完整 zip。
 
 需在 GitHub 仓库配置 `GITEE_TOKEN`。
 
