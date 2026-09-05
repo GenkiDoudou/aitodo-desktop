@@ -29,25 +29,10 @@ describe('PortableZipUpdater (mocked feed)', () => {
 
     const resolver = new FeedResolver({
       config: {
-        gitee: { owner: 'o', repo: 'r' },
         github: { owner: 'o', repo: 'r' }
       },
       fetchText: async (url) => {
-        if (url.includes('gitee.com/api')) {
-          return JSON.stringify({
-            assets: [
-              {
-                name: 'latest-portable.yml',
-                browser_download_url:
-                  'https://gitee.com/o/r/releases/download/v9.9.9/latest-portable.yml'
-              },
-              {
-                name: zipName,
-                browser_download_url: `https://gitee.com/o/r/releases/download/v9.9.9/${zipName}`
-              }
-            ]
-          })
-        }
+        if (url.includes('gitee.com')) throw new Error('should not hit gitee')
         if (url.endsWith('latest-portable.yml')) {
           return `version: 9.9.9\npath: ${zipName}\nsha512: ${sha512}\n`
         }
@@ -80,25 +65,10 @@ describe('PortableZipUpdater (mocked feed)', () => {
 
     const resolver = new FeedResolver({
       config: {
-        gitee: { owner: 'o', repo: 'r' },
         github: { owner: 'o', repo: 'r' }
       },
       fetchText: async (url) => {
-        if (url.includes('gitee.com/api')) {
-          return JSON.stringify({
-            assets: [
-              {
-                name: 'latest-portable.yml',
-                browser_download_url:
-                  'https://gitee.com/o/r/releases/download/v2.0.0/latest-portable.yml'
-              },
-              {
-                name: 'x.zip',
-                browser_download_url: 'https://gitee.com/o/r/releases/download/v2.0.0/x.zip'
-              }
-            ]
-          })
-        }
+        if (url.includes('gitee.com')) throw new Error('should not hit gitee')
         if (url.endsWith('latest-portable.yml')) {
           return 'version: 2.0.0\npath: x.zip\nsha512: not-the-real-hash=\n'
         }

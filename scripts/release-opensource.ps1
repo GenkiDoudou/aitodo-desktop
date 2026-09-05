@@ -1,12 +1,9 @@
-# 将 desktop/ subtree 同步到开源仓，并在 GitHub 打 v* tag，触发 Actions 打包（供自更新）。
-# Gitee 不在此脚本推 tag：subtree 只同步 main；Gitee Release/tag 由 Actions 内脚本创建。
-# 目标仓:
-#   https://github.com/GenkiDoudou/aitodo-desktop.git
-#   https://gitee.com/GenkiDoudou/aitodo-desktop.git
+# 将 desktop/ subtree 同步到 GitHub 开源仓，并打 v* tag，触发 Actions 打包（供自更新）。
+# 目标: https://github.com/GenkiDoudou/aitodo-desktop.git
 # 默认会自动 commit desktop/ 未提交改动（含版本号 bump）。
 #
 # 失败重试相关:
-#   - Actions Release 工作流失败时会自动删除 GitHub Release+tag，并重置 Gitee 同版本
+#   - Actions Release 工作流失败时会自动删除 GitHub Release+tag
 #   - 本脚本默认等待工作流结束；失败则清远端并重新推 tag（最多 -MaxRetries 次）
 #   - -ForceRetag：远端已有同名 tag 时先删再推，强制重跑 Actions
 #   - -SkipWait：推完 tag 即退出，不等待 Actions
@@ -25,14 +22,12 @@ param(
   [switch]$Force,
   [switch]$SkipSync,
   [switch]$SkipTag,
-  # 远端已有同名 tag 时先删 GitHub Release/tag（及尽力清 Gitee）再推，用于强制重跑
+  # 远端已有同名 tag 时先删 GitHub Release/tag 再推，用于强制重跑
   [switch]$ForceRetag,
   # 推完 tag 后不等待 Actions（默认会等待）
   [switch]$SkipWait,
   # 等待 Actions 成功；失败时自动 ForceRetag 再推，最多重试次数（不含首次）
-  [int]$MaxRetries = 1,
-  [ValidateSet('both', 'github', 'gitee')]
-  [string]$Remote = 'both'
+  [int]$MaxRetries = 1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -111,35 +106,6 @@ function Remove-GithubReleaseAndTag {
   $ErrorActionPreference = $oldEap
 }
 
-# 调用 reset 脚本只清 Gitee（不重新上传）；无 GITEE_TOKEN 则跳过
-function Remove-GiteeReleaseBestEffort {
-  param(
-    [string]$DesktopDir,
-    [string]$Tag
-  )
-  if (-not $env:GITEE_TOKEN) {
-    Write-Host 'WARN: GITEE_TOKEN not set; skip local Gitee cleanup (Actions failure cleanup still handles it)'
-    return
-  }
-  $script = Join-Path $DesktopDir 'scripts\reset-and-publish-gitee-release.cjs'
-  if (-not (Test-Path $script)) {
-    Write-Host ('WARN: missing {0}' -f $script)
-    return
-  }
-  Write-Host ('>>> reset Gitee release {0} (SKIP_PUBLISH)' -f $Tag)
-  $env:RELEASE_TAG = $Tag
-  $env:SKIP_PUBLISH = 'true'
-  $env:DRY_RUN = 'false'
-  if (-not $env:KEEP_OTHERS) { $env:KEEP_OTHERS = '3' }
-  $oldEap = $ErrorActionPreference
-  $ErrorActionPreference = 'Continue'
-  try {
-    & node $script
-  } finally {
-    $ErrorActionPreference = $oldEap
-  }
-}
-
 # 向 GitHub 开源仓推送（或强制重推）发版 tag。
 # 返回是否实际执行了 git push tag
 function Publish-DesktopGithubTag {
@@ -199,7 +165,6 @@ function Publish-DesktopGithubTag {
       }
       Write-Host ('>>> cleanup remote {0} then re-push' -f $Tag)
       Remove-GithubReleaseAndTag -Tag $Tag
-      Remove-GiteeReleaseBestEffort -DesktopDir $DesktopDir -Tag $Tag
       git push $r ":refs/tags/${Tag}" 2>$null | Out-Null
     }
 
@@ -310,8 +275,8 @@ if ($target -ne $current) {
 $tag = 'v{0}' -f $target
 
 if (-not $SkipSync) {
-  Write-Host ('>>> subtree sync desktop/ (Remote={0})' -f $Remote)
-  $syncArgs = @{ Remote = $Remote }
+  Write-Host '>>> subtree sync desktop/ -> desktop-github'
+  $syncArgs = @{}
   if ($NoAutoCommit) { $syncArgs.NoAutoCommit = $true }
   if ($Force) { $syncArgs.Force = $true }
   & $syncScript @syncArgs
@@ -324,12 +289,6 @@ if (-not $SkipSync) {
 
 if ($SkipTag) {
   Write-Host 'skip: tagging. Later: .\scripts\release-opensource.ps1 -SkipSync'
-  exit 0
-}
-
-if ($Remote -eq 'gitee') {
-  Write-Host 'skip: Remote=gitee does not push GitHub tag (Gitee Release is created by Actions)'
-  Write-Host 'Done.'
   exit 0
 }
 
@@ -369,7 +328,6 @@ while ($attempt -lt $maxAttempts) {
 
   Write-Host '>>> cleanup remote Release/tag then re-push to re-trigger Actions...'
   Remove-GithubReleaseAndTag -Tag $tag
-  Remove-GiteeReleaseBestEffort -DesktopDir $desktopDir -Tag $tag
   Push-Location $repoRoot
   try {
     git push desktop-github ":refs/tags/${tag}" 2>$null | Out-Null

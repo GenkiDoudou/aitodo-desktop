@@ -67,7 +67,6 @@ npm run build:mac    # macOS：dmg + zip（需在 macOS 上执行）
 仅同步 **desktop/** 到：
 
 - https://github.com/GenkiDoudou/aitodo-desktop
-- https://gitee.com/GenkiDoudou/aitodo-desktop
 
 ```bash
 cd desktop
@@ -84,9 +83,9 @@ pnpm run release:opensource
 
 - **NSIS / macOS**：`electron-updater` + `latest.yml` / `latest-mac.yml`
 - **免解压目录**：`*-win.zip` + `latest-portable.yml`；更新**不会**覆盖同级 `data/`
-- 发布到 **Gitee + GitHub Releases**（客户端优先 Gitee，失败回退 GitHub）
+- 发布与检查更新均仅使用 **GitHub Releases**
 - 首版**无代码签名**，可能出现 SmartScreen / Gatekeeper 提示
-- 仓库名可用环境变量 `AITODO_UPDATE_GITEE_*` / `AITODO_UPDATE_GITHUB_*` 覆盖
+- 仓库名可用环境变量 `AITODO_UPDATE_GITHUB_*` 覆盖
 
 ## 数据目录
 

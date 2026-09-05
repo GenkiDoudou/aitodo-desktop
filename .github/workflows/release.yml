@@ -1,8 +1,5 @@
-# 公开仓发版：打 v* tag 后打包，并上传到 GitHub + Gitee Releases
-# 工作流位于 desktop/.github，经 subtree 同步后会出现在公开仓根目录 .github/
-#
-# 仓库 Secrets 需配置：
-#   GITEE_TOKEN — Gitee 私人令牌（需 projects 权限，用于创建 Release / 上传附件）
+# 公开仓发版：打 v* tag 后打包，并上传到 GitHub Releases
+# 桌面端自动更新仅从 GitHub 拉取
 
 name: Release
 
@@ -45,48 +42,25 @@ jobs:
             dist/*-win.zip
             dist/*.zip
             dist/*.part*
-            dist/*.ps1
-            dist/*.bat
           body: |
             ## 下载说明
             - **安装版**：下载 `小柒todo Setup *.exe`
-            - **免解压版（Gitee）**：因单附件上限 100MB，大包以 `.part*` 分卷发布。请下载 **`下载免解压版.bat`**（及同目录的 `download-portable-from-gitee.ps1`），双击运行即可自动下载分卷、合并并校验。
-            - GitHub Release 另附完整 `*-win.zip`，也可直接下载解压。
+            - **免解压版**：下载完整 `*-win.zip` 解压即可（数据目录默认在 exe 同级 `data/`）
+            - 客户端自动更新仅从本 GitHub Release 读取 `latest.yml` / `latest-portable.yml`
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Gitee tag 不在此用 git push：checkout 已含 GitHub 的 v* tag，再 git tag 会冲突。
-      # 本机 release 脚本已 subtree 同步 main 到 Gitee；tag 由 publish 脚本调 API 创建。
-      # 使用 reset-and-publish：同 tag 重跑 / 配额占满时会先清该版附件再传，无需本机配 TOKEN。
-      - name: Reset and upload Gitee Release assets
-        env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          GITEE_OWNER: GenkiDoudou
-          GITEE_REPO: aitodo-desktop
-          RELEASE_TAG: ${{ github.ref_name }}
-          KEEP_OTHERS: '3'
-        run: node scripts/reset-and-publish-gitee-release.cjs
-
-      # 任一步失败：删掉本次已创建的 GitHub Release+tag、以及 Gitee 同版本 Release/附件，
-      # 便于本机 release-opensource.ps1 重新推 tag 触发完整重跑（避免「tag 已在、跳过推送」）。
-      - name: Cleanup Release and tags on failure
+      # 失败时删掉本次 GitHub Release+tag，便于本机重新推同名 tag 重跑
+      - name: Cleanup Release and tag on failure
         if: failure()
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          GITEE_OWNER: GenkiDoudou
-          GITEE_REPO: aitodo-desktop
           RELEASE_TAG: ${{ github.ref_name }}
-          SKIP_PUBLISH: 'true'
-          KEEP_OTHERS: '3'
-          DRY_RUN: 'false'
         run: |
           set +e
           echo "[cleanup] tag=$RELEASE_TAG"
           gh release delete "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
-          echo "[cleanup] GitHub release/tag 清理结束 (exit=$?)"
-          node scripts/reset-and-publish-gitee-release.cjs
-          echo "[cleanup] Gitee 重置结束 (exit=$?)"
+          echo "[cleanup] done (exit=$?)"
           exit 0

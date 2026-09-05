@@ -96,27 +96,6 @@ function main() {
   console.log(`[generate-portable-yml] wrote ${out}`)
   console.log(`  path=${zipName}`)
   console.log(`  sha512=${sha512.slice(0, 24)}…`)
-
-  // 供用户从 Gitee 手动获取免解压包：下载脚本体积很小，可随 Release 附件发布
-  copyPortableDownloader()
-}
-
-function copyPortableDownloader() {
-  const scriptsDir = __dirname
-  const pairs = [
-    ['download-portable-from-gitee.ps1', 'download-portable-from-gitee.ps1'],
-    ['下载免解压版.bat', '下载免解压版.bat']
-  ]
-  for (const [fromName, toName] of pairs) {
-    const from = path.join(scriptsDir, fromName)
-    const to = path.join(distDir, toName)
-    if (!fs.existsSync(from)) {
-      console.warn(`[generate-portable-yml] skip missing ${fromName}`)
-      continue
-    }
-    fs.copyFileSync(from, to)
-    console.log(`[generate-portable-yml] copied ${toName}`)
-  }
 }
 
 main()

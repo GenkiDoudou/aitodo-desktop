@@ -80,29 +80,15 @@ describe('parseUpdateYml / compareSemver', () => {
 })
 
 describe('FeedResolver', () => {
-  it('uses gitee when it succeeds', async () => {
+  it('resolves nsis feed from GitHub only', async () => {
     const calls: string[] = []
     const resolver = new FeedResolver({
       config: {
-        gitee: { owner: 'o', repo: 'r' },
         github: { owner: 'o', repo: 'r' }
       },
       fetchText: async (url) => {
         calls.push(url)
-        if (url.includes('gitee.com/api')) {
-          return JSON.stringify({
-            assets: [
-              {
-                name: 'latest.yml',
-                browser_download_url: 'https://gitee.com/o/r/releases/download/v1.1.0/latest.yml'
-              },
-              {
-                name: 'Setup.exe',
-                browser_download_url: 'https://gitee.com/o/r/releases/download/v1.1.0/Setup.exe'
-              }
-            ]
-          })
-        }
+        if (url.includes('gitee.com')) throw new Error('should not hit gitee')
         if (url.endsWith('latest.yml')) {
           return 'version: 1.1.0\npath: Setup.exe\nsha512: xyz=\n'
         }
@@ -110,39 +96,21 @@ describe('FeedResolver', () => {
       }
     })
     const feed = await resolver.resolve('nsis')
-    expect(feed.source).toBe('gitee')
+    expect(feed.source).toBe('github')
     expect(feed.manifest.version).toBe('1.1.0')
+    expect(feed.assetUrl).toContain('github.com')
     expect(feed.assetUrl).toContain('Setup.exe')
     expect(feed.partUrls).toEqual([])
-    expect(calls.some((u) => u.includes('github.com'))).toBe(false)
+    expect(calls.every((u) => u.includes('github.com'))).toBe(true)
   })
 
-  it('uses gitee part urls when full zip is absent', async () => {
+  it('resolves portable parts from GitHub when listed in yml', async () => {
     const resolver = new FeedResolver({
       config: {
-        gitee: { owner: 'o', repo: 'r' },
         github: { owner: 'o', repo: 'r' }
       },
       fetchText: async (url) => {
-        if (url.includes('gitee.com/api')) {
-          return JSON.stringify({
-            assets: [
-              {
-                name: 'latest-portable.yml',
-                browser_download_url:
-                  'https://gitee.com/o/r/releases/download/v1.0.0/latest-portable.yml'
-              },
-              {
-                name: 'a.zip.part01',
-                browser_download_url: 'https://gitee.com/o/r/releases/download/v1.0.0/a.zip.part01'
-              },
-              {
-                name: 'a.zip.part02',
-                browser_download_url: 'https://gitee.com/o/r/releases/download/v1.0.0/a.zip.part02'
-              }
-            ]
-          })
-        }
+        if (url.includes('gitee.com')) throw new Error('should not hit gitee')
         if (url.endsWith('latest-portable.yml')) {
           return 'version: 1.0.0\npath: a.zip\nsha512: zz=\npart: a.zip.part01\npart: a.zip.part02\n'
         }
@@ -150,22 +118,18 @@ describe('FeedResolver', () => {
       }
     })
     const feed = await resolver.resolve('portable')
-    expect(feed.source).toBe('gitee')
-    expect(feed.assetUrl).toBeNull()
-    expect(feed.partUrls).toEqual([
-      'https://gitee.com/o/r/releases/download/v1.0.0/a.zip.part01',
-      'https://gitee.com/o/r/releases/download/v1.0.0/a.zip.part02'
-    ])
+    expect(feed.source).toBe('github')
+    // GitHub resolveAsset 总是返回直链；有 path 时优先整包
+    expect(feed.assetUrl).toContain('a.zip')
+    expect(feed.partUrls).toEqual([])
   })
 
-  it('falls back to github when gitee fails', async () => {
+  it('uses GitHub latest download base', async () => {
     const resolver = new FeedResolver({
       config: {
-        gitee: { owner: 'o', repo: 'r' },
         github: { owner: 'o', repo: 'r' }
       },
       fetchText: async (url) => {
-        if (url.includes('gitee.com')) throw new Error('gitee down')
         if (url.includes('github.com') && url.endsWith('latest-portable.yml')) {
           return 'version: 2.0.0\npath: app-2.0.0-win.zip\nsha512: qq=\n'
         }
@@ -175,6 +139,7 @@ describe('FeedResolver', () => {
     const feed = await resolver.resolve('portable')
     expect(feed.source).toBe('github')
     expect(feed.manifest.path).toBe('app-2.0.0-win.zip')
+    expect(feed.baseUrl).toBe('https://github.com/o/r/releases/latest/download/')
   })
 })
 

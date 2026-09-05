@@ -95,7 +95,7 @@
       class="settings-about-dialog"
     >
       <p v-if="changelogSource" class="settings-about-changelog__meta">
-        数据源：{{ changelogSource === 'gitee' ? 'Gitee' : 'GitHub' }}
+        数据源：GitHub
       </p>
       <p v-if="changelogError" class="settings-about__error">{{ changelogError }}</p>
       <div v-else-if="changelogLoading" class="settings-about-changelog__loading">加载中…</div>

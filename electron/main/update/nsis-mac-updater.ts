@@ -59,7 +59,7 @@ export class NsisMacUpdater {
     })
   }
 
-  private lastSource: UpdateFeedSource = 'gitee'
+  private lastSource: UpdateFeedSource = 'github'
 
   async checkAndDownload(): Promise<void> {
     this.ensureListeners()

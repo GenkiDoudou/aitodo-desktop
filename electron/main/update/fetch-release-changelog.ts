@@ -1,11 +1,10 @@
 /**
  * 从公开更新仓拉取 Release 列表，作为关于页「更新日志」。
- * 策略与自动更新一致：优先 Gitee，失败再 GitHub。
+ * 与自动更新一致：仅 GitHub。
  */
 import type {
   AppReleaseChangelogItem,
-  AppReleaseChangelogResult,
-  UpdateFeedSource
+  AppReleaseChangelogResult
 } from '@shared/app-update'
 import { getUpdateFeedConfig, type UpdateFeedConfig } from './update-feed-config'
 
@@ -25,7 +24,6 @@ interface RawRelease {
   published_at?: string | null
   created_at?: string | null
   html_url?: string | null
-  /** Gitee 部分接口用 url 字段 */
   url?: string | null
 }
 
@@ -64,59 +62,31 @@ function normalizeItems(raw: unknown, limit: number): AppReleaseChangelogItem[] 
   return items
 }
 
-function releasesApiUrl(source: UpdateFeedSource, config: UpdateFeedConfig, limit: number): string {
-  if (source === 'gitee') {
-    const { owner, repo } = config.gitee
-    return `https://gitee.com/api/v5/repos/${owner}/${repo}/releases?per_page=${limit}&page=1`
-  }
+function githubReleasesApiUrl(config: UpdateFeedConfig, limit: number): string {
   const { owner, repo } = config.github
   return `https://api.github.com/repos/${owner}/${repo}/releases?per_page=${limit}&page=1`
 }
 
-async function fetchFrom(
-  source: UpdateFeedSource,
-  config: UpdateFeedConfig,
-  fetchText: FetchJsonText,
-  limit: number
-): Promise<AppReleaseChangelogResult> {
-  const url = releasesApiUrl(source, config, limit)
-  const text = await fetchText(url)
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(text) as unknown
-  } catch {
-    throw new Error(`${source} Release JSON 解析失败`)
-  }
-  // Gitee 偶发返回 { message } 错误对象
-  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-    const msg = (parsed as { message?: string }).message
-    throw new Error(msg ? `${source}: ${msg}` : `${source} Release 响应无效`)
-  }
-  const items = normalizeItems(parsed, limit)
-  if (items.length === 0) throw new Error(`${source} 暂无 Release`)
-  return { source, items }
-}
-
-/** 拉取更新日志：Gitee → GitHub */
+/** 拉取更新日志（仅 GitHub Releases） */
 export async function fetchReleaseChangelog(
   options: FetchReleaseChangelogOptions = {}
 ): Promise<AppReleaseChangelogResult> {
   const config = options.config ?? getUpdateFeedConfig()
   const fetchText = options.fetchText ?? defaultFetchText
   const limit = Math.min(Math.max(options.limit ?? 10, 1), 30)
-  const errors: string[] = []
-
+  const url = githubReleasesApiUrl(config, limit)
+  const text = await fetchText(url)
+  let parsed: unknown
   try {
-    return await fetchFrom('gitee', config, fetchText, limit)
-  } catch (err) {
-    errors.push(`gitee: ${err instanceof Error ? err.message : String(err)}`)
+    parsed = JSON.parse(text) as unknown
+  } catch {
+    throw new Error('GitHub Release JSON 解析失败')
   }
-
-  try {
-    return await fetchFrom('github', config, fetchText, limit)
-  } catch (err) {
-    errors.push(`github: ${err instanceof Error ? err.message : String(err)}`)
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const msg = (parsed as { message?: string }).message
+    throw new Error(msg ? `github: ${msg}` : 'GitHub Release 响应无效')
   }
-
-  throw new Error(`无法获取更新日志：${errors.join(' | ')}`)
+  const items = normalizeItems(parsed, limit)
+  if (items.length === 0) throw new Error('GitHub 暂无 Release')
+  return { source: 'github', items }
 }

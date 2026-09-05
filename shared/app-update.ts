@@ -2,7 +2,7 @@
 
 export type InstallShape = 'nsis' | 'portable-dir' | 'mac'
 
-export type UpdateFeedSource = 'gitee' | 'github'
+export type UpdateFeedSource = 'github'
 
 export type AppUpdateState =
   | 'idle'

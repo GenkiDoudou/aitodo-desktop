@@ -1,23 +1,18 @@
-# 将 monorepo 中 desktop/ 用 subtree 推送到两个开源仓。
-# 目标:
-#   https://github.com/GenkiDoudou/aitodo-desktop.git
-#   https://gitee.com/GenkiDoudou/aitodo-desktop.git
+# 将 monorepo 中 desktop/ 用 subtree 推送到 GitHub 开源仓。
+# 目标: https://github.com/GenkiDoudou/aitodo-desktop.git
 # 可从 desktop/ 或仓库根执行。
 # 默认：若 desktop/ 有未提交改动，会先自动 git add/commit 再 push（仅 desktop/）。
 #
 # 示例:
 #   .\scripts\sync-opensource.ps1 -SetupRemotesOnly
 #   .\scripts\sync-opensource.ps1
-#   .\scripts\sync-opensource.ps1 -Remote github
 #   .\scripts\sync-opensource.ps1 -NoAutoCommit
 #   .\scripts\sync-opensource.ps1 -Force   # 远程已分叉时强制以本地 desktop/ 覆盖
 [CmdletBinding()]
 param(
   [switch]$SetupRemotesOnly,
   [switch]$NoAutoCommit,
-  [switch]$Force,
-  [ValidateSet('both', 'github', 'gitee')]
-  [string]$Remote = 'both'
+  [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -63,28 +58,22 @@ function Ensure-DesktopRemotes {
   param([string]$RepoRoot)
   Push-Location $RepoRoot
   try {
-    $obsolete = git remote | Where-Object { $_ -eq 'gitee-ai-todo' }
-    if ($obsolete) {
-      git remote remove gitee-ai-todo
-      Write-Host '[ok] removed obsolete remote gitee-ai-todo'
+    foreach ($name in @('gitee-ai-todo', 'desktop-gitee')) {
+      $hit = git remote | Where-Object { $_ -eq $name }
+      if ($hit) {
+        git remote remove $name
+        Write-Host ('[ok] removed obsolete remote {0}' -f $name)
+      }
     }
 
     $remotes = @(git remote)
     $githubUrl = 'git@github.com:GenkiDoudou/aitodo-desktop.git'
-    $giteeUrl = 'git@gitee.com:GenkiDoudou/aitodo-desktop.git'
     if ($remotes -notcontains 'desktop-github') {
       git remote add desktop-github $githubUrl
       Write-Host '[ok] added remote desktop-github (ssh)'
     } else {
       git remote set-url desktop-github $githubUrl
       Write-Host '[ok] desktop-github url -> ssh'
-    }
-    if ($remotes -notcontains 'desktop-gitee') {
-      git remote add desktop-gitee $giteeUrl
-      Write-Host '[ok] added remote desktop-gitee (ssh)'
-    } else {
-      git remote set-url desktop-gitee $giteeUrl
-      Write-Host '[ok] desktop-gitee url -> ssh'
     }
   } finally {
     Pop-Location
@@ -186,7 +175,7 @@ function Push-Subtree {
 
 $repoRoot = Find-RepoRoot
 Write-Host "repo root: $repoRoot"
-Write-Host 'targets: GitHub + Gitee GenkiDoudou/aitodo-desktop (desktop/ only)'
+Write-Host 'target: GitHub GenkiDoudou/aitodo-desktop (desktop/ only)'
 
 Ensure-DesktopRemotes -RepoRoot $repoRoot
 
@@ -197,13 +186,7 @@ if ($SetupRemotesOnly) {
 
 Ensure-DesktopCommitted -RepoRoot $repoRoot -NoAutoCommit:$NoAutoCommit
 
-$targets = @()
-if ($Remote -eq 'both' -or $Remote -eq 'github') { $targets += 'desktop-github' }
-if ($Remote -eq 'both' -or $Remote -eq 'gitee') { $targets += 'desktop-gitee' }
-
-foreach ($r in $targets) {
-  Push-Subtree -RepoRoot $repoRoot -RemoteName $r -Force:$Force
-}
+Push-Subtree -RepoRoot $repoRoot -RemoteName 'desktop-github' -Force:$Force
 
 Write-Host ''
 Write-Host 'Sync done. To release (tag + Actions build):'
